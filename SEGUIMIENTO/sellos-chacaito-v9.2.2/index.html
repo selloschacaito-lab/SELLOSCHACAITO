@@ -1,0 +1,2823 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#00ef1b">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="assets/favicon.ico?v=9.2.2" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png?v=9.2.2">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png?v=9.2.2">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=9.2.2">
+    <title>Sellos ChacaÃ­to - Sistema de ProducciÃ³n V9.2.2</title>
+
+    <!-- Se conserva Firebase 8 para evitar una migraciÃ³n riesgosa esta noche. -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-soft: #eff6ff;
+            --bg: #f6f7f9;
+            --surface: #ffffff;
+            --surface-soft: #f8fafc;
+            --text-main: #111827;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --border-strong: #cbd5e1;
+            --success: #16a34a;
+            --success-hover: #15803d;
+            --danger: #dc2626;
+            --shadow: 0 8px 24px rgba(15, 23, 42, .06);
+        }
+
+        * { box-sizing: border-box; }
+        html { background: var(--bg); }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            padding: 16px;
+        }
+
+        button, input, textarea, select { font: inherit; }
+        button:disabled { opacity: .55; cursor: not-allowed; }
+        [hidden] { display: none !important; }
+        a { color: inherit; }
+
+        .app-container { width: min(1080px, 100%); margin: 0 auto; }
+
+        .app-header {
+            background: rgba(255, 255, 255, .96);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            padding: 18px;
+            box-shadow: var(--shadow);
+            margin-bottom: 14px;
+            position: sticky;
+            top: 10px;
+            z-index: 30;
+            backdrop-filter: blur(12px);
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .brand { display: flex; align-items: center; gap: 15px; min-width: 0; }
+        .logo-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 18px;
+            display: grid;
+            place-items: center;
+            flex: 0 0 auto;
+            overflow: hidden;
+            background: transparent;
+        }
+        .logo-icon img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain;
+        }
+        .header-title { min-width: 0; }
+        .header-title h1 { margin: 0; font-size: 1.28rem; line-height: 1.15; letter-spacing: -.025em; }
+        .header-title p { margin: 5px 0 0; color: var(--text-muted); font-size: .82rem; }
+
+        .header-status {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 6px;
+            color: var(--text-muted);
+            font-size: .72rem;
+            white-space: nowrap;
+        }
+        .connection-dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; }
+        .connection-dot.online { background: #22c55e; }
+        .connection-dot.offline { background: #ef4444; }
+        #currentUserLabel, #logoutBtn { display: none !important; }
+        .header-action-btn {
+            min-height: 32px;
+            border: 1px solid var(--border-strong);
+            border-radius: 999px;
+            background: white;
+            color: #334155;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: .69rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+        .header-action-btn:hover { background: #f8fafc; }
+        .header-action-btn.active { background: #f0fdf4; border-color: #86efac; color: #166534; }
+
+        .overview-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 12px;
+            align-items: stretch;
+        }
+
+        .stats-panel {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+        }
+        .stat-box {
+            min-width: 0;
+            background: var(--surface-soft);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 10px 12px;
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .stat-number { font-size: 1.05rem; font-weight: 800; letter-spacing: -.03em; }
+        .stat-label { color: var(--text-muted); font-size: .65rem; text-transform: uppercase; font-weight: 700; }
+
+        .btn-new-order {
+            border: 0;
+            border-radius: 14px;
+            padding: 0 18px;
+            min-height: 48px;
+            background: var(--text-main);
+            color: white;
+            font-weight: 750;
+            cursor: pointer;
+            white-space: nowrap;
+            box-shadow: 0 5px 14px rgba(15, 23, 42, .16);
+        }
+        .btn-new-order:hover { background: #000; }
+
+        .search-input-wrapper { position: relative; margin-top: 12px; }
+        .search-input-wrapper input {
+            width: 100%;
+            height: 44px;
+            padding: 0 14px 0 41px;
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            background: var(--surface-soft);
+            color: var(--text-main);
+            outline: none;
+        }
+        .search-input-wrapper input:focus,
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus,
+        .select-move:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, .11);
+        }
+        .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+
+        .workspace { display: flex; flex-direction: column; gap: 12px; padding-bottom: 34px; }
+        .filter-strip {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 3px 2px 7px;
+            scrollbar-width: thin;
+        }
+        .filter-chip {
+            flex: 0 0 auto;
+            min-height: 38px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: white;
+            color: #475569;
+            padding: 7px 11px;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            cursor: pointer;
+            font-size: .76rem;
+            font-weight: 700;
+            transition: .15s ease;
+        }
+        .filter-chip:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+        .filter-chip.active { background: var(--text-main); color: white; border-color: var(--text-main); }
+        .filter-chip-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .filter-chip-count {
+            min-width: 21px;
+            height: 21px;
+            padding: 0 6px;
+            border-radius: 999px;
+            display: grid;
+            place-items: center;
+            background: #f1f5f9;
+            color: #475569;
+            font-size: .66rem;
+        }
+        .filter-chip.active .filter-chip-count { background: rgba(255,255,255,.16); color: white; }
+
+        .order-list-shell {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 14px;
+            box-shadow: var(--shadow);
+        }
+        .list-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 2px 3px 12px;
+        }
+        .list-heading h2 { margin: 0; font-size: .98rem; letter-spacing: -.02em; }
+        .list-heading span { color: var(--text-muted); font-size: .73rem; font-weight: 650; }
+        .order-list { display: flex; flex-direction: column; gap: 10px; }
+
+        .order-card {
+            --status-color: #64748b;
+            position: relative;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 14px;
+            overflow: hidden;
+            transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+        }
+        .order-card::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 4px;
+            background: var(--status-color);
+        }
+        .order-card:hover { border-color: var(--border-strong); box-shadow: 0 8px 18px rgba(15,23,42,.055); }
+        .order-card.print-alert-focus { animation: print-card-focus 1.6s ease; }
+        @keyframes print-card-focus {
+            0%, 100% { box-shadow: none; }
+            25%, 75% { border-color: #f97316; box-shadow: 0 0 0 5px rgba(249,115,22,.18), 0 12px 28px rgba(249,115,22,.18); }
+        }
+
+        .card-main-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: start;
+        }
+        .client-line { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+        .card-client { font-size: 1rem; font-weight: 820; letter-spacing: -.02em; overflow-wrap: anywhere; }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: .66rem;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+        .status-badge-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--status-color); }
+        .designer-badge {
+            display: inline-flex;
+            margin-top: 7px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-size: .64rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        .designer-abril { background: #fdf2f8; color: #be185d; }
+        .designer-alvaro { background: #eff6ff; color: #0369a1; }
+
+        .whatsapp-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-height: 38px;
+            padding: 7px 11px;
+            border-radius: 11px;
+            border: 1px solid #bbf7d0;
+            background: #f0fdf4;
+            color: #15803d;
+            text-decoration: none;
+            font-size: .75rem;
+            font-weight: 780;
+            white-space: nowrap;
+        }
+        .whatsapp-button:hover { background: #dcfce7; }
+        .whatsapp-button.invalid { background: #f8fafc; border-color: var(--border); color: #94a3b8; pointer-events: none; }
+
+        .order-summary {
+            margin: 12px 0 10px;
+            padding: 10px 11px;
+            border-radius: 12px;
+            background: var(--surface-soft);
+            border: 1px solid #edf0f4;
+        }
+        .order-summary-label {
+            display: block;
+            margin-bottom: 4px;
+            color: var(--text-muted);
+            font-size: .62rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+        }
+        .order-summary-text {
+            margin: 0;
+            color: #334155;
+            font-size: .82rem;
+            line-height: 1.45;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+        .order-summary-text.empty { color: #94a3b8; font-style: italic; }
+
+        .order-progress {
+            margin-top: 12px;
+            padding: 10px 11px;
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            background: var(--surface-soft);
+        }
+        .progress-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 7px;
+            font-size: .68rem;
+            color: var(--text-muted);
+            font-weight: 750;
+        }
+        .progress-responsible { color: var(--text-main); }
+        .progress-track {
+            height: 8px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: #e2e8f0;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0;
+            border-radius: inherit;
+            background: var(--status-color);
+            transition: width .25s ease;
+        }
+        .progress-steps {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: 4px;
+            margin-top: 7px;
+        }
+        .progress-step {
+            height: 3px;
+            border-radius: 999px;
+            background: #dbe2ea;
+        }
+        .progress-step.done { background: var(--status-color); }
+
+        .card-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 11px; }
+        .meta-chip {
+            border: 0;
+            border-radius: 999px;
+            background: #f8fafc;
+            color: #64748b;
+            padding: 5px 8px;
+            font-size: .66rem;
+            font-weight: 700;
+        }
+        button.meta-chip { cursor: pointer; }
+        .meta-chip.fina { background: #fffbeb; color: #92400e; }
+        .meta-chip.alert { background: #fef2f2; color: #b91c1c; }
+
+        .card-action-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 8px;
+            align-items: center;
+            padding-top: 11px;
+            border-top: 1px solid #f1f5f9;
+        }
+        .btn-advance {
+            min-height: 40px;
+            border: 0;
+            border-radius: 11px;
+            background: var(--success);
+            color: white;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: .76rem;
+            font-weight: 700;
+        }
+        .btn-advance:hover { background: var(--success-hover); }
+        .btn-advance b { font-weight: 850; }
+        .badge-done {
+            min-height: 40px;
+            border-radius: 11px;
+            display: grid;
+            place-items: center;
+            background: #f0fdf4;
+            color: #15803d;
+            font-size: .76rem;
+            font-weight: 800;
+        }
+        .read-only-notice { color: #92400e; background: #fffbeb; border-radius: 11px; padding: 9px; font-size: .73rem; text-align: center; }
+
+        .card-more { position: relative; }
+        .card-more summary {
+            list-style: none;
+            min-height: 40px;
+            padding: 8px 11px;
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            background: white;
+            color: #475569;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .74rem;
+            font-weight: 760;
+            user-select: none;
+        }
+        .card-more summary::-webkit-details-marker { display: none; }
+        .card-more[open] { grid-column: 1 / -1; }
+        .card-more[open] summary { border-color: var(--border-strong); background: #f8fafc; }
+        .more-panel {
+            grid-column: 1 / -1;
+            margin-top: 8px;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: #f8fafc;
+        }
+        .more-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+        .secondary-btn {
+            min-height: 36px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            background: white;
+            color: #334155;
+            padding: 7px;
+            cursor: pointer;
+            font-size: .69rem;
+            font-weight: 720;
+        }
+        .secondary-btn:hover { background: #f1f5f9; }
+        .secondary-btn.danger { color: #b91c1c; }
+        .select-move {
+            width: 100%;
+            min-height: 38px;
+            margin-top: 8px;
+            padding: 7px 9px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            background: white;
+            color: #475569;
+            outline: none;
+            font-size: .72rem;
+        }
+
+        .empty-state {
+            min-height: 180px;
+            display: grid;
+            place-items: center;
+            text-align: center;
+            border: 1px dashed var(--border-strong);
+            border-radius: 15px;
+            color: var(--text-muted);
+            padding: 24px;
+        }
+        .empty-state strong { display: block; color: #334155; margin-bottom: 5px; }
+        .empty-state span { font-size: .76rem; }
+
+        .reference-image-panel {
+            display: grid;
+            grid-template-columns: 84px minmax(0, 1fr) auto;
+            gap: 10px;
+            align-items: center;
+            margin: 0 0 11px;
+            padding: 9px;
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            background: #fbfdff;
+        }
+        .reference-image-panel.empty {
+            grid-template-columns: minmax(0, 1fr) auto;
+            border-style: dashed;
+            background: #fafafa;
+        }
+        .reference-image-thumb {
+            width: 84px;
+            height: 62px;
+            border: 0;
+            border-radius: 10px;
+            padding: 0;
+            background: #eef2f7;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .reference-image-thumb img { width: 100%; height: 100%; display: block; object-fit: contain; background: white; }
+        .reference-image-copy { min-width: 0; }
+        .reference-image-copy strong { display: block; font-size: .76rem; }
+        .reference-image-copy span { display: block; color: var(--text-muted); font-size: .67rem; margin-top: 3px; line-height: 1.3; }
+        .reference-image-action {
+            min-height: 34px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            background: white;
+            color: #334155;
+            padding: 6px 9px;
+            cursor: pointer;
+            font-size: .7rem;
+            font-weight: 750;
+            white-space: nowrap;
+        }
+        .reference-image-action:hover { background: #f8fafc; }
+        .asset-section-title { margin: 13px 0 7px; font-size: .7rem; font-weight: 850; color: #475569; text-transform: uppercase; letter-spacing: .05em; }
+        .asset-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-bottom: 11px; }
+        .asset-panel { border: 1px solid var(--border); border-radius: 13px; background: #fbfdff; padding: 9px; min-width: 0; }
+        .asset-panel.empty { border-style: dashed; background: #fafafa; }
+        .asset-top { display: flex; gap: 9px; align-items: center; min-width: 0; }
+        .asset-copy { min-width: 0; flex: 1; }
+        .asset-copy strong { display: block; font-size: .75rem; }
+        .asset-copy span { display: block; color: var(--text-muted); font-size: .65rem; margin-top: 3px; line-height: 1.3; overflow-wrap: anywhere; }
+        .asset-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
+        .asset-btn, .asset-paste-zone { min-height: 34px; border: 1px solid var(--border); border-radius: 9px; background: white; color: #334155; padding: 6px 8px; cursor: pointer; font-size: .67rem; font-weight: 760; text-align: center; }
+        .asset-btn:hover, .asset-paste-zone:hover, .asset-paste-zone:focus { background: #f8fafc; border-color: #94a3b8; outline: none; }
+        .asset-paste-zone.dragging, .paste-drop-zone.dragging { border-color: var(--primary); background: #eef2ff; box-shadow: 0 0 0 2px rgba(99,102,241,.14); }
+        .asset-paste-zone { grid-column: 1 / -1; border-style: dashed; }
+        .paste-drop-zone { display: grid; place-items: center; min-height: 112px; border: 2px dashed var(--border-strong); border-radius: 13px; background: #f8fafc; color: #475569; text-align: center; padding: 14px; cursor: pointer; margin-bottom: 11px; }
+        .paste-drop-zone strong { display: block; color: #0f172a; font-size: .84rem; }
+        .paste-drop-zone span { display: block; margin-top: 5px; font-size: .69rem; line-height: 1.4; }
+        .image-stage {
+            display: grid;
+            place-items: center;
+            min-height: 280px;
+            max-height: 70vh;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: #f1f5f9;
+            overflow: auto;
+            padding: 10px;
+        }
+        .image-stage img { max-width: 100%; max-height: 66vh; object-fit: contain; border-radius: 9px; background: white; }
+        .image-stage-status { color: var(--text-muted); font-size: .8rem; text-align: center; }
+        .image-upload-preview {
+            width: 100%;
+            min-height: 220px;
+            max-height: 54vh;
+            object-fit: contain;
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            background: #f8fafc;
+            display: none;
+        }
+        .image-upload-preview.ready { display: block; }
+        .file-picker {
+            display: block;
+            width: 100%;
+            border: 1px dashed var(--border-strong);
+            border-radius: 12px;
+            background: #f8fafc;
+            padding: 12px;
+            font-size: .78rem;
+        }
+        .upload-summary { color: var(--text-muted); font-size: .7rem; margin-top: 8px; line-height: 1.4; }
+        .image-modal-card { max-width: 880px; }
+
+        .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.58); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
+        .modal-overlay.visible { display: flex; }
+        .modal-card { background: white; width: 100%; max-width: 440px; max-height: calc(100vh - 32px); overflow: auto; border-radius: 20px; padding: 18px; box-shadow: 0 24px 60px rgba(0,0,0,.22); }
+        .modal-card h3 { margin: 0 0 15px; font-size: 1.02rem; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; margin-bottom: 5px; font-size: .76rem; font-weight: 750; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px 11px; border: 1px solid var(--border); border-radius: 11px; background: #f8fafc; outline: none; font-size: .86rem; }
+        .form-help { color: var(--text-muted); font-size: .67rem; margin-top: 4px; }
+        .modal-buttons { display: flex; gap: 8px; margin-top: 16px; }
+        .btn-cancel, .btn-submit, .btn-danger { border: 0; padding: 10px; border-radius: 10px; font-weight: 750; flex: 1; cursor: pointer; text-align: center; text-decoration: none; }
+        .btn-cancel { background: #f1f5f9; color: #475569; }
+        .btn-submit { background: var(--primary); color: white; }
+        .btn-danger { background: #fee2e2; color: #991b1b; }
+
+        .print-alert-notification {
+            position: fixed;
+            right: 18px;
+            bottom: 18px;
+            z-index: 2500;
+            display: none;
+            width: min(390px, calc(100vw - 36px));
+        }
+        .print-alert-notification.visible {
+            display: block;
+            animation: print-alert-enter .24s ease-out;
+        }
+        @keyframes print-alert-enter {
+            from { opacity: 0; transform: translateY(22px) scale(.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .print-alert-card {
+            width: 100%;
+            max-height: min(78vh, 680px);
+            overflow: auto;
+            border: 3px solid #fb923c;
+            border-radius: 18px;
+            background: white;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 18px 42px rgba(67, 20, 7, .28);
+        }
+        .print-alert-icon {
+            width: 72px;
+            height: 72px;
+            display: grid;
+            place-items: center;
+            margin: 0 auto 10px;
+            border-radius: 22px;
+            background: #fff7ed;
+            font-size: 2.2rem;
+            animation: print-alert-pulse 1.1s ease-in-out infinite;
+        }
+        @keyframes print-alert-pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(249,115,22,.28); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 11px rgba(249,115,22,0); }
+        }
+        .print-alert-card h3 { margin-bottom: 5px; color: #9a3412; font-size: 1.2rem; }
+        .print-alert-subtitle { margin: 0 0 13px; color: var(--text-muted); font-size: .78rem; }
+        .print-alert-details { display: grid; gap: 8px; text-align: left; }
+        .print-alert-detail { border: 1px solid #fed7aa; border-radius: 11px; background: #fffaf5; padding: 9px 10px; }
+        .print-alert-detail span { display: block; color: #9a3412; font-size: .62rem; font-weight: 850; text-transform: uppercase; letter-spacing: .04em; }
+        .print-alert-detail strong { display: block; margin-top: 2px; color: #431407; font-size: .86rem; overflow-wrap: anywhere; }
+        .print-alert-sound-note { margin: 10px 0 0; color: #b45309; font-size: .68rem; }
+        .print-alert-view-btn { background: #f97316; }
+        .print-alert-view-btn:hover { background: #ea580c; }
+
+        .login-screen { min-height: calc(100vh - 32px); display: flex; align-items: center; justify-content: center; }
+        .login-card { background: white; border: 1px solid var(--border); border-radius: 20px; padding: 20px; max-width: 390px; width: 100%; box-shadow: var(--shadow); }
+        .login-card h1 { margin: 0 0 4px; font-size: 1.2rem; }
+        .login-card p { margin: 0 0 18px; color: var(--text-muted); font-size: .8rem; }
+        .login-error { color: #b91c1c; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 8px; font-size: .76rem; margin-bottom: 10px; }
+        .history-list { display: flex; flex-direction: column; gap: 8px; }
+        .history-event { border: 1px solid var(--border); border-radius: 11px; padding: 10px; background: #f8fafc; }
+        .history-event strong { display: block; font-size: .79rem; }
+        .history-event span { display: block; color: var(--text-muted); font-size: .69rem; margin-top: 3px; }
+        .toast-container { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 3000; width: min(92vw, 440px); pointer-events: none; }
+        .toast { background: #0f172a; color: white; border-radius: 11px; padding: 11px 13px; box-shadow: 0 10px 20px rgba(0,0,0,.22); font-size: .8rem; margin-top: 8px; pointer-events: auto; }
+        .toast.error { background: #991b1b; }
+        .toast.success { background: #166534; }
+
+        @media (max-width: 700px) {
+            body { padding: 9px; }
+            .app-header { top: 6px; padding: 14px; border-radius: 18px; }
+            .brand { gap: 12px; }
+            .logo-icon { width: 60px; height: 60px; border-radius: 16px; }
+            .header-title h1 { font-size: 1.15rem; }
+            .header-title p { font-size: .77rem; }
+            .overview-row { grid-template-columns: 1fr; }
+            .btn-new-order { min-height: 44px; width: 100%; }
+            .stat-box { flex-direction: column; align-items: flex-start; gap: 1px; padding: 9px; }
+            .stat-label { font-size: .58rem; }
+            .order-list-shell { padding: 10px; border-radius: 17px; }
+            .card-main-row { grid-template-columns: 1fr; gap: 9px; }
+            .whatsapp-button { width: 100%; }
+            .card-action-row { grid-template-columns: 1fr; }
+            .card-more summary { width: 100%; }
+            .more-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .reference-image-panel { grid-template-columns: 72px minmax(0, 1fr); }
+            .reference-image-thumb { width: 72px; height: 58px; }
+            .reference-image-panel .reference-image-action { grid-column: 1 / -1; width: 100%; }
+            .reference-image-panel.empty { grid-template-columns: 1fr; }
+            .asset-grid { grid-template-columns: 1fr; }
+            .print-alert-notification { left: 9px; right: 9px; bottom: 9px; width: auto; }
+            .print-alert-card { max-height: 72vh; padding: 13px; }
+            .print-alert-icon { width: 58px; height: 58px; border-radius: 18px; font-size: 1.75rem; }
+            .print-alert-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .print-alert-detail:last-child { grid-column: 1 / -1; }
+        }
+
+        @media (max-width: 390px) {
+            .stats-panel { grid-template-columns: repeat(3, 1fr); }
+            .topbar { align-items: flex-start; }
+            .header-status { font-size: 0; }
+            .header-status #connectionText { font-size: .68rem; }
+        }
+
+
+        .app-version {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin: 18px 0 4px;
+            color: var(--text-muted);
+            font-size: .68rem;
+            letter-spacing: .01em;
+        }
+        .app-version strong { color: var(--text-main); }
+        .version-dot {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: #00c817;
+        }
+    </style>
+</head>
+<body>
+
+<section class="login-screen" id="loginScreen" hidden>
+    <div class="login-card">
+        <h1>Sellos ChacaÃ­to</h1>
+        <p>Acceso interno a pedidos y producciÃ³n.</p>
+        <div class="login-error" id="loginError" hidden></div>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="loginEmail">Correo</label>
+                <input type="email" id="loginEmail" autocomplete="username" required>
+            </div>
+            <div class="form-group">
+                <label for="loginPassword">ContraseÃ±a</label>
+                <input type="password" id="loginPassword" autocomplete="current-password" required minlength="6">
+            </div>
+            <button class="btn-submit" id="loginBtn" type="submit" style="width:100%;">Entrar</button>
+        </form>
+    </div>
+</section>
+
+<div class="app-container" id="appContainer" hidden>
+    <header class="app-header">
+        <div class="topbar">
+            <div class="brand">
+                <div class="logo-icon"><img src="assets/logo.png?v=9.2.2" alt="Logo Sellos ChacaÃ­to"></div>
+                <div class="header-title">
+                    <h1>Sellos ChacaÃ­to</h1>
+                    <p>Sistema de producciÃ³n</p>
+                </div>
+            </div>
+            <div class="header-status">
+                <span class="connection-dot" id="connectionDot"></span>
+                <span id="connectionText">Conectandoâ€¦</span>
+                <button class="header-action-btn" id="printAlertsBtn" type="button">ðŸ”” Activar alertas</button>
+                <button class="header-action-btn" id="installAppBtn" type="button" hidden>Instalar aplicaciÃ³n</button>
+                <strong id="currentUserLabel">Equipo</strong>
+                <button id="logoutBtn" type="button" hidden>Salir</button>
+            </div>
+        </div>
+
+        <div class="overview-row">
+            <div class="stats-panel">
+                <div class="stat-box"><span class="stat-number" id="statTotal">0</span><span class="stat-label">Pedidos</span></div>
+                <div class="stat-box"><span class="stat-number" id="statTodayDone">0</span><span class="stat-label">Empacados hoy</span></div>
+                <div class="stat-box"><span class="stat-number" id="statCompleted">0</span><span class="stat-label">Listos</span></div>
+            </div>
+            <button class="btn-new-order" id="openModalBtn" type="button">+ Nuevo pedido</button>
+        </div>
+
+        <div class="search-input-wrapper">
+            <span class="search-icon">âŒ•</span>
+            <input type="search" id="searchWhatsapp" placeholder="Buscar cliente, pedido, WhatsApp o FINAâ€¦" autocomplete="off">
+        </div>
+    </header>
+
+    <main class="workspace" id="kanbanBoard"></main>
+    <footer class="app-version" aria-label="VersiÃ³n de la aplicaciÃ³n">
+        <strong>Sellos ChacaÃ­to</strong>
+        <span class="version-dot"></span>
+        <span>V9.2.2</span>
+        <span>Build 2026.07.31</span>
+    </footer>
+</div>
+
+<div class="modal-overlay" id="orderModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-card">
+        <h3 id="modalTitle">âœ¨ Nuevo Pedido</h3>
+        <form id="orderForm">
+            <input type="hidden" id="editOrderId">
+            <div class="form-group">
+                <label for="designer">DiseÃ±ador *</label>
+                <select id="designer" required>
+                    <option value="ABRIL">Abril</option>
+                    <option value="ALVARO">Ãlvaro</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="whatsapp">NÃºmero de WhatsApp *</label>
+                <input type="tel" id="whatsapp" required inputmode="tel" placeholder="Ej. 04124001716" maxlength="24">
+                <div class="form-help">Acepta 0412â€¦, 58412â€¦ o +58 412â€¦</div>
+            </div>
+            <div class="form-group">
+                <label for="clientName">Nombre del cliente</label>
+                <input type="text" id="clientName" maxlength="120" placeholder="Ej. Juan PÃ©rez">
+            </div>
+            <div class="form-group">
+                <label for="orderNotes">Notas</label>
+                <textarea id="orderNotes" rows="3" maxlength="1500" placeholder="Detalles del selloâ€¦"></textarea>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-cancel" id="cancelModalBtn">Cancelar</button>
+                <button type="submit" class="btn-submit" id="saveBtnText">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-overlay" id="finaModal" role="dialog" aria-modal="true" aria-labelledby="finaModalTitle">
+    <div class="modal-card">
+        <h3 id="finaModalTitle">ðŸ“„ Nota de Entrega FINA</h3>
+        <form id="finaForm">
+            <input type="hidden" id="finaOrderId">
+            <div class="form-group">
+                <label for="finaNumberInput">NÃºmero de Nota FINA *</label>
+                <input type="text" id="finaNumberInput" required maxlength="80" placeholder="Ej. FINA-001234">
+                <div class="form-help">No se puede avanzar a FINA o etapas posteriores sin este nÃºmero.</div>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-cancel" id="cancelFinaBtn">Cancelar</button>
+                <button type="submit" class="btn-submit" id="saveFinaBtn">Guardar Nota</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-overlay" id="historyModal" role="dialog" aria-modal="true" aria-labelledby="historyModalTitle">
+    <div class="modal-card">
+        <h3 id="historyModalTitle">ðŸ•’ Historial del pedido</h3>
+        <div class="history-list" id="historyList"></div>
+        <div class="modal-buttons"><button type="button" class="btn-cancel" id="closeHistoryBtn">Cerrar</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="whatsappModal" role="dialog" aria-modal="true" aria-labelledby="whatsappModalTitle">
+    <div class="modal-card">
+        <h3 id="whatsappModalTitle">💬 Abrir WhatsApp</h3>
+        <p style="font-size:.82rem;color:var(--text-muted);">El navegador bloqueó la ventana automática. Usa este botón para continuar.</p>
+        <div class="modal-buttons">
+            <button type="button" class="btn-cancel" id="closeWhatsappBtn">Cerrar</button>
+            <a class="btn-submit" id="whatsappFallbackLink" href="#" target="_blank" rel="noopener">Abrir WhatsApp</a>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="whatsappOptionsModal" role="dialog" aria-modal="true" aria-labelledby="whatsappOptionsTitle">
+    <div class="modal-card">
+        <h3 id="whatsappOptionsTitle">📱 Opciones de WhatsApp</h3>
+        <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:1rem;">Selecciona una opción para contactar al cliente:</p>
+        <div style="display:flex;flex-direction:column;gap:0.75rem;">
+            <a class="btn-submit" id="waOptNormal" href="#" target="_blank" rel="noopener" style="background:var(--success);border-color:var(--success);">Hablar con el cliente (Normal)</a>
+            <div style="font-size:0.8rem;font-weight:600;margin-top:0.5rem;">Respuestas Rápidas:</div>
+            <a class="btn-submit" id="waOptApprove" href="#" target="_blank" rel="noopener" style="background:#f1f5f9;color:var(--text-main);border-color:var(--border);">APROBACIÓN (Diseño)</a>
+            <a class="btn-submit" id="waOptPayment" href="#" target="_blank" rel="noopener" style="background:#f1f5f9;color:var(--text-main);border-color:var(--border);">PAGO (Soporte)</a>
+        </div>
+        <div class="modal-buttons" style="margin-top:1.5rem;">
+            <button type="button" class="btn-cancel" id="closeWaOptionsBtn">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="imageViewerModal" role="dialog" aria-modal="true" aria-labelledby="imageViewerTitle">
+    <div class="modal-card image-modal-card">
+        <h3 id="imageViewerTitle">ðŸ–¼ Imagen de referencia</h3>
+        <div class="image-stage" id="imageViewerStage">
+            <span class="image-stage-status" id="imageViewerStatus">Cargando imagenâ€¦</span>
+            <img id="imageViewerImg" alt="Imagen de referencia del sello" hidden>
+        </div>
+        <div class="modal-buttons">
+            <button type="button" class="btn-cancel" id="closeImageViewerBtn">Cerrar</button>
+            <a class="btn-submit" id="openImageOnlyLink" href="#" target="_blank" rel="noopener" hidden>Abrir imagen sola</a>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="imageUploadModal" role="dialog" aria-modal="true" aria-labelledby="imageUploadTitle">
+    <div class="modal-card image-modal-card">
+        <h3 id="imageUploadTitle">Agregar imagen</h3>
+        <form id="imageUploadForm">
+            <input type="hidden" id="imageOrderId">
+            <input type="hidden" id="imageAssetType" value="reference">
+            <div class="paste-drop-zone" id="pasteDropZone" tabindex="0">
+                <div>
+                    <strong id="pasteDropTitle">Pega la imagen aquÃ­ con Ctrl+V</strong>
+                    <span>TambiÃ©n puedes arrastrarla desde Windows o usar el selector de archivo debajo.</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="referenceImageInput">Subir imagen desde archivo</label>
+                <input class="file-picker" type="file" id="referenceImageInput" accept="image/*">
+                <div class="form-help">JPG, PNG, WEBP, captura de pantalla o imagen copiada desde Illustrator.</div>
+            </div>
+            <img class="image-upload-preview" id="imageUploadPreview" alt="Vista previa de la imagen seleccionada">
+            <div class="upload-summary" id="imageUploadSummary">Pega, arrastra o selecciona una imagen.</div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-cancel" id="cancelImageUploadBtn">Cancelar</button>
+                <button type="submit" class="btn-submit" id="saveImageBtn" disabled>Guardar imagen</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<aside class="print-alert-notification" id="printAlertModal" role="alert" aria-live="assertive" aria-labelledby="printAlertTitle" aria-describedby="printAlertSubtitle">
+    <div class="print-alert-card">
+        <div class="print-alert-icon" aria-hidden="true">ðŸ–¨ï¸ </div>
+        <h3 id="printAlertTitle">Â¡Nuevo pedido para impresiÃ³n!</h3>
+        <p class="print-alert-subtitle" id="printAlertSubtitle">Un pedido acaba de entrar en la etapa de ImpresiÃ³n.</p>
+        <div class="print-alert-details">
+            <div class="print-alert-detail"><span>Cliente</span><strong id="printAlertClient">Cliente sin nombre</strong></div>
+            <div class="print-alert-detail"><span>DiseÃ±ador</span><strong id="printAlertDesigner">â€”</strong></div>
+            <div class="print-alert-detail"><span>FINA</span><strong id="printAlertFina">â€”</strong></div>
+            <div class="print-alert-detail"><span>Pedido</span><strong id="printAlertNotes">Sin detalles.</strong></div>
+        </div>
+        <p class="print-alert-sound-note" id="printAlertSoundNote" hidden>El aviso visual funciona. Toca la pantalla para habilitar el sonido en esta sesiÃ³n.</p>
+        <div class="modal-buttons">
+            <button type="button" class="btn-cancel" id="closePrintAlertBtn">âœ“ Recibido</button>
+            <button type="button" class="btn-submit print-alert-view-btn" id="viewPrintAlertBtn">Ver pedido</button>
+        </div>
+    </div>
+</aside>
+
+<div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+<script>
+    "use strict";
+
+    /*
+      Acceso directo sin correo ni contraseÃ±a.
+      Abril y Ã lvaro se mantienen como diseÃ±adores asignados a cada pedido.
+    */
+    const REQUIRE_AUTH = false;
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD7YzgDdk38Ij3bNEKISra_UWDA8i7vQNQ",
+        authDomain: "seguimiento-sellos-chacaito.firebaseapp.com",
+        databaseURL: "https://seguimiento-sellos-chacaito-default-rtdb.firebaseio.com",
+        projectId: "seguimiento-sellos-chacaito",
+        storageBucket: "seguimiento-sellos-chacaito.firebasestorage.app",
+        messagingSenderId: "62441533319",
+        appId: "1:62441533319:web:16cdcf3ae7ab4e39676d22"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
+    const SERVER_TIMESTAMP = firebase.database.ServerValue.TIMESTAMP;
+
+    const statuses = [
+        { id: "design_sent", name: "DiseÃ±o Enviado", color: "#3b82f6", responsible: "DiseÃ±o" },
+        { id: "waiting_payment", name: "Espera de Pago", color: "#eab308", responsible: "Cliente" },
+        { id: "fina", name: "FINA", color: "#ef4444", responsible: "AdministraciÃ³n" },
+        { id: "printing", name: "ImpresiÃ³n", color: "#f97316", responsible: "DiseÃ±o / impresiÃ³n" },
+        { id: "production", name: "En ProducciÃ³n", color: "#6366f1", responsible: "TÃ©cnica" },
+        { id: "finished", name: "Terminado", color: "#16a34a", responsible: "TÃ©cnica" },
+        { id: "packed", name: "Empacado", color: "#14b8a6", responsible: "AtenciÃ³n / entrega" }
+    ];
+
+    const FINA_INDEX = statuses.findIndex(status => status.id === "fina");
+    const PRINTING_INDEX = statuses.findIndex(status => status.id === "printing");
+    const PACKED_INDEX = statuses.findIndex(status => status.id === "packed");
+    const LEGACY_DESIGNING_IDS = new Set(["designing"]);
+    const LEGACY_DESIGNING_NAMES = new Set(["DiseÃ±ando"]);
+    const LEGACY_DELIVERED_IDS = new Set(["delivered"]);
+    const LEGACY_DELIVERED_NAMES = new Set(["Entregado"]);
+    const LEGACY_STATUS_MAP = {
+        approved: "waiting_payment",
+        paid: "fina",
+        received_production: "finished"
+    };
+    const LEGACY_STATUS_NAME_MAP = {
+        "Aprobado": "waiting_payment",
+        "Pagado": "fina",
+        "Recibo de FINA": "fina",
+        "ProducciÃ³n": "production",
+        "Recibido de ProducciÃ³n": "finished"
+    };
+    const IMAGE_AVAILABLE_INDEX = FINA_INDEX;
+    const MAX_SOURCE_IMAGE_BYTES = 12 * 1024 * 1024;
+    const MAX_STORED_IMAGE_BYTES = 850 * 1024;
+    const PRINT_ALERTS_STORAGE_KEY = "sellosChacaitoPrintAlertsV921Enabled";
+
+    let allOrdersData = {};
+    let allImageThumbs = {};
+    let allFinaReceiptThumbs = {};
+    let searchTerm = "";
+    let activeStatusFilter = "all";
+    let activeQuickFilter = "all";
+    let activeView = "active";
+    let deferredInstallPrompt = null;
+    let currentActor = null;
+    let ordersListenerStarted = false;
+    let pendingFinaAction = null;
+    let pendingImageUpload = null;
+    let pendingImageType = "reference";
+    let imageViewerRequestToken = 0;
+    let previousOrderStatuses = null;
+    let printAlertsEnabled = localStorage.getItem(PRINT_ALERTS_STORAGE_KEY) === "true";
+    let printAudioContext = null;
+    let printAudioUnlocked = false;
+    let allPrintAlertsData = {};
+    let activePrintAlert = null;
+    let printAlertQueue = [];
+    const queuedPrintAlertEvents = new Set();
+
+    const $ = id => document.getElementById(id);
+
+    function showModal(element) {
+        element.classList.add("visible");
+        const focusable = element.querySelector("input:not([type='hidden']), textarea, select, button");
+        if (focusable) setTimeout(() => focusable.focus(), 30);
+    }
+
+    function hideModal(element) { element.classList.remove("visible"); }
+
+    function showToast(message, type = "") {
+        const toast = document.createElement("div");
+        toast.className = `toast ${type}`.trim();
+        toast.textContent = message;
+        $("toastContainer").appendChild(toast);
+        setTimeout(() => toast.remove(), 4200);
+    }
+
+    function updatePrintAlertsButton() {
+        const button = $("printAlertsBtn");
+        if (!button) return;
+        button.classList.toggle("active", printAlertsEnabled);
+        button.textContent = printAlertsEnabled ? "ðŸ”” Alertas activas" : "ðŸ”• Alertas apagadas";
+        button.title = printAlertsEnabled
+            ? "Este dispositivo recibe avisos de ImpresiÃ³n. Toca para desactivarlos."
+            : "Toca para que este dispositivo reciba los avisos de ImpresiÃ³n.";
+    }
+
+    function getPrintAudioContext() {
+        if (printAudioContext) return printAudioContext;
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return null;
+        printAudioContext = new AudioContextClass();
+        return printAudioContext;
+    }
+
+    async function unlockPrintAudio() {
+        const context = getPrintAudioContext();
+        if (!context) {
+            printAudioUnlocked = false;
+            updatePrintAlertsButton();
+            showToast("Este navegador no permite reproducir el sonido de alerta.", "error");
+            return false;
+        }
+        try {
+            if (context.state === "suspended") await context.resume();
+            printAudioUnlocked = context.state === "running";
+            updatePrintAlertsButton();
+            return printAudioUnlocked;
+        } catch (error) {
+            console.warn("No se pudo activar el sonido:", error);
+            printAudioUnlocked = false;
+            updatePrintAlertsButton();
+            return false;
+        }
+    }
+
+    function playPrintAlertSound() {
+        if (!printAlertsEnabled || !printAudioUnlocked || !printAudioContext) return false;
+        const context = printAudioContext;
+        if (context.state !== "running") {
+            printAudioUnlocked = false;
+            updatePrintAlertsButton();
+            return false;
+        }
+
+        const start = context.currentTime;
+        const notes = [
+            { frequency: 784, offset: 0, duration: .16 },
+            { frequency: 988, offset: .19, duration: .19 },
+            { frequency: 1175, offset: .42, duration: .28 }
+        ];
+        notes.forEach(note => {
+            const oscillator = context.createOscillator();
+            const gain = context.createGain();
+            oscillator.type = "sine";
+            oscillator.frequency.setValueAtTime(note.frequency, start + note.offset);
+            gain.gain.setValueAtTime(.0001, start + note.offset);
+            gain.gain.exponentialRampToValueAtTime(.22, start + note.offset + .025);
+            gain.gain.exponentialRampToValueAtTime(.0001, start + note.offset + note.duration);
+            oscillator.connect(gain);
+            gain.connect(context.destination);
+            oscillator.start(start + note.offset);
+            oscillator.stop(start + note.offset + note.duration + .03);
+        });
+        return true;
+    }
+
+    async function activatePrintAlerts() {
+        printAlertsEnabled = true;
+        localStorage.setItem(PRINT_ALERTS_STORAGE_KEY, "true");
+        let notificationPermissionRequest = null;
+        if ("Notification" in window && Notification.permission === "default" && location.protocol === "https:") {
+            try { notificationPermissionRequest = Notification.requestPermission(); }
+            catch (error) { console.warn("Permiso de notificaciones:", error); }
+        }
+        const unlocked = await unlockPrintAudio();
+        if (unlocked) {
+            playPrintAlertSound();
+            showToast("Alertas de ImpresiÃ³n activadas. Ese serÃ¡ el sonido del aviso.", "success");
+        }
+        if (notificationPermissionRequest) {
+            try { await notificationPermissionRequest; }
+            catch (error) { console.warn("Permiso de notificaciones:", error); }
+        }
+        syncPendingPrintAlerts();
+    }
+
+    function deactivatePrintAlerts() {
+        printAlertsEnabled = false;
+        localStorage.setItem(PRINT_ALERTS_STORAGE_KEY, "false");
+        printAlertQueue = [];
+        queuedPrintAlertEvents.clear();
+        hideModal($("printAlertModal"));
+        activePrintAlert = null;
+        updatePrintAlertsButton();
+        showToast("Alertas de ImpresiÃ³n apagadas en este dispositivo.");
+    }
+
+    async function togglePrintAlerts() {
+        if (printAlertsEnabled) deactivatePrintAlerts();
+        else await activatePrintAlerts();
+    }
+
+    function createPrintAlertToken(id) {
+        return `${id}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+
+    function buildPrintAlertRecord(id, order, eventToken = createPrintAlertToken(id), orderUpdatedAt = SERVER_TIMESTAMP) {
+        return {
+            orderId: id,
+            eventToken,
+            clientName: order.clientName || "Cliente sin nombre",
+            designer: order.designer || "Sin asignar",
+            finaNumber: order.finaNumber || "",
+            orderNotes: order.orderNotes || "",
+            orderUpdatedAt,
+            createdAt: SERVER_TIMESTAMP,
+            createdBy: currentActor && currentActor.name ? currentActor.name : "Equipo Sellos ChacaÃ­to",
+            acknowledgedAt: null,
+            acknowledgedBy: null
+        };
+    }
+
+    function printAlertEventKey(id, alert) {
+        return `${id}:${alert.eventToken || alert.createdAt || alert.orderUpdatedAt || "pending"}`;
+    }
+
+    function ensurePersistentPrintAlert(id, order) {
+        const transitionAt = Number(order.updatedAt || order.lastActionAt || Date.now());
+        const candidate = buildPrintAlertRecord(id, order, createPrintAlertToken(id), transitionAt);
+        db.ref(`printAlerts/${id}`).transaction(current => {
+            const currentTransitionAt = Number(current && current.orderUpdatedAt || 0);
+            if (current && currentTransitionAt >= transitionAt) return;
+            return candidate;
+        }, (error) => {
+            if (error) console.warn("No se pudo respaldar la alerta de ImpresiÃ³n:", error);
+        }, false);
+    }
+
+    function showSystemPrintNotification(id, order, eventToken) {
+        if (document.visibilityState === "visible" || !("Notification" in window) || Notification.permission !== "granted") return;
+        const title = "Pedido para impresiÃ³n";
+        const body = `${order.clientName || "Cliente sin nombre"} Â· FINA ${order.finaNumber || "sin nÃºmero"}`;
+        const options = {
+            body,
+            icon: "assets/icon-192.png",
+            badge: "assets/favicon-32x32.png",
+            tag: `printing-${id}-${eventToken || "pending"}`,
+            renotify: true,
+            data: { url: "./" }
+        };
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.ready
+                .then(registration => registration.showNotification(title, options))
+                .catch(error => console.warn("NotificaciÃ³n del sistema:", error));
+        } else {
+            try { new Notification(title, options); }
+            catch (error) { console.warn("NotificaciÃ³n del sistema:", error); }
+        }
+    }
+
+    function displayPrintAlert(item) {
+        const { id, alert, eventKey } = item;
+        const order = Object.assign({}, allOrdersData[id] || {}, alert);
+        activePrintAlert = { id, eventToken: alert.eventToken || "", eventKey };
+        $("printAlertClient").textContent = order.clientName || "Cliente sin nombre";
+        $("printAlertDesigner").textContent = order.designer || "Sin asignar";
+        $("printAlertFina").textContent = order.finaNumber || "Sin nÃºmero FINA";
+        $("printAlertNotes").textContent = order.orderNotes || "Sin detalles del pedido.";
+        const sounded = playPrintAlertSound();
+        $("printAlertSoundNote").hidden = sounded;
+        showModal($("printAlertModal"));
+        showSystemPrintNotification(id, order, alert.eventToken);
+    }
+
+    function showNextPrintAlert() {
+        if (!printAlertsEnabled || $("printAlertModal").classList.contains("visible")) return;
+        while (printAlertQueue.length) {
+            const next = printAlertQueue.shift();
+            const current = allPrintAlertsData[next.id];
+            if (current && !current.acknowledgedAt && printAlertEventKey(next.id, current) === next.eventKey) {
+                displayPrintAlert(next);
+                return;
+            }
+            queuedPrintAlertEvents.delete(next.eventKey);
+        }
+    }
+
+    function enqueuePrintAlert(id, alert) {
+        if (!printAlertsEnabled) return;
+        const eventKey = printAlertEventKey(id, alert);
+        if (queuedPrintAlertEvents.has(eventKey)) return;
+        queuedPrintAlertEvents.add(eventKey);
+        printAlertQueue.push({ id, alert: { ...alert }, eventKey });
+        showNextPrintAlert();
+    }
+
+    function dismissActivePrintAlertLocally() {
+        const dismissed = activePrintAlert;
+        hideModal($("printAlertModal"));
+        activePrintAlert = null;
+        if (dismissed) queuedPrintAlertEvents.delete(dismissed.eventKey);
+        setTimeout(showNextPrintAlert, 180);
+    }
+
+    function focusPrintOrder(id) {
+        if (!id) return;
+        activeView = "active";
+        activeQuickFilter = "all";
+        activeStatusFilter = "printing";
+        searchTerm = "";
+        $("searchWhatsapp").value = "";
+        updateUI();
+        setTimeout(() => {
+            const card = document.querySelector(`[data-order-id="${CSS.escape(id)}"]`);
+            if (!card) return;
+            card.scrollIntoView({ behavior: "smooth", block: "center" });
+            card.classList.add("print-alert-focus");
+            setTimeout(() => card.classList.remove("print-alert-focus"), 1800);
+        }, 80);
+    }
+
+    async function acknowledgeActivePrintAlert(openOrderAfter = false) {
+        const acknowledged = activePrintAlert;
+        if (!acknowledged) return;
+        const closeButton = $("closePrintAlertBtn");
+        const viewButton = $("viewPrintAlertBtn");
+        closeButton.disabled = true;
+        viewButton.disabled = true;
+        try {
+            await db.ref(`printAlerts/${acknowledged.id}`).transaction(current => {
+                if (!current || current.acknowledgedAt) return;
+                if (acknowledged.eventToken && current.eventToken !== acknowledged.eventToken) return;
+                return Object.assign({}, current, {
+                    acknowledgedAt: SERVER_TIMESTAMP,
+                    acknowledgedBy: currentActor && currentActor.name ? currentActor.name : "TÃ©cnica"
+                });
+            }, undefined, false);
+            dismissActivePrintAlertLocally();
+            if (openOrderAfter) focusPrintOrder(acknowledged.id);
+        } catch (error) {
+            console.error(error);
+            showToast(`No se pudo confirmar la alerta: ${error.message}`, "error");
+        } finally {
+            closeButton.disabled = false;
+            viewButton.disabled = false;
+        }
+    }
+
+    function closePrintAlert() { return acknowledgeActivePrintAlert(false); }
+
+    function viewActivePrintAlertOrder() { return acknowledgeActivePrintAlert(true); }
+
+    function syncPendingPrintAlerts() {
+        const pendingEventKeys = new Set();
+        Object.entries(allPrintAlertsData)
+            .filter(([, alert]) => alert && !alert.acknowledgedAt)
+            .sort(([, a], [, b]) => Number(a.createdAt || 0) - Number(b.createdAt || 0))
+            .forEach(([id, alert]) => {
+                const eventKey = printAlertEventKey(id, alert);
+                pendingEventKeys.add(eventKey);
+                if (!activePrintAlert || activePrintAlert.eventKey !== eventKey) enqueuePrintAlert(id, alert);
+            });
+
+        printAlertQueue = printAlertQueue.filter(item => pendingEventKeys.has(item.eventKey));
+        if (activePrintAlert && !pendingEventKeys.has(activePrintAlert.eventKey)) dismissActivePrintAlertLocally();
+        else showNextPrintAlert();
+    }
+
+    function processOrderSnapshot(nextOrders) {
+        const nextStatuses = new Map();
+        Object.entries(nextOrders).forEach(([id, order]) => {
+            if (!order) return;
+            const nextIndex = statusIndexFromOrder(order);
+            nextStatuses.set(id, nextIndex);
+            if (previousOrderStatuses && previousOrderStatuses.has(id)) {
+                const previousIndex = previousOrderStatuses.get(id);
+                if (previousIndex !== PRINTING_INDEX && nextIndex === PRINTING_INDEX && !isOrderArchived(order)) {
+                    ensurePersistentPrintAlert(id, order);
+                }
+            }
+        });
+        previousOrderStatuses = nextStatuses;
+        allOrdersData = nextOrders;
+        updateUI();
+    }
+
+    function setButtonBusy(button, busy, busyText) {
+        if (!button) return;
+        if (busy) {
+            button.dataset.originalText = button.textContent;
+            button.textContent = busyText || "Guardandoâ€¦";
+            button.disabled = true;
+        } else {
+            button.textContent = button.dataset.originalText || button.textContent;
+            button.disabled = false;
+        }
+    }
+
+    function roleLabel(role) {
+        return ({ admin: "Administrador", designer: "DiseÃ±o", production: "ProducciÃ³n" })[role] || role || "Sin rol";
+    }
+
+    function canManageOrders() {
+        return currentActor && (currentActor.role === "admin" || currentActor.role === "designer");
+    }
+
+    function canModifyFromStatus(statusIndex) {
+        if (canManageOrders()) return true;
+        return currentActor && currentActor.role === "production" && statusIndex >= FINA_INDEX;
+    }
+
+    function isLegacyDelivered(order) {
+        if (!order) return false;
+        return LEGACY_DELIVERED_IDS.has(String(order.statusId || "")) || LEGACY_DELIVERED_NAMES.has(String(order.status || ""));
+    }
+
+    function isOrderArchived(order) {
+        return !!order && (order.archived === true || isLegacyDelivered(order));
+    }
+
+    function statusIndexFromOrder(order) {
+        const statusId = String(order && order.statusId || "");
+        const statusName = String(order && order.status || "");
+        const mappedId = LEGACY_STATUS_MAP[statusId] || statusId;
+        const byId = mappedId ? statuses.findIndex(status => status.id === mappedId) : -1;
+        if (byId >= 0) return byId;
+        if (LEGACY_DESIGNING_IDS.has(statusId) || LEGACY_DESIGNING_NAMES.has(statusName)) return 0;
+        if (LEGACY_DELIVERED_IDS.has(statusId) || LEGACY_DELIVERED_NAMES.has(statusName)) return PACKED_INDEX;
+        const mappedNameId = LEGACY_STATUS_NAME_MAP[statusName];
+        if (mappedNameId) return statuses.findIndex(status => status.id === mappedNameId);
+        const byName = statuses.findIndex(status => status.name === statusName);
+        return byName >= 0 ? byName : 0;
+    }
+
+    function rgba(hex, alpha) {
+        const value = hex.replace("#", "");
+        const number = parseInt(value, 16);
+        const r = (number >> 16) & 255;
+        const g = (number >> 8) & 255;
+        const b = number & 255;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function normalizeWhatsAppNumber(rawNumber) {
+        if (!rawNumber) return null;
+        let digits = String(rawNumber).replace(/\D/g, "");
+        if (!digits) return null;
+
+        while (digits.startsWith("00")) digits = digits.slice(2);
+        if (digits.startsWith("580")) digits = "58" + digits.slice(3);
+        if (digits.startsWith("0") && digits.length === 11) digits = "58" + digits.slice(1);
+        else if (!digits.startsWith("58") && digits.length === 10) digits = "58" + digits;
+
+        if (!/^\d{10,15}$/.test(digits)) return null;
+        return digits;
+    }
+
+    function buildWhatsAppUrl(rawNumber, message = "") {
+        const number = normalizeWhatsAppNumber(rawNumber);
+        if (!number) return null;
+        const base = `https://wa.me/${number}`;
+        return message ? `${base}?text=${encodeURIComponent(message)}` : base;
+    }
+
+    function pickupMessage() {
+        // Mensaje sin emojis para mÃ¡xima compatibilidad con WhatsApp Web y Windows.
+        return [
+            "Â¡LISTO PARA ENTREGAR!",
+            "",
+            "Â¡Hola! Tu sello ya saliÃ³ de producciÃ³n y puedes pasar a buscarlo.",
+            "",
+            "UbicaciÃ³n: C.C. ARTA, Piso 1, Local 1-6 (ChacaÃ­to).",
+            "Horario: Lunes a Viernes | 8:00 AM - 5:00 PM.",
+            "",
+            "Â¡Nos vemos pronto!",
+            "SÃ­guenos en: @sellos.chacaito"
+        ].join("\n");
+    }
+
+    function openWhatsAppOptions(rawNumber) {
+        const waLinkNormal = buildWhatsAppUrl(rawNumber);
+        const msgApprove = "¡Hola! Estamos a la espera de que nos apruebes el diseño para poder avanzar con el pago y comenzar a trabajar en tu pedido. ¡Quedamos atentos!";
+        const msgPayment = "¡Hola! Nos encontramos a la espera del comprobante (soporte) de pago para proceder con la elaboración y despacho de tu pedido. ¡Gracias por tu confianza!";
+        
+        $("waOptNormal").href = waLinkNormal;
+        $("waOptApprove").href = buildWhatsAppUrl(rawNumber, msgApprove);
+        $("waOptPayment").href = buildWhatsAppUrl(rawNumber, msgPayment);
+        
+        showModal($("whatsappOptionsModal"));
+    }
+
+    function localDateString(date = new Date()) {
+        return date.toLocaleDateString("es-VE");
+    }
+
+    function localTimeString(date = new Date()) {
+        return date.toLocaleTimeString("es-VE", { hour: "2-digit", minute: "2-digit" });
+    }
+
+    function formatTimestamp(value) {
+        if (typeof value !== "number" || !Number.isFinite(value)) return "";
+        return new Date(value).toLocaleString("es-VE", { dateStyle: "short", timeStyle: "short" });
+    }
+
+    function isToday(timestamp) {
+        if (typeof timestamp !== "number" || !Number.isFinite(timestamp)) return false;
+        const date = new Date(timestamp);
+        const today = new Date();
+        return date.getFullYear() === today.getFullYear() && date.getMonth() === today.getMonth() && date.getDate() === today.getDate();
+    }
+
+    function packedActivityTimestamp(order) {
+        if (typeof order.packedAt === "number" && Number.isFinite(order.packedAt)) return order.packedAt;
+        const action = String(order.lastActionLabel || "").toLowerCase();
+        const legacyHistory = String(order.history || "").toLowerCase();
+        const looksLikePackingMove = action.includes("empacado") || legacyHistory.startsWith("movido a empacado");
+        if (!looksLikePackingMove) return null;
+        return orderActivityTimestamp(order);
+    }
+
+    function normalizeFina(value) {
+        return String(value || "").toUpperCase().replace(/[\s-]+/g, "").trim();
+    }
+
+    function finaDuplicateIds() {
+        const groups = new Map();
+        Object.entries(allOrdersData).forEach(([id, order]) => {
+            if (!order) return;
+            const key = normalizeFina(order.finaNumber);
+            if (!key) return;
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(id);
+        });
+        const duplicates = new Set();
+        groups.forEach(ids => { if (ids.length > 1) ids.forEach(id => duplicates.add(id)); });
+        return duplicates;
+    }
+
+    function findDuplicateFina(finaNumber, excludeId = "") {
+        const key = normalizeFina(finaNumber);
+        if (!key) return null;
+        for (const [id, order] of Object.entries(allOrdersData)) {
+            if (!order || id === excludeId) continue;
+            if (normalizeFina(order.finaNumber) === key) return { id, order };
+        }
+        return null;
+    }
+
+    function orderActivityTimestamp(order) {
+        const value = order && (order.lastActionAt || order.updatedAt || order.createdAt);
+        return typeof value === "number" && Number.isFinite(value) ? value : null;
+    }
+
+    function delayInfo(order, statusIndex) {
+        if (isOrderArchived(order)) return null;
+        const timestamp = orderActivityTimestamp(order);
+        if (!timestamp) return null;
+        const hours = Math.max(0, (Date.now() - timestamp) / 3600000);
+        if (hours < 24) return null;
+        const statusId = statuses[statusIndex].id;
+        const days = Math.floor(hours / 24);
+        const elapsed = days >= 1 ? `${days} ${days === 1 ? "dÃ­a" : "dÃ­as"}` : `${Math.floor(hours)} h`;
+        if (statusId === "packed") return { type: "waiting", text: `Esperando retiro Â· ${elapsed}`, hours };
+        if (["design_sent", "waiting_payment"].includes(statusId)) return { type: "waiting", text: `Esperando cliente Â· ${elapsed}`, hours };
+        return { type: hours >= 48 ? "danger" : "warning", text: `Sin movimiento Â· ${elapsed}`, hours };
+    }
+
+    function dataUrlByteSize(dataUrl) {
+        const comma = String(dataUrl || "").indexOf(",");
+        if (comma < 0) return 0;
+        const base64 = dataUrl.slice(comma + 1);
+        return Math.ceil(base64.length * 3 / 4);
+    }
+
+    function formatBytes(bytes) {
+        if (!Number.isFinite(bytes) || bytes <= 0) return "0 KB";
+        if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    function loadImageFile(file) {
+        return new Promise((resolve, reject) => {
+            const url = URL.createObjectURL(file);
+            const image = new Image();
+            image.onload = () => { URL.revokeObjectURL(url); resolve(image); };
+            image.onerror = () => { URL.revokeObjectURL(url); reject(new Error("No se pudo leer esta imagen. Prueba con JPG, PNG o WEBP.")); };
+            image.src = url;
+        });
+    }
+
+    function renderCompressedDataUrl(image, maxDimension, quality, scaleMultiplier = 1) {
+        const sourceWidth = image.naturalWidth || image.width;
+        const sourceHeight = image.naturalHeight || image.height;
+        const baseScale = Math.min(1, maxDimension / Math.max(sourceWidth, sourceHeight));
+        const scale = Math.min(1, baseScale * scaleMultiplier);
+        const width = Math.max(1, Math.round(sourceWidth * scale));
+        const height = Math.max(1, Math.round(sourceHeight * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d", { alpha: false });
+        if (!context) throw new Error("El navegador no pudo preparar la imagen.");
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, width, height);
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = "high";
+        context.drawImage(image, 0, 0, width, height);
+        return { dataUrl: canvas.toDataURL("image/jpeg", quality), width, height };
+    }
+
+    async function compressReferenceImage(file) {
+        if (!file || !String(file.type || "").startsWith("image/")) throw new Error("Selecciona un archivo de imagen.");
+        if (file.size > MAX_SOURCE_IMAGE_BYTES) throw new Error("La imagen original supera 12 MB.");
+        const image = await loadImageFile(file);
+        let full = null;
+        const scales = [1, .88, .76, .64];
+        const qualities = [.82, .74, .66, .58, .5];
+        outer: for (const scale of scales) {
+            for (const quality of qualities) {
+                const candidate = renderCompressedDataUrl(image, 1400, quality, scale);
+                candidate.bytes = dataUrlByteSize(candidate.dataUrl);
+                full = candidate;
+                if (candidate.bytes <= MAX_STORED_IMAGE_BYTES) break outer;
+            }
+        }
+        if (!full || full.bytes > 1100 * 1024) throw new Error("No se pudo comprimir suficientemente la imagen. Prueba recortÃ¡ndola primero.");
+        const thumb = renderCompressedDataUrl(image, 240, .68);
+        thumb.bytes = dataUrlByteSize(thumb.dataUrl);
+        return {
+            fullDataUrl: full.dataUrl,
+            thumbnailDataUrl: thumb.dataUrl,
+            fullBytes: full.bytes,
+            thumbBytes: thumb.bytes,
+            width: full.width,
+            height: full.height,
+            originalName: String(file.name || "imagen.jpg").slice(0, 160),
+            originalBytes: file.size
+        };
+    }
+
+    function assetConfig(type) {
+        if (type === "fina_receipt") return {
+            type,
+            title: "Recibo FINA",
+            singular: "recibo FINA",
+            icon: "ðŸ“„",
+            fullPath: "finaReceiptImages",
+            thumbPath: "finaReceiptThumbs",
+            hasField: "hasFinaReceiptImage",
+            nameField: "finaReceiptImageName",
+            updatedField: "finaReceiptImageUpdatedAt",
+            historyPrefix: "fina_receipt_image"
+        };
+        return {
+            type: "reference",
+            title: "DiseÃ±o del sello",
+            singular: "diseÃ±o del sello",
+            icon: "ðŸ–¼",
+            fullPath: "orderImages",
+            thumbPath: "orderImageThumbs",
+            hasField: "hasReferenceImage",
+            nameField: "referenceImageName",
+            updatedField: "referenceImageUpdatedAt",
+            historyPrefix: "reference_image"
+        };
+    }
+
+    function assetThumb(type, id) {
+        const source = type === "fina_receipt" ? allFinaReceiptThumbs : allImageThumbs;
+        return source[id] && source[id].dataUrl;
+    }
+
+    function assetExists(order, id, type) {
+        const config = assetConfig(type);
+        return order && (order[config.hasField] === true || !!assetThumb(type, id));
+    }
+
+    function resetImageUploadModal() {
+        pendingImageUpload = null;
+        $("imageUploadForm").reset();
+        $("imageAssetType").value = pendingImageType;
+        $("imageUploadPreview").removeAttribute("src");
+        $("imageUploadPreview").classList.remove("ready");
+        $("imageUploadSummary").textContent = "Pega, arrastra o selecciona una imagen.";
+        $("saveImageBtn").disabled = true;
+        $("pasteDropZone").classList.remove("dragging");
+    }
+
+    function openImageUploadModal(id, type = "reference") {
+        const order = allOrdersData[id];
+        if (!order) return;
+        const statusIndex = statusIndexFromOrder(order);
+        if (statusIndex < IMAGE_AVAILABLE_INDEX) return showToast("Las imÃ¡genes se habilitan desde Recibo de FINA.", "error");
+        if (isOrderArchived(order)) return showToast("Restaura el pedido antes de cambiar sus imÃ¡genes.", "error");
+        pendingImageType = type;
+        resetImageUploadModal();
+        const config = assetConfig(type);
+        const exists = assetExists(order, id, type);
+        $("imageOrderId").value = id;
+        $("imageAssetType").value = type;
+        $("imageUploadTitle").textContent = `${config.icon} ${exists ? "Reemplazar" : "Agregar"} ${config.singular}`;
+        $("pasteDropTitle").textContent = `Pega aquÃ­ ${config.singular} con Ctrl+V`;
+        showModal($("imageUploadModal"));
+        setTimeout(() => $("pasteDropZone").focus(), 60);
+    }
+
+    async function prepareImageFile(file, sourceLabel = "imagen") {
+        pendingImageUpload = null;
+        $("saveImageBtn").disabled = true;
+        $("imageUploadPreview").classList.remove("ready");
+        if (!file) return;
+        $("imageUploadSummary").textContent = "Comprimiendo imagenâ€¦";
+        try {
+            const processed = await compressReferenceImage(file);
+            if (!processed.originalName || processed.originalName === "imagen.jpg") processed.originalName = `${sourceLabel}-${Date.now()}.jpg`;
+            pendingImageUpload = processed;
+            $("imageUploadPreview").src = processed.fullDataUrl;
+            $("imageUploadPreview").classList.add("ready");
+            $("imageUploadSummary").textContent = `${processed.originalName} Â· ${processed.width}Ã—${processed.height} Â· ${formatBytes(processed.fullBytes)} despuÃ©s de comprimir`;
+            $("saveImageBtn").disabled = false;
+        } catch (error) {
+            console.error(error);
+            $("imageUploadSummary").textContent = error.message;
+            showToast(error.message, "error");
+        }
+    }
+
+    async function prepareSelectedImage(event) {
+        const file = event.target.files && event.target.files[0];
+        await prepareImageFile(file, "archivo");
+    }
+
+    function clipboardImageFile(event) {
+        const items = Array.from((event.clipboardData && event.clipboardData.items) || []);
+        const imageItem = items.find(item => item.kind === "file" && String(item.type || "").startsWith("image/"));
+        if (!imageItem) return null;
+        const blob = imageItem.getAsFile();
+        if (!blob) return null;
+        return new File([blob], `pegado-${Date.now()}.${blob.type === "image/png" ? "png" : "jpg"}`, { type: blob.type || "image/png" });
+    }
+
+    async function handleModalPaste(event) {
+        if (!$("imageUploadModal").classList.contains("visible")) return;
+        const file = clipboardImageFile(event);
+        if (!file) return;
+        event.preventDefault();
+        await prepareImageFile(file, "pegado");
+    }
+
+    async function handleAssetDrop(event, id, type) {
+        event.preventDefault();
+        event.currentTarget.classList.remove("dragging");
+        const file = Array.from(event.dataTransfer && event.dataTransfer.files || []).find(item => String(item.type || "").startsWith("image/"));
+        if (!file) return showToast("Arrastra un archivo de imagen.", "error");
+        await processAndSaveAssetImmediately(id, type, file, "arrastrado");
+    }
+
+    async function handleAssetPaste(event, id, type) {
+        const file = clipboardImageFile(event);
+        if (!file) return;
+        event.preventDefault();
+        await processAndSaveAssetImmediately(id, type, file, "pegado");
+    }
+
+    async function processAndSaveAssetImmediately(id, type, file, sourceLabel) {
+        const order = allOrdersData[id];
+        if (!order || isOrderArchived(order)) return;
+        const config = assetConfig(type);
+        const replacing = assetExists(order, id, type);
+        if (replacing && !window.confirm(`Este pedido ya tiene ${config.singular}. Â¿Deseas reemplazarlo?`)) return;
+        showToast(`Procesando ${config.singular}â€¦`);
+        try {
+            const processed = await compressReferenceImage(file);
+            if (!processed.originalName || processed.originalName === "imagen.jpg") processed.originalName = `${sourceLabel}-${Date.now()}.jpg`;
+            await saveAssetData(id, type, processed);
+            showToast(`${config.title} guardado.`, "success");
+        } catch (error) {
+            console.error(error);
+            showToast(`No se pudo guardar ${config.singular}: ${error.message}`, "error");
+        }
+    }
+
+    async function saveAssetData(id, type, processed) {
+        const order = allOrdersData[id];
+        if (!order || !processed) throw new Error("No hay una imagen vÃ¡lida.");
+        const config = assetConfig(type);
+        const replacing = assetExists(order, id, type);
+        const label = `${config.title} ${replacing ? "reemplazado" : "cargado"} por ${currentActor.name}`;
+        const updates = {
+            [`${config.fullPath}/${id}/fullDataUrl`]: processed.fullDataUrl,
+            [`${config.fullPath}/${id}/contentType`]: "image/jpeg",
+            [`${config.fullPath}/${id}/originalName`]: processed.originalName,
+            [`${config.fullPath}/${id}/byteSize`]: processed.fullBytes,
+            [`${config.fullPath}/${id}/width`]: processed.width,
+            [`${config.fullPath}/${id}/height`]: processed.height,
+            [`${config.fullPath}/${id}/updatedAt`]: SERVER_TIMESTAMP,
+            [`${config.thumbPath}/${id}/dataUrl`]: processed.thumbnailDataUrl,
+            [`${config.thumbPath}/${id}/updatedAt`]: SERVER_TIMESTAMP,
+            [`orders/${id}/${config.hasField}`]: true,
+            [`orders/${id}/${config.nameField}`]: processed.originalName,
+            [`orders/${id}/${config.updatedField}`]: SERVER_TIMESTAMP,
+            [`orders/${id}/updatedAt`]: SERVER_TIMESTAMP,
+            [`orders/${id}/lastActionLabel`]: label,
+            [`orders/${id}/lastActionAt`]: SERVER_TIMESTAMP,
+            [`orders/${id}/lastActionBy`]: currentActor.uid,
+            [`orders/${id}/history`]: compactLegacyHistory(`${config.title} ${replacing ? "reemplazado" : "cargado"}`, order.history),
+            ...makeHistoryUpdate(id, historyEvent(`${config.historyPrefix}_${replacing ? "replaced" : "uploaded"}`, label, { fileName: processed.originalName }))
+        };
+        await db.ref().update(updates);
+    }
+
+    async function saveReferenceImage(event) {
+        event.preventDefault();
+        const id = $("imageOrderId").value;
+        const type = $("imageAssetType").value || pendingImageType;
+        if (!allOrdersData[id] || !pendingImageUpload) return showToast("Pega, arrastra o selecciona una imagen vÃ¡lida.", "error");
+        const config = assetConfig(type);
+        const button = $("saveImageBtn");
+        setButtonBusy(button, true, "Guardando imagenâ€¦");
+        try {
+            await saveAssetData(id, type, pendingImageUpload);
+            hideModal($("imageUploadModal"));
+            resetImageUploadModal();
+            showToast(`${config.title} guardado.`, "success");
+        } catch (error) {
+            console.error(error);
+            showToast(`No se pudo guardar ${config.singular}: ${error.message}`, "error");
+        } finally {
+            setButtonBusy(button, false);
+        }
+    }
+
+    async function openOrderAsset(id, type = "reference") {
+        const order = allOrdersData[id];
+        if (!order) return;
+        const config = assetConfig(type);
+        const requestToken = ++imageViewerRequestToken;
+        $("imageViewerTitle").textContent = `${config.icon} ${config.title} Â· ${order.clientName || "Pedido"}`;
+        $("imageViewerImg").hidden = true;
+        $("imageViewerImg").removeAttribute("src");
+        $("imageViewerStatus").hidden = false;
+        $("imageViewerStatus").textContent = "Cargando imagenâ€¦";
+        $("openImageOnlyLink").hidden = true;
+        showModal($("imageViewerModal"));
+        try {
+            const snapshot = await db.ref(`${config.fullPath}/${id}/fullDataUrl`).once("value");
+            if (requestToken !== imageViewerRequestToken) return;
+            const dataUrl = snapshot.val();
+            if (!dataUrl) throw new Error(`Este pedido no tiene ${config.singular}.`);
+            $("imageViewerImg").src = dataUrl;
+            $("imageViewerImg").hidden = false;
+            $("imageViewerStatus").hidden = true;
+            $("openImageOnlyLink").href = dataUrl;
+            $("openImageOnlyLink").hidden = false;
+        } catch (error) {
+            console.error(error);
+            $("imageViewerStatus").textContent = `No se pudo cargar: ${error.message}`;
+        }
+    }
+
+    function openReferenceImage(id) { return openOrderAsset(id, "reference"); }
+
+    async function removeOrderAsset(id, type = "reference") {
+        const order = allOrdersData[id];
+        if (!order || isOrderArchived(order)) return;
+        const config = assetConfig(type);
+        if (!window.confirm(`Â¿Quitar ${config.singular} de este pedido?`)) return;
+        const label = `${config.title} eliminado por ${currentActor.name}`;
+        const updates = {
+            [`${config.fullPath}/${id}`]: null,
+            [`${config.thumbPath}/${id}`]: null,
+            [`orders/${id}/${config.hasField}`]: false,
+            [`orders/${id}/${config.nameField}`]: null,
+            [`orders/${id}/${config.updatedField}`]: null,
+            [`orders/${id}/updatedAt`]: SERVER_TIMESTAMP,
+            [`orders/${id}/lastActionLabel`]: label,
+            [`orders/${id}/lastActionAt`]: SERVER_TIMESTAMP,
+            [`orders/${id}/lastActionBy`]: currentActor.uid,
+            [`orders/${id}/history`]: compactLegacyHistory(`${config.title} eliminado`, order.history),
+            ...makeHistoryUpdate(id, historyEvent(`${config.historyPrefix}_removed`, label))
+        };
+        try {
+            await db.ref().update(updates);
+            showToast(`${config.title} eliminado.`, "success");
+        } catch (error) {
+            console.error(error);
+            showToast(`No se pudo eliminar ${config.singular}: ${error.message}`, "error");
+        }
+    }
+
+    function removeReferenceImage(id) { return removeOrderAsset(id, "reference"); }
+
+    function compactLegacyHistory(label, existingHistory) {
+        const newPart = `${label} (${localTimeString()})`;
+        const combined = existingHistory ? `${newPart} | ${existingHistory}` : newPart;
+        return combined.slice(0, 1800);
+    }
+
+    function actorSnapshot() {
+        return {
+            uid: currentActor && currentActor.uid ? currentActor.uid : "compatibility",
+            userName: currentActor && currentActor.name ? currentActor.name : "Equipo Sellos ChacaÃ­to",
+            role: currentActor && currentActor.role ? currentActor.role : "admin"
+        };
+    }
+
+    function historyEvent(action, label, extra = {}) {
+        return Object.assign(actorSnapshot(), {
+            action,
+            label,
+            timestamp: SERVER_TIMESTAMP
+        }, extra);
+    }
+
+    function makeHistoryUpdate(orderId, event) {
+        const historyKey = db.ref(`orderHistory/${orderId}`).push().key;
+        return { [`orderHistory/${orderId}/${historyKey}`]: event };
+    }
+
+    function applyActorToUI() {
+        $("currentUserLabel").textContent = `${currentActor.name} Â· ${roleLabel(currentActor.role)}`;
+        $("logoutBtn").hidden = !REQUIRE_AUTH;
+        $("openModalBtn").hidden = !canManageOrders();
+    }
+
+    function renderBoardStructure() {
+        const board = $("kanbanBoard");
+        board.replaceChildren();
+
+        const filters = document.createElement("nav");
+        filters.className = "filter-strip";
+        filters.id = "statusFilters";
+        filters.setAttribute("aria-label", "Filtrar pedidos por estado");
+        const filterDefinitions = [{ id: "all", name: "Todos", color: "#111827" }, ...statuses];
+        filterDefinitions.forEach((status, index) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = `filter-chip${activeStatusFilter === status.id ? " active" : ""}`;
+            button.dataset.filter = status.id;
+            if (status.id !== "all") {
+                const dot = document.createElement("span"); dot.className = "filter-chip-dot"; dot.style.background = status.color; button.appendChild(dot);
+            }
+            const label = document.createElement("span"); label.textContent = status.name;
+            const count = document.createElement("span"); count.className = "filter-chip-count"; count.id = status.id === "all" ? "filter-count-all" : `filter-count-${index - 1}`; count.textContent = "0";
+            button.append(label, count);
+            button.addEventListener("click", () => { activeStatusFilter = status.id; updateUI(); });
+            filters.appendChild(button);
+        });
+
+        const quickSection = document.createElement("section"); quickSection.className = "quick-filter-section";
+        const quickLabel = document.createElement("div"); quickLabel.className = "quick-filter-label"; quickLabel.textContent = "Filtros rÃ¡pidos";
+        const quickStrip = document.createElement("div"); quickStrip.className = "quick-filter-strip";
+        const quickDefinitions = [
+            { id:"all", name:"Sin filtro" }, { id:"delayed", name:"â ± Demorados" }, { id:"missing_fina", name:"âš  Falta FINA" },
+            { id:"ready", name:"ðŸ“¦ Listos para retirar" }, { id:"abril", name:"Abril" }, { id:"alvaro", name:"Ã lvaro" },
+            { id:"duplicates", name:"â§‰ FINA duplicada" }, { id:"missing_image", name:"ðŸ–¼ Sin imagen" },
+            { id:"archived", name:"ðŸ—„ Archivados", archived:true }
+        ];
+        quickDefinitions.forEach(item => {
+            const button=document.createElement("button"); button.type="button"; button.className=`quick-chip${item.archived ? " archived" : ""}`; button.dataset.quick=item.id; button.textContent=item.name;
+            button.addEventListener("click", () => {
+                if (item.id === "archived") { activeView = activeView === "archived" ? "active" : "archived"; activeQuickFilter = "all"; activeStatusFilter = "all"; }
+                else { activeView = "active"; activeQuickFilter = activeQuickFilter === item.id ? "all" : item.id; }
+                updateUI();
+            });
+            quickStrip.appendChild(button);
+        });
+        quickSection.append(quickLabel, quickStrip);
+
+        const shell = document.createElement("section"); shell.className = "order-list-shell";
+        const heading = document.createElement("div"); heading.className = "list-heading";
+        const title = document.createElement("h2"); title.id = "listTitle"; title.textContent = "Todos los pedidos";
+        const resultCount = document.createElement("span"); resultCount.id = "filteredCount"; resultCount.textContent = "0 pedidos";
+        heading.append(title, resultCount);
+        const list = document.createElement("div"); list.className = "order-list"; list.id = "orderList";
+        shell.append(heading, list);
+        board.append(filters, quickSection, shell);
+    }
+
+    function createButton(text, className, title, handler) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = className;
+        button.textContent = text;
+        if (title) button.title = title;
+        button.addEventListener("click", handler);
+        return button;
+    }
+
+    function createOrderCard(id, order, statusIndex) {
+        const status = statuses[statusIndex];
+        const card = document.createElement("article");
+        card.className = "order-card";
+        card.dataset.orderId = id;
+        card.style.setProperty("--status-color", status.color);
+
+        const mainRow = document.createElement("div");
+        mainRow.className = "card-main-row";
+
+        const identity = document.createElement("div");
+        const clientLine = document.createElement("div");
+        clientLine.className = "client-line";
+
+        const client = document.createElement("div");
+        client.className = "card-client";
+        client.textContent = order.clientName || "Cliente sin nombre";
+
+        const statusBadge = document.createElement("span");
+        statusBadge.className = "status-badge";
+        statusBadge.style.background = rgba(status.color, .12);
+        statusBadge.style.color = status.color;
+        const statusDot = document.createElement("span");
+        statusDot.className = "status-badge-dot";
+        const statusText = document.createElement("span");
+        statusText.textContent = status.name;
+        statusBadge.append(statusDot, statusText);
+        clientLine.append(client, statusBadge);
+
+        const designerName = order.designer || "ABRIL";
+        const designer = document.createElement("span");
+        designer.className = `designer-badge ${designerName === "ALVARO" ? "designer-alvaro" : "designer-abril"}`;
+        designer.textContent = designerName;
+        identity.append(clientLine, designer);
+
+        const whatsapp = document.createElement("button");
+        whatsapp.className = "whatsapp-button";
+        whatsapp.type = "button";
+        whatsapp.textContent = `💬 ${order.whatsapp || "Sin WhatsApp"}`;
+        const waLink = buildWhatsAppUrl(order.whatsapp);
+        if (waLink) {
+            whatsapp.addEventListener("click", () => openWhatsAppOptions(order.whatsapp));
+        } else {
+            whatsapp.classList.add("invalid");
+            whatsapp.title = "NÃºmero de WhatsApp invÃ¡lido";
+        }
+        mainRow.append(identity, whatsapp);
+        card.appendChild(mainRow);
+
+        const orderSummary = document.createElement("div");
+        orderSummary.className = "order-summary";
+        const orderLabel = document.createElement("span");
+        orderLabel.className = "order-summary-label";
+        orderLabel.textContent = "Pedido";
+        const orderText = document.createElement("p");
+        orderText.className = `order-summary-text${order.orderNotes ? "" : " empty"}`;
+        orderText.textContent = order.orderNotes || "Sin detalles del pedido.";
+        orderSummary.append(orderLabel, orderText);
+        card.appendChild(orderSummary);
+
+        const progress = document.createElement("div");
+        progress.className = "order-progress";
+        const progressHead = document.createElement("div");
+        progressHead.className = "progress-head";
+        const progressPosition = document.createElement("span");
+        const progressPercent = Math.round(((statusIndex + 1) / statuses.length) * 100);
+        progressPosition.textContent = `Progreso ${statusIndex + 1} de ${statuses.length} Â· ${progressPercent}%`;
+        const responsible = document.createElement("span");
+        responsible.className = "progress-responsible";
+        responsible.textContent = `Responsable: ${status.responsible}`;
+        progressHead.append(progressPosition, responsible);
+        const progressTrack = document.createElement("div");
+        progressTrack.className = "progress-track";
+        const progressFill = document.createElement("div");
+        progressFill.className = "progress-fill";
+        progressFill.style.width = `${progressPercent}%`;
+        progressTrack.appendChild(progressFill);
+        const progressSteps = document.createElement("div");
+        progressSteps.className = "progress-steps";
+        statuses.forEach((_, index) => {
+            const step = document.createElement("span");
+            step.className = `progress-step${index <= statusIndex ? " done" : ""}`;
+            progressSteps.appendChild(step);
+        });
+        progress.append(progressHead, progressTrack, progressSteps);
+        card.appendChild(progress);
+
+        const imageExists = assetExists(order, id, "reference");
+        const finaReceiptExists = assetExists(order, id, "fina_receipt");
+        if (statusIndex >= IMAGE_AVAILABLE_INDEX || imageExists || finaReceiptExists) {
+            const sectionTitle = document.createElement("div");
+            sectionTitle.className = "asset-section-title";
+            sectionTitle.textContent = "Documentos visuales";
+            card.appendChild(sectionTitle);
+            const assetGrid = document.createElement("div");
+            assetGrid.className = "asset-grid";
+
+            const buildAssetPanel = (type) => {
+                const config = assetConfig(type);
+                const exists = assetExists(order, id, type);
+                const thumbData = assetThumb(type, id);
+                const panel = document.createElement("div");
+                panel.className = `asset-panel${exists ? "" : " empty"}`;
+                const top = document.createElement("div");
+                top.className = "asset-top";
+                if (exists) {
+                    const thumbButton = document.createElement("button");
+                    thumbButton.type = "button";
+                    thumbButton.className = "reference-image-thumb";
+                    thumbButton.title = `Ver ${config.singular}`;
+                    if (thumbData) {
+                        const img = document.createElement("img");
+                        img.src = thumbData;
+                        img.alt = `${config.title} de ${order.clientName || "pedido"}`;
+                        thumbButton.appendChild(img);
+                    } else thumbButton.textContent = config.icon;
+                    thumbButton.addEventListener("click", () => openOrderAsset(id, type));
+                    top.appendChild(thumbButton);
+                }
+                const copy = document.createElement("div");
+                copy.className = "asset-copy";
+                const title = document.createElement("strong");
+                title.textContent = config.title;
+                const help = document.createElement("span");
+                help.textContent = exists ? (order[config.nameField] || "Toca la miniatura para verla grande.") : (type === "reference" ? "Pega el diseÃ±o que verÃ¡ la tÃ©cnica." : "Pega la captura del recibo FINA.");
+                copy.append(title, help);
+                top.appendChild(copy);
+                panel.appendChild(top);
+
+                if (!isOrderArchived(order) && canModifyFromStatus(statusIndex)) {
+                    const actions = document.createElement("div");
+                    actions.className = "asset-actions";
+                    if (exists) actions.appendChild(createButton("Ver", "asset-btn", `Ver ${config.singular}`, () => openOrderAsset(id, type)));
+                    actions.appendChild(createButton(exists ? "Reemplazar/Subir" : "Subir archivo", "asset-btn", `Subir ${config.singular}`, () => openImageUploadModal(id, type)));
+                    const pasteZone = createButton("Haz clic y pega con Ctrl+V Â· o arrastra aquÃ­", "asset-paste-zone", `Pegar o arrastrar ${config.singular}`, () => {
+                        pasteZone.focus();
+                        showToast(`Copia ${config.singular} y presiona Ctrl+V aquÃ­.`);
+                    });
+                    pasteZone.dataset.assetType = type;
+                    pasteZone.dataset.orderId = id;
+                    pasteZone.addEventListener("paste", event => handleAssetPaste(event, id, type));
+                    pasteZone.addEventListener("dragover", event => { event.preventDefault(); pasteZone.classList.add("dragging"); });
+                    pasteZone.addEventListener("dragleave", () => pasteZone.classList.remove("dragging"));
+                    pasteZone.addEventListener("drop", event => handleAssetDrop(event, id, type));
+                    actions.appendChild(pasteZone);
+                    panel.appendChild(actions);
+                }
+                return panel;
+            };
+
+            assetGrid.append(buildAssetPanel("reference"), buildAssetPanel("fina_receipt"));
+            card.appendChild(assetGrid);
+        }
+
+        const meta = document.createElement("div");
+        meta.className = "card-meta";
+        const created = document.createElement("span");
+        created.className = "meta-chip";
+        created.textContent = order.createdAt ? `Creado ${formatTimestamp(order.createdAt)}` : (order.date || "Fecha no disponible");
+        meta.appendChild(created);
+
+        const delayed = delayInfo(order, statusIndex);
+        if (delayed) {
+            const delay = document.createElement("span");
+            delay.className = `delay-badge ${delayed.type}`;
+            delay.textContent = delayed.text;
+            meta.appendChild(delay);
+        }
+        if (finaDuplicateIds().has(id)) {
+            const duplicate = document.createElement("span");
+            duplicate.className = "meta-chip duplicate-badge";
+            duplicate.textContent = "FINA duplicada";
+            meta.appendChild(duplicate);
+        }
+        if (isOrderArchived(order)) {
+            const archived = document.createElement("span");
+            archived.className = "meta-chip archived-badge";
+            archived.textContent = "Archivado";
+            meta.appendChild(archived);
+        }
+
+        const canModify = isOrderArchived(order) ? false : canModifyFromStatus(statusIndex);
+        if (order.finaNumber) {
+            const fina = createButton(`FINA ${order.finaNumber}`, "meta-chip fina", "Editar nÃºmero FINA", () => openFinaModal(id, order.finaNumber));
+            fina.disabled = !canModify;
+            meta.appendChild(fina);
+        } else if (statusIndex >= FINA_INDEX) {
+            const missing = document.createElement("span");
+            missing.className = "meta-chip alert";
+            missing.textContent = "Falta FINA";
+            meta.appendChild(missing);
+        }
+        card.appendChild(meta);
+
+        const actionRow = document.createElement("div");
+        actionRow.className = "card-action-row";
+
+        if (isOrderArchived(order)) {
+            actionRow.appendChild(createButton("â†© Restaurar pedido", "restore-btn", "Restaurar pedido archivado", () => restoreOrder(id)));
+        } else if (!canModify) {
+            const notice = document.createElement("div");
+            notice.className = "read-only-notice";
+            notice.textContent = "Solo lectura";
+            actionRow.appendChild(notice);
+        } else if (statusIndex < statuses.length - 1) {
+            const nextStatus = statuses[statusIndex + 1];
+            const advance = createButton("", "btn-advance", `Avanzar a ${nextStatus.name}`, () => requestMoveOrder(id, statusIndex + 1));
+            advance.append("Avanzar a ");
+            const bold = document.createElement("b");
+            bold.textContent = nextStatus.name;
+            advance.appendChild(bold);
+            actionRow.appendChild(advance);
+        } else {
+            const finish = createButton("âœ“ Cliente retirÃ³ Â· Archivar", "btn-advance", "Sacar este pedido de la lista activa conservando su historial", () => archiveOrder(id));
+            actionRow.appendChild(finish);
+        }
+
+        const more = document.createElement("details");
+        more.className = "card-more";
+        const summary = document.createElement("summary");
+        summary.textContent = "MÃ¡s opciones";
+        const panel = document.createElement("div");
+        panel.className = "more-panel";
+        const actions = document.createElement("div");
+        actions.className = "more-actions";
+
+        if (!isOrderArchived(order) && canModify) actions.appendChild(createButton("ðŸ“„ FINA", "secondary-btn", "Nota FINA", () => openFinaModal(id, order.finaNumber || "")));
+        if (!isOrderArchived(order) && canModify && statusIndex >= IMAGE_AVAILABLE_INDEX) actions.appendChild(createButton(imageExists ? "ðŸ–¼ Reemplazar diseÃ±o" : "ðŸ–¼ Agregar diseÃ±o", "secondary-btn", "DiseÃ±o del sello", () => openImageUploadModal(id, "reference")));
+        if (!isOrderArchived(order) && canModify && statusIndex >= IMAGE_AVAILABLE_INDEX) actions.appendChild(createButton(finaReceiptExists ? "ðŸ“„ Reemplazar recibo" : "ðŸ“„ Agregar recibo", "secondary-btn", "Imagen del recibo FINA", () => openImageUploadModal(id, "fina_receipt")));
+        if (!isOrderArchived(order) && canModify && imageExists) actions.appendChild(createButton("âœ• Quitar diseÃ±o", "secondary-btn danger", "Eliminar diseÃ±o del sello", () => removeOrderAsset(id, "reference")));
+        if (!isOrderArchived(order) && canModify && finaReceiptExists) actions.appendChild(createButton("âœ• Quitar recibo", "secondary-btn danger", "Eliminar imagen del recibo FINA", () => removeOrderAsset(id, "fina_receipt")));
+        if (!isOrderArchived(order) && canManageOrders()) actions.appendChild(createButton("âœï¸ Editar", "secondary-btn", "Editar pedido", () => editOrder(id)));
+        actions.appendChild(createButton("ðŸ•’ Historial", "secondary-btn", "Historial detallado", () => openHistoryModal(id)));
+        if (!isOrderArchived(order) && canManageOrders()) actions.appendChild(createButton("ðŸ—„ï¸ Archivar", "secondary-btn danger", "Archivar pedido", () => archiveOrder(id)));
+        if (canManageOrders()) actions.appendChild(createButton("ðŸ—‘ Eliminar definitivamente", "secondary-btn danger", "Borrar pedido, historial e imagen", () => deleteOrderPermanently(id)));
+        panel.appendChild(actions);
+
+        if (!isOrderArchived(order) && canModify) {
+            const select = document.createElement("select");
+            select.className = "select-move";
+            const placeholder = document.createElement("option");
+            placeholder.value = "";
+            placeholder.textContent = "Mover a otro estadoâ€¦";
+            select.appendChild(placeholder);
+            statuses.forEach((optionStatus, index) => {
+                if (index === statusIndex) return;
+                if (currentActor.role === "production" && index < FINA_INDEX) return;
+                const option = document.createElement("option");
+                option.value = String(index);
+                option.textContent = optionStatus.name;
+                select.appendChild(option);
+            });
+            select.addEventListener("change", () => {
+                const value = select.value;
+                select.value = "";
+                if (value !== "") requestMoveOrder(id, Number(value));
+            });
+            panel.appendChild(select);
+        }
+
+        more.append(summary, panel);
+        actionRow.appendChild(more);
+        card.appendChild(actionRow);
+        return card;
+    }
+
+    function updateUI() {
+        const counts = new Array(statuses.length).fill(0);
+        let totalActive = 0, totalReady = 0, packedToday = 0;
+        const duplicateIds = finaDuplicateIds();
+        const allEntries = Object.entries(allOrdersData).filter(([, order]) => !!order);
+        const activeEntries = allEntries.filter(([, order]) => !isOrderArchived(order));
+        activeEntries.forEach(([, order]) => {
+            const statusIndex = statusIndexFromOrder(order);
+            counts[statusIndex] += 1;
+            totalActive += 1;
+            if (statusIndex === PACKED_INDEX) {
+                totalReady += 1;
+                if (isToday(packedActivityTimestamp(order))) packedToday += 1;
+            }
+        });
+
+        document.querySelectorAll(".filter-chip").forEach(button => button.classList.toggle("active", button.dataset.filter === activeStatusFilter));
+        document.querySelectorAll(".quick-chip").forEach(button => {
+            const isArchived = button.dataset.quick === "archived";
+            button.classList.toggle("active", isArchived ? activeView === "archived" : (activeView === "active" && button.dataset.quick === activeQuickFilter));
+        });
+        const allCount = $("filter-count-all"); if (allCount) allCount.textContent = String(activeEntries.length);
+        statuses.forEach((_, index) => { const element = $(`filter-count-${index}`); if (element) element.textContent = String(counts[index]); });
+
+        let entries = allEntries.filter(([, order]) => activeView === "archived" ? isOrderArchived(order) : !isOrderArchived(order))
+            .sort(([, a], [, b]) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
+        const selectedStatus = statuses.find(status => status.id === activeStatusFilter);
+        $("listTitle").textContent = activeView === "archived" ? "Pedidos archivados" : (selectedStatus ? selectedStatus.name : "Todos los pedidos");
+        const list = $("orderList"); list.replaceChildren();
+
+        let visibleCount = 0;
+        entries.forEach(([id, order]) => {
+            const statusIndex = statusIndexFromOrder(order); const status = statuses[statusIndex];
+            const haystack = [order.whatsapp, order.clientName, order.orderNotes, order.finaNumber].map(v => String(v || "").toLowerCase());
+            const matchesSearch = !searchTerm || haystack.some(value => value.includes(searchTerm));
+            const matchesStatus = activeStatusFilter === "all" || status.id === activeStatusFilter;
+            let matchesQuick = true;
+            if (activeView === "active") {
+                if (activeQuickFilter === "delayed") matchesQuick = !!delayInfo(order, statusIndex);
+                else if (activeQuickFilter === "missing_fina") matchesQuick = statusIndex >= FINA_INDEX && !String(order.finaNumber || "").trim();
+                else if (activeQuickFilter === "ready") matchesQuick = status.id === "packed";
+                else if (activeQuickFilter === "abril") matchesQuick = String(order.designer || "ABRIL").toUpperCase() === "ABRIL";
+                else if (activeQuickFilter === "alvaro") matchesQuick = String(order.designer || "").toUpperCase() === "ALVARO";
+                else if (activeQuickFilter === "duplicates") matchesQuick = duplicateIds.has(id);
+                else if (activeQuickFilter === "missing_image") matchesQuick = statusIndex >= IMAGE_AVAILABLE_INDEX && order.hasReferenceImage !== true && !allImageThumbs[id];
+            }
+            if (!matchesSearch || !matchesStatus || !matchesQuick) return;
+            visibleCount += 1; list.appendChild(createOrderCard(id, order, statusIndex));
+        });
+
+        $("filteredCount").textContent = `${visibleCount} ${visibleCount === 1 ? "pedido" : "pedidos"}`;
+        if (!visibleCount) {
+            const empty=document.createElement("div"); empty.className="empty-state";
+            const content=document.createElement("div"); const title=document.createElement("strong");
+            title.textContent = activeView === "archived" ? "No hay pedidos archivados" : (searchTerm ? "No encontramos coincidencias" : "No hay pedidos con este filtro");
+            const help=document.createElement("span"); help.textContent = activeView === "archived" ? "Los pedidos archivados aparecerÃ¡n aquÃ­ y podrÃ¡n restaurarse." : "Cambia el estado, el filtro rÃ¡pido o la bÃºsqueda.";
+            content.append(title, help); empty.appendChild(content); list.appendChild(empty);
+        }
+        $("statTotal").textContent=String(totalActive); $("statTodayDone").textContent=String(packedToday); $("statCompleted").textContent=String(totalReady);
+    }
+
+    function openOrderModalForNew() {
+        $("orderForm").reset();
+        $("editOrderId").value = "";
+        $("modalTitle").textContent = "âœ¨ Nuevo Pedido";
+        $("saveBtnText").textContent = "Guardar";
+        showModal($("orderModal"));
+    }
+
+    function editOrder(id) {
+        const order = allOrdersData[id];
+        if (!order || !canManageOrders()) return;
+        $("editOrderId").value = id;
+        $("designer").value = order.designer || "ABRIL";
+        $("whatsapp").value = order.whatsapp || "";
+        $("clientName").value = order.clientName || "";
+        $("orderNotes").value = order.orderNotes || "";
+        $("modalTitle").textContent = "âœï¸ Editar Pedido";
+        $("saveBtnText").textContent = "Actualizar";
+        showModal($("orderModal"));
+    }
+
+    async function saveOrder(event) {
+        event.preventDefault();
+        if (!canManageOrders()) return showToast("Tu usuario no puede crear o editar pedidos.", "error");
+
+        const editId = $("editOrderId").value;
+        const designer = $("designer").value;
+        const whatsapp = $("whatsapp").value.trim();
+        const normalized = normalizeWhatsAppNumber(whatsapp);
+        const clientName = $("clientName").value.trim() || "Cliente sin nombre";
+        const orderNotes = $("orderNotes").value.trim();
+
+        if (!normalized) {
+            $("whatsapp").focus();
+            return showToast("Revisa el nÃºmero de WhatsApp.", "error");
+        }
+
+        const button = $("saveBtnText");
+        setButtonBusy(button, true, editId ? "Actualizandoâ€¦" : "Guardandoâ€¦");
+
+        try {
+            if (editId) {
+                const existing = allOrdersData[editId];
+                if (!existing) throw new Error("El pedido ya no existe.");
+                const label = `Pedido editado por ${currentActor.name}`;
+                const updates = {
+                    [`orders/${editId}/designer`]: designer,
+                    [`orders/${editId}/whatsapp`]: whatsapp,
+                    [`orders/${editId}/whatsappNormalized`]: normalized,
+                    [`orders/${editId}/clientName`]: clientName,
+                    [`orders/${editId}/orderNotes`]: orderNotes,
+                    [`orders/${editId}/updatedAt`]: SERVER_TIMESTAMP,
+                    [`orders/${editId}/lastActionLabel`]: label,
+                    [`orders/${editId}/lastActionAt`]: SERVER_TIMESTAMP,
+                    [`orders/${editId}/lastActionBy`]: currentActor.uid,
+                    [`orders/${editId}/history`]: compactLegacyHistory("Editado", existing.history),
+                    ...makeHistoryUpdate(editId, historyEvent("order_edited", label))
+                };
+                await db.ref().update(updates);
+                showToast("Pedido actualizado.", "success");
+            } else {
+                const orderId = db.ref("orders").push().key;
+                const label = `Pedido creado por ${currentActor.name}`;
+                const order = {
+                    designer,
+                    whatsapp,
+                    whatsappNormalized: normalized,
+                    clientName,
+                    orderNotes,
+                    status: statuses[0].name,
+                    statusId: statuses[0].id,
+                    finaNumber: "",
+                    date: localDateString(),
+                    createdAt: SERVER_TIMESTAMP,
+                    updatedAt: SERVER_TIMESTAMP,
+                    packedAt: null,
+                    archived: false,
+                    hasReferenceImage: false,
+                    referenceImageName: null,
+                    referenceImageUpdatedAt: null,
+                    history: `Creado ${localDateString()} - ${localTimeString()}`,
+                    lastActionLabel: label,
+                    lastActionAt: SERVER_TIMESTAMP,
+                    lastActionBy: currentActor.uid
+                };
+                const updates = {
+                    [`orders/${orderId}`]: order,
+                    ...makeHistoryUpdate(orderId, historyEvent("order_created", label, { toStatus: statuses[0].name }))
+                };
+                await db.ref().update(updates);
+                $("orderForm").reset();
+                showToast("Pedido guardado.", "success");
+            }
+            hideModal($("orderModal"));
+        } catch (error) {
+            console.error(error);
+            showToast(`No se pudo guardar: ${error.message}`, "error");
+        } finally {
+            setButtonBusy(button, false);
+        }
+    }
+
+    function openFinaModal(id, currentFina, targetIndex = null) {
+        const order = allOrdersData[id];
+        if (!order) return;
+        const currentIndex = statusIndexFromOrder(order);
+        if (!canModifyFromStatus(currentIndex) && !canManageOrders()) return showToast("No tienes permiso para modificar este pedido.", "error");
+
+        pendingFinaAction = targetIndex === null ? null : { id, targetIndex };
+        $("finaOrderId").value = id;
+        $("finaNumberInput").value = currentFina || "";
+        $("finaModalTitle").textContent = pendingFinaAction ? "ðŸ“„ FINA obligatoria para avanzar" : "ðŸ“„ NÃºmero de FINA";
+        showModal($("finaModal"));
+    }
+
+    function cancelFinaModal() {
+        pendingFinaAction = null;
+        $("finaForm").reset();
+        hideModal($("finaModal"));
+    }
+
+    async function saveFina(event) {
+        event.preventDefault();
+        const id = $("finaOrderId").value;
+        const finaNumber = $("finaNumberInput").value.trim();
+        const order = allOrdersData[id];
+        if (!order) return showToast("El pedido ya no existe.", "error");
+        if (!finaNumber) return showToast("El nÃºmero FINA es obligatorio.", "error");
+        const duplicateFina = findDuplicateFina(finaNumber, id);
+        if (duplicateFina) {
+            const other = duplicateFina.order;
+            return showToast(`FINA duplicada: ya pertenece a ${other.clientName || "otro cliente"} (${other.status || "sin estado"}).`, "error");
+        }
+
+        const targetIndex = pendingFinaAction && pendingFinaAction.id === id ? pendingFinaAction.targetIndex : null;
+        const button = $("saveFinaBtn");
+        setButtonBusy(button, true, "Guardandoâ€¦");
+
+        try {
+            const label = `FINA ${finaNumber} registrada por ${currentActor.name}`;
+            const updates = {
+                [`orders/${id}/finaNumber`]: finaNumber,
+                [`orders/${id}/updatedAt`]: SERVER_TIMESTAMP,
+                [`orders/${id}/lastActionLabel`]: label,
+                [`orders/${id}/lastActionAt`]: SERVER_TIMESTAMP,
+                [`orders/${id}/lastActionBy`]: currentActor.uid,
+                [`orders/${id}/history`]: compactLegacyHistory(`FINA: ${finaNumber}`, order.history),
+                ...makeHistoryUpdate(id, historyEvent("fina_saved", label, { finaNumber }))
+            };
+            await db.ref().update(updates);
+            // Mantiene el objeto local coherente si el cambio de estado ocurre antes
+            // de que llegue el siguiente evento en tiempo real.
+            order.finaNumber = finaNumber;
+            order.history = updates[`orders/${id}/history`];
+            hideModal($("finaModal"));
+            $("finaForm").reset();
+            pendingFinaAction = null;
+            showToast("NÃºmero FINA guardado.", "success");
+            if (targetIndex !== null) await performMoveOrder(id, targetIndex, finaNumber);
+        } catch (error) {
+            console.error(error);
+            showToast(`No se pudo guardar FINA: ${error.message}`, "error");
+        } finally {
+            setButtonBusy(button, false);
+        }
+    }
+
+    function requestMoveOrder(id, targetIndex) {
+        const order = allOrdersData[id];
+        if (!order) return;
+        const currentIndex = statusIndexFromOrder(order);
+        if (!canModifyFromStatus(currentIndex)) return showToast("No tienes permiso para mover este pedido.", "error");
+        if (!Number.isInteger(targetIndex) || !statuses[targetIndex] || targetIndex === currentIndex) return;
+
+        if (targetIndex >= FINA_INDEX && !String(order.finaNumber || "").trim()) {
+            openFinaModal(id, "", targetIndex);
+            return;
+        }
+        performMoveOrder(id, targetIndex, order.finaNumber || "");
+    }
+
+    async function performMoveOrder(id, targetIndex, knownFinaNumber = "") {
+        const order = allOrdersData[id];
+        if (!order) return;
+        const currentIndex = statusIndexFromOrder(order);
+        if (!canModifyFromStatus(currentIndex)) return showToast("No tienes permiso para mover este pedido.", "error");
+        const newStatus = statuses[targetIndex];
+        if (!newStatus) return;
+        if (targetIndex >= FINA_INDEX && !String(knownFinaNumber || order.finaNumber || "").trim()) {
+            return openFinaModal(id, "", targetIndex);
+        }
+
+        let popup = null;
+        let whatsappUrl = null;
+        if (targetIndex === PACKED_INDEX) {
+            whatsappUrl = buildWhatsAppUrl(order.whatsapp, pickupMessage());
+            if (whatsappUrl) {
+                popup = window.open("about:blank", "_blank");
+                if (popup) popup.opener = null;
+            }
+        }
+
+        const fromStatus = statuses[currentIndex].name;
+        const label = `Movido de ${fromStatus} a ${newStatus.name} por ${currentActor.name}`;
+        const updates = {
+            [`orders/${id}/status`]: newStatus.name,
+            [`orders/${id}/statusId`]: newStatus.id,
+            [`orders/${id}/updatedAt`]: SERVER_TIMESTAMP,
+            [`orders/${id}/lastActionLabel`]: label,
+            [`orders/${id}/lastActionAt`]: SERVER_TIMESTAMP,
+            [`orders/${id}/lastActionBy`]: currentActor.uid,
+            [`orders/${id}/history`]: compactLegacyHistory(`Movido a ${newStatus.name}`, order.history),
+            ...makeHistoryUpdate(id, historyEvent("status_changed", label, { fromStatus, toStatus: newStatus.name }))
+        };
+
+        if (targetIndex === PACKED_INDEX) updates[`orders/${id}/packedAt`] = SERVER_TIMESTAMP;
+        else if (currentIndex === PACKED_INDEX) updates[`orders/${id}/packedAt`] = null;
+        if (isLegacyDelivered(order)) updates[`orders/${id}/deliveredAt`] = null;
+        if (currentIndex !== PRINTING_INDEX && targetIndex === PRINTING_INDEX) {
+            updates[`printAlerts/${id}`] = buildPrintAlertRecord(id, order);
+        }
+
+        try {
+            await db.ref().update(updates);
+            showToast(`Pedido movido a ${newStatus.name}.`, "success");
+            if (whatsappUrl) {
+                if (popup && !popup.closed) popup.location.href = whatsappUrl;
+                else {
+                    $("whatsappFallbackLink").href = whatsappUrl;
+                    showModal($("whatsappModal"));
+                }
+            }
+        } catch (error) {
+            if (popup && !popup.closed) popup.close();
+            console.error(error);
+            showToast(`No se pudo cambiar el estado: ${error.message}`, "error");
+        }
+    }
+
+    async function archiveOrder(id) {
+        const order = allOrdersData[id];
+        if (!order || !canManageOrders()) return;
+        const accepted = window.confirm("Â¿Archivar este pedido? DejarÃ¡ de aparecer, pero conservarÃ¡ sus datos e historial.");
+        if (!accepted) return;
+
+        const label = `Pedido archivado por ${currentActor.name}`;
+        const updates = {
+            [`orders/${id}/archived`]: true,
+            [`orders/${id}/archivedAt`]: SERVER_TIMESTAMP,
+            [`orders/${id}/updatedAt`]: SERVER_TIMESTAMP,
+            [`orders/${id}/lastActionLabel`]: label,
+            [`orders/${id}/lastActionAt`]: SERVER_TIMESTAMP,
+            [`orders/${id}/lastActionBy`]: currentActor.uid,
+            [`orders/${id}/history`]: compactLegacyHistory("Archivado", order.history),
+            ...makeHistoryUpdate(id, historyEvent("order_archived", label))
+        };
+        try {
+            await db.ref().update(updates);
+            showToast("Pedido archivado. No fue eliminado.", "success");
+        } catch (error) {
+            console.error(error);
+            showToast(`No se pudo archivar: ${error.message}`, "error");
+        }
+    }
+
+    async function restoreOrder(id) {
+        const order = allOrdersData[id];
+        if (!order || !isOrderArchived(order) || !canManageOrders()) return;
+        const accepted = window.confirm("Â¿Restaurar este pedido a la lista activa?");
+        if (!accepted) return;
+        const label = `Pedido restaurado por ${currentActor.name}`;
+        const updates = {
+            [`orders/${id}/archived`]: false,
+            [`orders/${id}/archivedAt`]: null,
+            [`orders/${id}/status`]: statuses[PACKED_INDEX].name,
+            [`orders/${id}/statusId`]: statuses[PACKED_INDEX].id,
+            [`orders/${id}/packedAt`]: order.packedAt || SERVER_TIMESTAMP,
+            [`orders/${id}/deliveredAt`]: null,
+            [`orders/${id}/updatedAt`]: SERVER_TIMESTAMP,
+            [`orders/${id}/lastActionLabel`]: label,
+            [`orders/${id}/lastActionAt`]: SERVER_TIMESTAMP,
+            [`orders/${id}/lastActionBy`]: currentActor.uid,
+            [`orders/${id}/history`]: compactLegacyHistory("Restaurado", order.history),
+            ...makeHistoryUpdate(id, historyEvent("order_restored", label))
+        };
+        try { await db.ref().update(updates); showToast("Pedido restaurado.", "success"); }
+        catch (error) { console.error(error); showToast(`No se pudo restaurar: ${error.message}`, "error"); }
+    }
+
+    async function deleteOrderPermanently(id) {
+        const order = allOrdersData[id];
+        if (!order || !canManageOrders()) return;
+        const client = order.clientName || "Cliente sin nombre";
+        const accepted = window.confirm(`Â¿Eliminar definitivamente el pedido de ${client}?\n\nSe borrarÃ¡n el pedido, su historial, el diseÃ±o del sello, el recibo FINA y todas sus miniaturas. Esta acciÃ³n no se puede deshacer.`);
+        if (!accepted) return;
+        const verification = window.prompt('Para confirmar, escribe ELIMINAR:');
+        if (String(verification || "").trim().toUpperCase() !== "ELIMINAR") {
+            showToast("EliminaciÃ³n cancelada.");
+            return;
+        }
+
+        const updates = {
+            [`orders/${id}`]: null,
+            [`orderHistory/${id}`]: null,
+            [`orderImages/${id}`]: null,
+            [`orderImageThumbs/${id}`]: null,
+            [`finaReceiptImages/${id}`]: null,
+            [`finaReceiptThumbs/${id}`]: null,
+            [`printAlerts/${id}`]: null
+        };
+        try {
+            await db.ref().update(updates);
+            showToast("Pedido eliminado definitivamente de todo el sistema.", "success");
+        } catch (error) {
+            console.error(error);
+            showToast(`No se pudo eliminar: ${error.message}`, "error");
+        }
+    }
+
+    async function openHistoryModal(id) {
+        const order = allOrdersData[id];
+        if (!order) return;
+        $("historyList").replaceChildren();
+        const loading = document.createElement("div");
+        loading.className = "history-event";
+        loading.textContent = "Cargando historialâ€¦";
+        $("historyList").appendChild(loading);
+        showModal($("historyModal"));
+
+        try {
+            const snapshot = await db.ref(`orderHistory/${id}`).orderByChild("timestamp").limitToLast(50).once("value");
+            const events = [];
+            snapshot.forEach(child => events.push(child.val()));
+            events.reverse();
+            $("historyList").replaceChildren();
+
+            if (!events.length) {
+                const legacy = document.createElement("div");
+                legacy.className = "history-event";
+                const strong = document.createElement("strong");
+                strong.textContent = "Historial anterior";
+                const detail = document.createElement("span");
+                detail.textContent = order.history || "Este pedido todavÃ­a no tiene eventos detallados.";
+                legacy.append(strong, detail);
+                $("historyList").appendChild(legacy);
+                return;
+            }
+
+            events.forEach(event => {
+                const box = document.createElement("div");
+                box.className = "history-event";
+                const title = document.createElement("strong");
+                title.textContent = event.label || event.action || "AcciÃ³n";
+                const meta = document.createElement("span");
+                meta.textContent = `${event.userName || "Usuario"} Â· ${roleLabel(event.role)}${event.timestamp ? ` Â· ${formatTimestamp(event.timestamp)}` : ""}`;
+                box.append(title, meta);
+                $("historyList").appendChild(box);
+            });
+        } catch (error) {
+            console.error(error);
+            $("historyList").replaceChildren();
+            const box = document.createElement("div");
+            box.className = "history-event";
+            box.textContent = `No se pudo cargar el historial: ${error.message}`;
+            $("historyList").appendChild(box);
+        }
+    }
+
+    function startRealtimeListeners() {
+        if (ordersListenerStarted) return;
+        ordersListenerStarted = true;
+
+        db.ref(".info/connected").on("value", snapshot => {
+            const online = snapshot.val() === true;
+            $("connectionDot").className = `connection-dot ${online ? "online" : "offline"}`;
+            $("connectionText").textContent = online ? "Firebase conectado" : "Sin conexiÃ³n";
+        });
+
+        db.ref("orders").on("value", snapshot => {
+            processOrderSnapshot(snapshot.val() || {});
+        }, error => {
+            console.error(error);
+            showToast(`No se pudieron leer los pedidos: ${error.message}`, "error");
+        });
+
+        db.ref("printAlerts").on("value", snapshot => {
+            allPrintAlertsData = snapshot.val() || {};
+            syncPendingPrintAlerts();
+        }, error => {
+            console.error(error);
+            showToast(`No se pudieron leer las alertas pendientes: ${error.message}`, "error");
+        });
+
+        db.ref("orderImageThumbs").on("value", snapshot => {
+            allImageThumbs = snapshot.val() || {};
+            updateUI();
+        }, error => {
+            console.error(error);
+            showToast(`No se pudieron leer las miniaturas: ${error.message}`, "error");
+        });
+
+        db.ref("finaReceiptThumbs").on("value", snapshot => {
+            allFinaReceiptThumbs = snapshot.val() || {};
+            updateUI();
+        }, error => {
+            console.error(error);
+            showToast(`No se pudieron leer las miniaturas de FINA: ${error.message}`, "error");
+        });
+    }
+
+    async function loadUserProfile(user) {
+        const snapshot = await db.ref(`users/${user.uid}`).once("value");
+        const profile = snapshot.val();
+        if (!profile || profile.active !== true || !["admin", "designer", "production"].includes(profile.role)) {
+            throw new Error("Este usuario no tiene un perfil activo o un rol vÃ¡lido en /users.");
+        }
+        currentActor = {
+            uid: user.uid,
+            name: profile.name || user.email || "Usuario",
+            email: user.email || profile.email || "",
+            role: profile.role
+        };
+    }
+
+    function showApp() {
+        $("loginScreen").hidden = true;
+        $("appContainer").hidden = false;
+        applyActorToUI();
+        renderBoardStructure();
+        startRealtimeListeners();
+    }
+
+    async function initializeAccess() {
+        if (!REQUIRE_AUTH) {
+            currentActor = { uid: "compatibility", name: "Equipo Sellos ChacaÃ­to", role: "admin", email: "" };
+            showApp();
+            return;
+        }
+
+        $("loginScreen").hidden = false;
+        auth.onAuthStateChanged(async user => {
+            if (!user) {
+                $("appContainer").hidden = true;
+                $("loginScreen").hidden = false;
+                return;
+            }
+            try {
+                await loadUserProfile(user);
+                showApp();
+            } catch (error) {
+                console.error(error);
+                await auth.signOut();
+                $("loginError").textContent = error.message;
+                $("loginError").hidden = false;
+            }
+        });
+    }
+
+    async function login(event) {
+        event.preventDefault();
+        const email = $("loginEmail").value.trim();
+        const password = $("loginPassword").value;
+        const button = $("loginBtn");
+        $("loginError").hidden = true;
+        setButtonBusy(button, true, "Entrandoâ€¦");
+        try {
+            await auth.signInWithEmailAndPassword(email, password);
+        } catch (error) {
+            console.error(error);
+            $("loginError").textContent = "No se pudo iniciar sesiÃ³n. Revisa el correo, la contraseÃ±a y que el usuario estÃ© habilitado.";
+            $("loginError").hidden = false;
+        } finally {
+            setButtonBusy(button, false);
+        }
+    }
+
+    function setupPwa() {
+        if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+            window.addEventListener("load", () => navigator.serviceWorker.register("service-worker.js").catch(error => console.warn("Service worker:", error)));
+        }
+        window.addEventListener("beforeinstallprompt", event => {
+            event.preventDefault(); deferredInstallPrompt = event; $("installAppBtn").hidden = false;
+        });
+        $("installAppBtn").addEventListener("click", async () => {
+            if (!deferredInstallPrompt) return showToast("Usa el menÃº del navegador y elige Agregar a pantalla principal.");
+            deferredInstallPrompt.prompt(); await deferredInstallPrompt.userChoice; deferredInstallPrompt = null; $("installAppBtn").hidden = true;
+        });
+        window.addEventListener("appinstalled", () => { deferredInstallPrompt = null; $("installAppBtn").hidden = true; showToast("AplicaciÃ³n instalada.", "success"); });
+        updatePrintAlertsButton();
+        document.addEventListener("pointerdown", () => {
+            if (printAlertsEnabled && !printAudioUnlocked) unlockPrintAudio();
+        }, { capture: true });
+    }
+
+    function attachEvents() {
+        $("openModalBtn").addEventListener("click", openOrderModalForNew);
+        $("cancelModalBtn").addEventListener("click", () => hideModal($("orderModal")));
+        $("cancelFinaBtn").addEventListener("click", cancelFinaModal);
+        $("closeHistoryBtn").addEventListener("click", () => hideModal($("historyModal")));
+        $("closeWhatsappBtn").addEventListener("click", () => hideModal($("whatsappModal")));
+        $("closeWaOptionsBtn").addEventListener("click", () => hideModal($("whatsappOptionsModal")));
+        $("closeImageViewerBtn").addEventListener("click", () => { imageViewerRequestToken += 1; hideModal($("imageViewerModal")); });
+        $("cancelImageUploadBtn").addEventListener("click", () => { resetImageUploadModal(); hideModal($("imageUploadModal")); });
+        $("referenceImageInput").addEventListener("change", prepareSelectedImage);
+        $("imageUploadForm").addEventListener("submit", saveReferenceImage);
+        $("pasteDropZone").addEventListener("paste", handleModalPaste);
+        $("pasteDropZone").addEventListener("dragover", event => { event.preventDefault(); $("pasteDropZone").classList.add("dragging"); });
+        $("pasteDropZone").addEventListener("dragleave", () => $("pasteDropZone").classList.remove("dragging"));
+        $("pasteDropZone").addEventListener("drop", async event => {
+            event.preventDefault();
+            $("pasteDropZone").classList.remove("dragging");
+            const file = Array.from(event.dataTransfer && event.dataTransfer.files || []).find(item => String(item.type || "").startsWith("image/"));
+            if (!file) return showToast("Arrastra un archivo de imagen.", "error");
+            await prepareImageFile(file, "arrastrado");
+        });
+        document.addEventListener("paste", handleModalPaste);
+        $("orderForm").addEventListener("submit", saveOrder);
+        $("finaForm").addEventListener("submit", saveFina);
+        $("loginForm").addEventListener("submit", login);
+        $("logoutBtn").addEventListener("click", () => auth.signOut());
+        $("printAlertsBtn").addEventListener("click", togglePrintAlerts);
+        $("closePrintAlertBtn").addEventListener("click", closePrintAlert);
+        $("viewPrintAlertBtn").addEventListener("click", viewActivePrintAlertOrder);
+        $("searchWhatsapp").addEventListener("input", event => {
+            searchTerm = event.target.value.toLowerCase().trim();
+            updateUI();
+        });
+
+        [$("orderModal"), $("finaModal"), $("historyModal"), $("whatsappModal"), $("whatsappOptionsModal"), $("imageViewerModal"), $("imageUploadModal")].forEach(modal => {
+            modal.addEventListener("click", event => {
+                if (event.target !== modal) return;
+                if (modal === $("finaModal")) cancelFinaModal();
+                else if (modal === $("imageUploadModal")) { resetImageUploadModal(); hideModal(modal); }
+                else if (modal === $("imageViewerModal")) { imageViewerRequestToken += 1; hideModal(modal); }
+                else hideModal(modal);
+            });
+        });
+
+        document.addEventListener("keydown", event => {
+            if (event.key !== "Escape") return;
+            hideModal($("orderModal"));
+            hideModal($("historyModal"));
+            hideModal($("whatsappModal"));
+            hideModal($("whatsappOptionsModal"));
+            imageViewerRequestToken += 1;
+            hideModal($("imageViewerModal"));
+            resetImageUploadModal();
+            hideModal($("imageUploadModal"));
+            cancelFinaModal();
+        });
+    }
+
+    attachEvents();
+    setupPwa();
+    initializeAccess();
+</script>
+</body>
+</html>

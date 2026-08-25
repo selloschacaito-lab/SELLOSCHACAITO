@@ -1,0 +1,257 @@
+.pres-container {
+  display: flex;
+  gap: 2rem;
+  padding: 2rem;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  align-items: flex-start;
+}
+
+.pres-controls {
+  flex: 1;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+.controls-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.section-title {
+  font-size: 1rem;
+  font-weight: bold;
+  color: var(--text-main);
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-strong);
+  padding-bottom: 0.25rem;
+}
+
+.pres-section {
+  display: flex;
+  flex-direction: column;
+}
+
+/* --------------------------
+   PREVIEW DOCUMENT STYLES
+   (This must look like the user's image)
+-------------------------- */
+.pres-preview-wrapper {
+  flex: 2;
+  display: flex;
+  justify-content: center;
+  background-color: #f1f5f9;
+  padding: 2rem;
+  border-radius: 1rem;
+  overflow: auto;
+  min-height: 800px;
+}
+
+.pres-document {
+  background-color: white;
+  width: 210mm; /* A4 width */
+  min-height: 297mm; /* A4 height */
+  padding: 15mm;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid #cbd5e1;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #000;
+  box-sizing: border-box;
+}
+
+.pres-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.pres-logo {
+  margin-bottom: 10px;
+}
+
+.pres-company-name {
+  color: #e85d22;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.pres-company-rif {
+  color: #e85d22;
+  font-size: 12px;
+}
+
+.pres-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 3px solid #e85d22;
+  padding: 10px 20px;
+  margin-bottom: 20px;
+  color: #e85d22;
+  font-weight: bold;
+}
+
+.pres-date {
+  font-size: 20px;
+}
+
+.pres-title {
+  font-size: 36px;
+  letter-spacing: 2px;
+}
+
+.pres-number {
+  font-size: 20px;
+}
+
+.pres-client-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.pres-row {
+  display: flex;
+  align-items: flex-end;
+}
+
+.pres-label {
+  font-weight: bold;
+  width: 100px;
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+.pres-val {
+  flex: 1;
+  border-bottom: 1px solid #000;
+  min-height: 20px;
+  padding-bottom: 2px;
+  text-transform: uppercase;
+}
+
+.pres-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 3px solid #e85d22;
+  margin-bottom: 0;
+}
+
+.pres-table th {
+  border-bottom: 3px solid #e85d22;
+  border-right: 1px solid #e85d22;
+  padding: 8px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.pres-table th:last-child {
+  border-right: none;
+}
+
+.pres-table td {
+  border-right: 1px solid #e85d22;
+  padding: 6px 8px;
+  font-size: 14px;
+  height: 24px;
+}
+
+.pres-table td:last-child {
+  border-right: none;
+}
+
+.col-num { text-align: center; width: 5%; font-weight: bold; }
+.col-desc { text-align: left; width: 55%; font-weight: bold; }
+.col-qty { text-align: center; width: 10%; font-weight: bold; }
+.col-price { text-align: right; width: 15%; font-weight: bold; }
+.col-total { text-align: right; width: 15%; font-weight: bold; }
+
+.pres-totals-container {
+  display: flex;
+  border: 3px solid #e85d22;
+  border-top: none;
+  margin-bottom: 30px;
+}
+
+.pres-notes {
+  flex: 1;
+  padding: 10px;
+  color: #e85d22;
+  font-weight: bold;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  text-align: center;
+}
+
+.pres-totals {
+  width: 40%;
+  border-left: 1px solid #e85d22;
+  display: flex;
+  flex-direction: column;
+}
+
+.pres-total-row {
+  display: flex;
+  border-bottom: 1px solid #e85d22;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.pres-total-row:last-child {
+  border-bottom: none;
+}
+
+.pres-total-label {
+  padding: 6px 10px;
+  flex: 1;
+}
+
+.pres-total-val {
+  padding: 6px 10px;
+  width: 100px;
+  text-align: right;
+  border-left: 1px solid #e85d22;
+}
+
+.pres-footer {
+  text-align: center;
+  color: #e85d22;
+  font-weight: bold;
+  font-size: 12px;
+  margin-top: 40px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .pres-container {
+    flex-direction: column;
+  }
+  
+  .pres-controls, .pres-preview-wrapper {
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  .pres-document {
+    transform-origin: top center;
+    transform: scale(0.8);
+    margin-bottom: -150px; /* offset the scale */
+  }
+}
+@media (max-width: 768px) {
+  .pres-document {
+    transform: scale(0.5);
+    margin-bottom: -400px;
+  }
+}

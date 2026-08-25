@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convertidor de Excel a PDF</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- SheetJS for Excel parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <!-- jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- jsPDF AutoTable for tabular data in PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Excel a PDF <span class="highlight">Pro</span></h1>
+            <p>Convierte tus hojas de cálculo en documentos PDF elegantes en segundos.</p>
+        </header>
+
+        <main class="card">
+            <div class="upload-area" id="upload-area">
+                <input type="file" id="file-input" accept=".xlsx, .xls, .csv" hidden>
+                <div class="upload-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                </div>
+                <h3>Arrastra y suelta tu archivo aquí</h3>
+                <p>o <span class="browse-link" id="browse-btn">explora tus archivos</span></p>
+                <p class="file-hint">Formatos soportados: .xlsx, .xls, .csv</p>
+            </div>
+
+            <div class="file-info hidden" id="file-info">
+                <div class="file-details">
+                    <div class="file-icon">📊</div>
+                    <div class="file-name" id="file-name">archivo.xlsx</div>
+                </div>
+                <button class="remove-btn" id="remove-btn">✕</button>
+            </div>
+
+            <div class="actions">
+                <button class="convert-btn" id="convert-btn" disabled>
+                    <span class="btn-text">Convertir a PDF</span>
+                    <div class="loader hidden" id="loader"></div>
+                </button>
+            </div>
+        </main>
+        
+        <footer>
+            <p>Generado de forma segura en tu navegador. Tus archivos no se suben a ningún servidor.</p>
+        </footer>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>

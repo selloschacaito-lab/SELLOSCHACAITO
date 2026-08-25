@@ -1,0 +1,26 @@
+{
+  "name": "Sellos Chacaíto - Sistema de Producción",
+  "short_name": "Sellos Chacaíto",
+  "id": "./",
+  "description": "Sistema interno de pedidos y producción de Sellos Chacaíto.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f7f9",
+  "theme_color": "#00ef1b",
+  "lang": "es-VE",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
