@@ -2,13 +2,14 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { db } from '../firebase/config';
 import { ref, onValue } from 'firebase/database';
-import { Package, Search, Bell, MapPin, PanelLeft, FolderArchive, Plus } from 'lucide-react';
+import { Package, Search, Bell, MapPin, PanelLeft, FolderArchive, Plus, Sparkles } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import KanbanBoard from '../components/KanbanBoard';
 import OrderModal from '../components/OrderModal';
 import PrintAlertsModal from '../components/PrintAlertsModal';
 import NewOrderModal from '../components/NewOrderModal';
 import DeliveryMapModal from '../components/DeliveryMapModal';
+import QuickPasteModal from '../components/QuickPasteModal';
 
 function Dashboard() {
   const { toggleSidebar } = useOutletContext();
@@ -18,6 +19,7 @@ function Dashboard() {
   const [printAlerts, setPrintAlerts] = useState({});
   const [showAlertsModal, setShowAlertsModal] = useState(false);
   const [showNewOrderModal, setShowNewOrderModal] = useState(false);
+  const [showQuickPasteModal, setShowQuickPasteModal] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [orderToEdit, setOrderToEdit] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
@@ -193,6 +195,16 @@ function Dashboard() {
             >
               <FolderArchive size={14} /> <span className="hide-on-mobile">{showArchived ? 'Ocultar Arch.' : 'Archivados'}</span>
             </button>
+
+            <button 
+              className="btn-secondary" 
+              onClick={() => setShowQuickPasteModal(true)}
+              style={{ background: '#25D366', color: '#ffffff', border: 'none', padding: '0.25rem 0.65rem', fontSize: '0.8rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px', borderRadius: '0.5rem', minHeight: '32px' }}
+              title="Cargar pedido de WhatsApp en 1 segundo"
+            >
+              <Sparkles size={14} /> <span>⚡ WhatsApp</span>
+            </button>
+
             <button className="btn-new-order" onClick={() => setShowNewOrderModal(true)} style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem', minHeight: '32px' }}>
               <span className="hide-on-mobile">+ Nuevo pedido</span>
               <span className="show-on-mobile" style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>+</span>
@@ -230,6 +242,10 @@ function Dashboard() {
           alerts={printAlerts} 
           onClose={() => setShowAlertsModal(false)} 
         />
+      )}
+
+      {showQuickPasteModal && (
+        <QuickPasteModal onClose={() => setShowQuickPasteModal(false)} />
       )}
 
       {showNewOrderModal && (

@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { getProductById, getProducts } from '../services/db';
 import { useSelection } from '../context/SelectionContext';
 import LikeButton from '../components/LikeButton';
+import ProductDetailSkeleton from '../components/ProductDetailSkeleton';
 
 const formatDimensions = (dim) => {
   if (!dim) return '';
@@ -28,6 +29,7 @@ const ProductDetail = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const shareRef = useRef(null);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
   // Swipe gesture support
   const [touchStart, setTouchStart] = useState(null);
@@ -38,6 +40,7 @@ const ProductDetail = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       setLoading(true);
+      setIsAutoPlaying(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       const [data, allProds] = await Promise.all([
         getProductById(id),
@@ -67,6 +70,21 @@ const ProductDetail = () => {
     };
   }, [id]);
 
+  // Auto-slideshow effect every 1.5s
+  useEffect(() => {
+    if (!product?.variants || product.variants.length <= 1 || !isAutoPlaying || loading) return;
+
+    const interval = setInterval(() => {
+      setSelectedVariantIndex((prev) => (prev + 1) % product.variants.length);
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [product, isAutoPlaying, loading]);
+
+  const stopAutoPlay = () => {
+    if (isAutoPlaying) setIsAutoPlaying(false);
+  };
+
   useEffect(() => {
     setSelectedImageIndex(0);
   }, [selectedVariantIndex]);
@@ -82,18 +100,15 @@ const ProductDetail = () => {
   }, []);
 
   if (loading) {
-    return (
-      <main className="product-detail" style={{ padding: '4rem 0', textAlign: 'center', minHeight: '80vh' }}>
-        <p style={{ color: 'var(--color-text-secondary)', fontSize: '1.1rem' }}>Cargando producto...</p>
-      </main>
-    );
+    return <ProductDetailSkeleton isResellerMode={isResellerMode} />;
   }
 
   if (!product) {
     return (
       <main className="product-detail" style={{ padding: '4rem 1rem', textAlign: 'center', minHeight: '80vh' }}>
         <h2 style={{ fontSize: '1.75rem', marginBottom: '1rem', color: 'var(--color-text-main)' }}>Producto no encontrado</h2>
-        <Link to="/" className="btn btn-primary" style={{ display: 'inline-block', textDecoration: 'none', padding: '0.75rem 1.5rem', borderRadius: '10px' }}>
+        <p style={{ color: 'var(--color-text-secondary)', marginBottom: '2rem' }}>El sello que buscas no existe o fue retirado del catálogo.</p>
+        <Link to="/" className="btn btn-primary" style={{ padding: '0.8rem 1.5rem', textDecoration: 'none', borderRadius: '10px' }}>
           Volver al Catálogo
         </Link>
       </main>
@@ -103,38 +118,38 @@ const ProductDetail = () => {
   const variants = product.variants || [];
   const hasVariants = variants.length > 0;
   const currentVariant = hasVariants ? variants[selectedVariantIndex] : null;
-  const currentImages = currentVariant?.imageUrls || (currentVariant?.imageUrl ? [currentVariant.imageUrl] : []);
+  const currentImages = currentVariant
+    ? (currentVariant.imageUrls && currentVariant.imageUrls.length > 0 ? currentVariant.imageUrls : (currentVariant.imageUrl ? [currentVariant.imageUrl] : []))
+    : (product.singleImageUrls && product.singleImageUrls.length > 0 ? product.singleImageUrls : (product.singleImageUrl ? [product.singleImageUrl] : (product.imageUrls || [])));
   const price = isResellerMode ? (product.resellerPrice || Math.round(product.price * 0.8)) : product.price;
 
   const handleNextImage = (e) => {
     if (e) e.stopPropagation();
-    if (selectedImageIndex < currentImages.length - 1) {
-      setSelectedImageIndex(selectedImageIndex + 1);
+    stopAutoPlay();
+    if (currentImages.length > 1) {
+      setSelectedImageIndex((prev) => (prev + 1) % currentImages.length);
     } else if (variants.length > 1) {
       const nextVariantIndex = (selectedVariantIndex + 1) % variants.length;
       setSelectedVariantIndex(nextVariantIndex);
-      setSelectedImageIndex(0);
-    } else {
       setSelectedImageIndex(0);
     }
   };
 
   const handlePrevImage = (e) => {
     if (e) e.stopPropagation();
-    if (selectedImageIndex > 0) {
-      setSelectedImageIndex(selectedImageIndex - 1);
+    stopAutoPlay();
+    if (currentImages.length > 1) {
+      setSelectedImageIndex((prev) => (prev - 1 + currentImages.length) % currentImages.length);
     } else if (variants.length > 1) {
       const prevVariantIndex = (selectedVariantIndex - 1 + variants.length) % variants.length;
       setSelectedVariantIndex(prevVariantIndex);
-      const prevVariantImages = variants[prevVariantIndex].imageUrls || (variants[prevVariantIndex].imageUrl ? [variants[prevVariantIndex].imageUrl] : []);
-      setSelectedImageIndex(Math.max(0, prevVariantImages.length - 1));
-    } else {
-      setSelectedImageIndex(currentImages.length - 1);
+      setSelectedImageIndex(0);
     }
   };
 
-  const minSwipeDistance = 50;
+  const minSwipeDistance = 45;
   const onTouchStart = (e) => {
+    stopAutoPlay();
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
   };
@@ -251,7 +266,7 @@ const ProductDetail = () => {
             position: 'relative', borderBottom: '1px solid var(--color-border)'
           }}
         >
-          {currentVariant ? (
+          {currentImages.length > 0 ? (
             <>
               {(currentImages.length > 1 || variants.length > 1) && (
                 <button 
@@ -264,8 +279,8 @@ const ProductDetail = () => {
               
               <img 
                 key={`${selectedVariantIndex}-${selectedImageIndex}`}
-                src={currentImages[selectedImageIndex]} 
-                alt={`${product.name} en ${currentVariant.colorName}`} 
+                src={currentImages[selectedImageIndex] || currentImages[0]} 
+                alt={`${product.name} ${currentVariant ? `en ${currentVariant.colorName}` : ''}`} 
                 className="content-fade-in"
                 style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '1.25rem', userSelect: 'none' }} 
               />
@@ -279,13 +294,13 @@ const ProductDetail = () => {
                 </button>
               )}
               {currentImages.length > 1 && (
-                <div style={{ position: 'absolute', bottom: '10px', display: 'flex', gap: '0.4rem' }}>
+                <div style={{ position: 'absolute', bottom: '8px', display: 'flex', gap: '0.4rem', zIndex: 5 }}>
                   {currentImages.map((_, i) => (
-                    <span key={i} style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: i === selectedImageIndex ? 'var(--color-primary)' : 'var(--color-border)' }} />
+                    <span key={i} style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: i === selectedImageIndex ? 'var(--color-primary)' : 'rgba(0,0,0,0.25)' }} />
                   ))}
                 </div>
               )}
-              {!currentVariant.available && (
+              {currentVariant && !currentVariant.available && (
                 <div style={{
                   position: 'absolute', inset: 0,
                   backgroundColor: 'rgba(255,255,255,0.7)',
@@ -301,6 +316,42 @@ const ProductDetail = () => {
             <span style={{ color: 'var(--color-text-secondary)' }}>Sin fotos</span>
           )}
         </div>
+
+        {/* Fila de Miniaturas Interactivas (ej. Con tapa / Sin tapa) */}
+        {currentImages.length > 1 && (
+          <div style={{
+            display: 'flex',
+            gap: '0.5rem',
+            justifyContent: 'center',
+            padding: '0.65rem 0.75rem',
+            borderBottom: '1px solid var(--color-border)',
+            backgroundColor: 'var(--color-bg-secondary)',
+            overflowX: 'auto'
+          }}>
+            {currentImages.map((imgUrl, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setSelectedImageIndex(i)}
+                style={{
+                  width: '56px',
+                  height: '56px',
+                  padding: '3px',
+                  borderRadius: '10px',
+                  border: i === selectedImageIndex ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                  backgroundColor: 'var(--color-bg-main)',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  transition: 'all 0.2s ease',
+                  opacity: i === selectedImageIndex ? 1 : 0.65,
+                  boxShadow: i === selectedImageIndex ? '0 2px 8px rgba(71, 255, 0, 0.25)' : 'none'
+                }}
+              >
+                <img src={imgUrl} alt={`Foto ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Detalles del Producto */}
         <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column' }}>
@@ -385,7 +436,10 @@ const ProductDetail = () => {
                   return (
                     <div 
                       key={index}
-                      onClick={() => setSelectedVariantIndex(index)}
+                      onClick={() => {
+                        stopAutoPlay();
+                        setSelectedVariantIndex(index);
+                      }}
                       title={`${variant.colorName}${!isAvailable ? ' (Agotado)' : ''}`}
                       className={`color-circle ${selectedVariantIndex === index ? 'selected' : ''}`}
                       style={{

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import CategoryCard from '../components/CategoryCard';
+import ProductSkeletonGrid from '../components/ProductSkeletonGrid';
 import { getProducts, getCategories } from '../services/db';
 import { useScrollAnimation } from '../hooks/useScrollAnimation';
 
@@ -57,6 +58,18 @@ const Catalog = ({ isResellerMode = false }) => {
   // Filtrado y Ordenamiento de Productos
   const filteredProducts = products
     .filter(p => {
+      // 1. Control Manual: Si está pausado/oculto, no mostrar
+      if (p.isVisible === false) return false;
+
+      // 2. Control Automático de Inventario: Si no tiene stock, no mostrar
+      if (p.variants && p.variants.length > 0) {
+        const hasStock = p.variants.some(v => v.available !== false);
+        if (!hasStock) return false;
+      } else if (p.available === false) {
+        return false;
+      }
+
+      // 3. Búsqueda por texto / dimensiones
       const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                             (p.dimensions && p.dimensions.toLowerCase().includes(searchTerm.toLowerCase()));
       return matchesSearch;
@@ -84,11 +97,7 @@ const Catalog = ({ isResellerMode = false }) => {
     });
 
   if (loading) {
-    return (
-      <main style={{ padding: '4rem 0', backgroundColor: 'var(--color-bg-secondary)', minHeight: '80vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <h2 style={{ color: 'var(--color-text-secondary)', fontSize: '1.1rem', fontWeight: '600' }}>Cargando catálogo...</h2>
-      </main>
-    );
+    return <ProductSkeletonGrid isResellerMode={isResellerMode} />;
   }
 
   // Vista 1: Productos de una sola categoría

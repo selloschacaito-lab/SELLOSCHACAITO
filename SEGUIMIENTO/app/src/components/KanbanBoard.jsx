@@ -96,7 +96,7 @@ function KanbanBoard({ orders, searchTerm = '', showArchived = false, onOrderCli
       "Entregado": "delivered"
     };
 
-    let rawStatus = order.statusId || legacyStatusMap[order.status] || order.status || "design_sent";
+    let rawStatus = order.status || order.statusId || legacyStatusMap[order.status] || "design_sent";
     if (rawStatus === 'waiting_payment') rawStatus = 'fina';
     
     if (ordersByStatus[rawStatus]) {
@@ -186,6 +186,7 @@ Le notificaremos cuando esté listo para retiro o despacho. ¡Saludos!`);
     const orderRef = ref(db, `orders/${id}`);
     update(orderRef, { 
       status: nextStatus,
+      statusId: nextStatus,
       updatedAt: new Date().toISOString() 
     }).then(() => {
       if (nextStatus === 'fina') {
@@ -213,6 +214,7 @@ Le notificaremos cuando esté listo para retiro o despacho. ¡Saludos!`);
       const orderRef = ref(db, `orders/${id}`);
       update(orderRef, { 
         status: prevStatus,
+        statusId: prevStatus,
         updatedAt: new Date().toISOString() 
       }).catch(err => {
         console.error("Error retrocediendo pedido:", err);
@@ -225,6 +227,7 @@ Le notificaremos cuando esté listo para retiro o despacho. ¡Saludos!`);
       const orderRef = ref(db, `orders/${uploadingOrder.id}`);
       update(orderRef, { 
         status: uploadTargetStatus,
+        statusId: uploadTargetStatus,
         updatedAt: new Date().toISOString() 
       }).then(() => {
         if (uploadTargetStatus === 'fina' && uploadingOrder.whatsapp) {
@@ -267,6 +270,7 @@ Le notificaremos cuando esté listo para retiro o despacho. ¡Saludos!`);
 
       update(orderRef, { 
         status: 'packed',
+        statusId: 'packed',
         updatedAt: new Date().toISOString() 
       }).then(() => {
         if (packedOrder.whatsapp) {

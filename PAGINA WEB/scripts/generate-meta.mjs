@@ -55,15 +55,28 @@ async function run() {
       const dim = formatDimensions(rawDim);
       const shortDesc = extractValue(f.shortDescription) || '';
       const desc = extractValue(f.description) || '';
-      const variants = extractValue(f.variants) || [];
+      const isVisible = extractValue(f.isVisible);
+      if (isVisible === false) continue;
 
-      // Seleccionar imagen de la variante
+      const variants = extractValue(f.variants) || [];
+      const singleImg = extractValue(f.singleImageUrl);
+      const singleImgs = extractValue(f.singleImageUrls) || [];
+
+      // Auto stock check: skip if all variants sold out
+      if (Array.isArray(variants) && variants.length > 0) {
+        const hasStock = variants.some(v => v.available !== false);
+        if (!hasStock) continue;
+      }
+
+      // Seleccionar imagen de la variante o producto simple
       let img = 'https://sellos-chacaito.web.app/logo.png';
       if (Array.isArray(variants) && variants.length > 0) {
         const v0 = variants.find(v => v.imageUrl || (v.imageUrls && v.imageUrls.length > 0)) || variants[0];
         if (v0) {
           img = v0.imageUrl || (v0.imageUrls && v0.imageUrls[0]) || img;
         }
+      } else {
+        img = singleImg || (singleImgs && singleImgs[0]) || img;
       }
 
       const title = price ? `${name} - $${price} | Sellos Chacaíto` : `${name} | Sellos Chacaíto`;

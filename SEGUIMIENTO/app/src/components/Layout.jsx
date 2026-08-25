@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Package, ListTodo, Users, Search, PackageSearch, Tag, PieChart, Settings, LogOut, Sun, Moon, Menu, ChevronLeft, Calculator, FileText, Percent, ClipboardList, MapPin, PanelLeft } from 'lucide-react';
+import { Package, ListTodo, Users, Search, PackageSearch, Tag, PieChart, Settings, LogOut, Sun, Moon, Menu, ChevronLeft, Calculator, FileText, Percent, ClipboardList, MapPin, PanelLeft, BadgeDollarSign } from 'lucide-react';
 
 function Layout() {
   const { logout } = useAuth();
@@ -14,16 +14,10 @@ function Layout() {
   // Close sidebar when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Don't close if clicking inside the sidebar
       if (sidebarRef.current && sidebarRef.current.contains(event.target)) {
         return;
       }
       
-      // Don't close if clicking a toggle button (to let the button's own logic work)
-      // We identify toggle buttons by looking for the PanelLeft icon or their specific classes,
-      // but the safest way is to check if it's within a button that toggles the sidebar.
-      // Since we can't easily identify all toggles, we check if the clicked element is a button
-      // or inside a button. If it's the toggle, it'll just stay open or toggle.
       const isButton = event.target.closest('button');
       if (isButton) {
         return;
@@ -75,6 +69,7 @@ function Layout() {
     { name: 'Marketing', path: '/marketing', icon: <PieChart size={20} />, hidden: true },
     { name: 'Presupuestos', path: '/presupuestos', icon: <ClipboardList size={20} /> },
     { name: 'Cambio', path: '/cambio', icon: <Calculator size={20} /> },
+    { name: 'Costos y Precios', path: '/costos', icon: <BadgeDollarSign size={20} /> },
     { name: 'Texto', path: '/texto', icon: <FileText size={20} />, hidden: true },
     { name: 'Retenciones', path: '/retenciones', icon: <Percent size={20} /> },
     { name: 'Configuración', path: '/configuracion', icon: <Settings size={20} /> },

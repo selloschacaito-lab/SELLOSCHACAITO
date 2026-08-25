@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useWholesale } from '../context/WholesaleContext';
 import Catalog from './Catalog';
+import ProductSkeletonGrid from '../components/ProductSkeletonGrid';
 import WholesaleRegistrationModal from '../components/WholesaleRegistrationModal';
 import WholesaleProfileModal from '../components/WholesaleProfileModal';
 
@@ -37,14 +38,8 @@ const WholesalePortal = () => {
   // Cargando estado de autenticación
   if (loading) {
     return (
-      <div style={{
-        minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        backgroundColor: '#0B0D12', color: '#FFB800', flexDirection: 'column', gap: '1rem'
-      }}>
-        <div style={{ fontSize: '2.5rem', animation: 'spin 1s linear infinite' }}>⏳</div>
-        <p style={{ fontWeight: '700', fontSize: '1rem', letterSpacing: '0.5px' }}>
-          Accediendo al Portal Mayorista...
-        </p>
+      <div style={{ backgroundColor: '#0B0D12', minHeight: '85vh' }}>
+        <ProductSkeletonGrid isResellerMode={true} />
       </div>
     );
   }

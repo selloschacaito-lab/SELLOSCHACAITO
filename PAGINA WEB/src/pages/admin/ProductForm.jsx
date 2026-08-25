@@ -29,7 +29,9 @@ const ProductForm = () => {
     variants: [],
     inkColors: ['Negro'],
     resellerPrice: '',
-    singleImageUrl: ''  // For products without color variants
+    singleImageUrl: '',
+    singleImageUrls: [],
+    isVisible: true
   });
 
   const AVAILABLE_INKS = ['Negro', 'Azul', 'Rojo', 'Morado', 'Verde'];
@@ -42,11 +44,17 @@ const ProductForm = () => {
       if (isEditing) {
         const prod = await getProductById(id);
         if (prod) {
+          const singleImgs = prod.singleImageUrls || (prod.singleImageUrl ? [prod.singleImageUrl] : (prod.imageUrls || []));
           setFormData({
             ...prod,
-            variants: prod.variants || [],
+            variants: (prod.variants || []).map(v => ({
+              ...v,
+              imageUrls: v.imageUrls || (v.imageUrl ? [v.imageUrl] : [])
+            })),
             inkColors: prod.inkColors || ['Negro'],
-            singleImageUrl: prod.singleImageUrl || ''
+            singleImageUrl: prod.singleImageUrl || singleImgs[0] || '',
+            singleImageUrls: singleImgs,
+            isVisible: prod.isVisible !== false
           });
           // Auto-detect toggles from existing data
           if (prod.dimensions && prod.dimensions.trim()) setHasDimensions(true);
@@ -80,6 +88,23 @@ const ProductForm = () => {
     }));
   };
 
+  // Manejo de Gotero (EyeDropper API)
+  const handleEyeDropper = async (variantIndex, field) => {
+    if (window.EyeDropper) {
+      try {
+        const eyeDropper = new window.EyeDropper();
+        const result = await eyeDropper.open();
+        if (result && result.sRGBHex) {
+          updateVariant(variantIndex, field, result.sRGBHex);
+        }
+      } catch (e) {
+        // Cancelado o cerrado por el usuario
+      }
+    } else {
+      alert("El gotero es compatible con Google Chrome, Microsoft Edge y navegadores modernos en Android y PC.");
+    }
+  };
+
   // Manejo de Tintas
   const handleInkChange = (inkColor) => {
     const currentInks = formData.inkColors || [];
@@ -94,7 +119,7 @@ const ProductForm = () => {
   const addVariant = () => {
     setFormData({
       ...formData,
-      variants: [...formData.variants, { colorName: '', hex: '#000000', hex2: '', imageUrl: '', available: true }]
+      variants: [...formData.variants, { colorName: '', hex: '#000000', hex2: '', imageUrl: '', imageUrls: [], available: true }]
     });
   };
   
@@ -116,37 +141,49 @@ const ProductForm = () => {
     setFormData({ ...formData, variants: items });
   };
 
-  const handleImageUpload = async (index, file) => {
-    if (!file) return;
+  // Subida de múltiples fotos para una variante
+  const handleImageUpload = async (index, fileList) => {
+    if (!fileList || fileList.length === 0) return;
     setUploadingVariantIndex(index);
     try {
-      const url = await uploadImage(file, 'products');
+      const files = Array.from(fileList);
+      const uploadedUrls = await Promise.all(
+        files.map(f => uploadImage(f, 'products'))
+      );
+      
       const currentVariant = formData.variants[index];
       const currentImages = currentVariant.imageUrls || (currentVariant.imageUrl ? [currentVariant.imageUrl] : []);
-      const newImages = [...currentImages, url];
+      const newImages = [...currentImages, ...uploadedUrls];
       
       const newVariants = [...formData.variants];
       newVariants[index].imageUrls = newImages;
-      if (!currentVariant.imageUrl) {
-        newVariants[index].imageUrl = url;
-      }
+      newVariants[index].imageUrl = newImages[0] || '';
       setFormData({ ...formData, variants: newVariants });
     } catch (error) {
-      alert('Error al subir la imagen. Intenta de nuevo.');
+      alert('Error al subir las imágenes. Intenta de nuevo.');
     } finally {
       setUploadingVariantIndex(null);
     }
   };
 
-  // Single image upload (no variants)
-  const handleSingleImageUpload = async (file) => {
-    if (!file) return;
+  // Subida de múltiples fotos para productos sin variantes
+  const handleSingleImageUpload = async (fileList) => {
+    if (!fileList || fileList.length === 0) return;
     setUploadingSingleImage(true);
     try {
-      const url = await uploadImage(file, 'products');
-      setFormData({ ...formData, singleImageUrl: url });
+      const files = Array.from(fileList);
+      const uploadedUrls = await Promise.all(
+        files.map(f => uploadImage(f, 'products'))
+      );
+      const currentImages = formData.singleImageUrls || (formData.singleImageUrl ? [formData.singleImageUrl] : []);
+      const newImages = [...currentImages, ...uploadedUrls];
+      setFormData({
+        ...formData,
+        singleImageUrls: newImages,
+        singleImageUrl: newImages[0] || ''
+      });
     } catch (error) {
-      alert('Error al subir la imagen.');
+      alert('Error al subir las imágenes.');
     } finally {
       setUploadingSingleImage(false);
     }
@@ -156,28 +193,39 @@ const ProductForm = () => {
     e.preventDefault();
     
     if (hasVariants) {
-      const missingPhotos = formData.variants.some(v => !v.imageUrl);
+      const missingPhotos = formData.variants.some(v => (!v.imageUrl && (!v.imageUrls || v.imageUrls.length === 0)));
       if (missingPhotos) {
-        alert("Asegúrate de que todas las variantes tengan una foto.");
+        alert("Asegúrate de que todas las variantes tengan al menos una foto.");
         return;
       }
     }
 
     setSaving(true);
     
+    const cleanedVariants = hasVariants ? formData.variants.map(v => {
+      const imgs = v.imageUrls || (v.imageUrl ? [v.imageUrl] : []);
+      return {
+        ...v,
+        imageUrl: imgs[0] || v.imageUrl || '',
+        imageUrls: imgs
+      };
+    }) : [];
+
+    const cleanedSingleImages = !hasVariants ? (formData.singleImageUrls || (formData.singleImageUrl ? [formData.singleImageUrl] : [])) : [];
+
     const cleanedData = {
       ...formData,
       price: Number(formData.price),
       resellerPrice: Number(formData.resellerPrice),
-      // If dimensions toggle is off, clear dimensions
       dimensions: hasDimensions ? formData.dimensions : '',
-      // If variants toggle is off, clear variants
-      variants: hasVariants ? formData.variants : [],
-      // If ink colors toggle is off, clear ink colors
+      variants: cleanedVariants,
       inkColors: hasInkColors ? formData.inkColors : [],
+      singleImageUrl: cleanedSingleImages[0] || '',
+      singleImageUrls: cleanedSingleImages,
+      imageUrls: cleanedSingleImages,
+      isVisible: formData.isVisible !== false
     };
 
-    // Remove capacity, featured, showOnHome — they no longer exist in the form
     delete cleanedData.capacity;
     delete cleanedData.featured;
     delete cleanedData.showOnHome;
@@ -208,12 +256,27 @@ const ProductForm = () => {
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         
+        {/* === VISIBILITY TOGGLE === */}
+        <div style={{ backgroundColor: 'var(--color-bg-card)', padding: '1rem 1.25rem', borderRadius: '14px', border: formData.isVisible !== false ? '1px solid var(--color-border)' : '1px solid #ef4444' }}>
+          <label className="admin-toggle">
+            <input type="checkbox" checked={formData.isVisible !== false} onChange={(e) => setFormData({...formData, isVisible: e.target.checked})} />
+            <div>
+              <span className="toggle-label" style={{ color: formData.isVisible !== false ? 'var(--color-text-main)' : '#ef4444' }}>
+                {formData.isVisible !== false ? '🟢 Visible en la tienda' : '🔴 Pausado / Oculto en la tienda'}
+              </span>
+              <span className="toggle-desc">
+                {formData.isVisible !== false ? 'Los clientes pueden ver y pedir este sello en la web' : 'Este sello NO aparecerá en el catálogo ni en búsquedas'}
+              </span>
+            </div>
+          </label>
+        </div>
+
         {/* === UNIVERSAL FIELDS === */}
         <div style={{ backgroundColor: 'var(--color-bg-card)', padding: '1.25rem', borderRadius: '14px', border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           
           <div>
             <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: '700', fontSize: '0.85rem' }}>Nombre / Modelo *</label>
-            <input type="text" name="name" value={formData.name} onChange={handleChange} required style={inputStyle} placeholder="Ej: Trodat 4911" />
+            <input type="text" name="name" value={formData.name} onChange={handleChange} required style={inputStyle} placeholder="Ej: Trodat 46025" />
           </div>
 
           <div>
@@ -236,7 +299,7 @@ const ProductForm = () => {
 
           <div>
             <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: '700', fontSize: '0.85rem' }}>Descripción Corta *</label>
-            <input type="text" name="shortDescription" value={formData.shortDescription} onChange={handleChange} required style={inputStyle} maxLength="70" placeholder="Ej: Práctico y de uso continuo" />
+            <input type="text" name="shortDescription" value={formData.shortDescription} onChange={handleChange} required style={inputStyle} maxLength="70" placeholder="Ej: Redondo con tapa de cierre seguro" />
             <span style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)' }}>{(formData.shortDescription || '').length}/70</span>
           </div>
         </div>
@@ -249,7 +312,7 @@ const ProductForm = () => {
             <input type="checkbox" checked={hasDimensions} onChange={(e) => setHasDimensions(e.target.checked)} />
             <div>
               <span className="toggle-label">📏 ¿Tiene dimensiones?</span>
-              <span className="toggle-desc">Activar si el producto tiene medidas (ej: 38 × 14 mm)</span>
+              <span className="toggle-desc">Activar si el producto tiene medidas (ej: Ø 25 mm)</span>
             </div>
           </label>
           <div className={`admin-collapsible ${hasDimensions ? 'expanded' : ''}`}>
@@ -259,7 +322,7 @@ const ProductForm = () => {
               value={formData.dimensions} 
               onChange={handleChange} 
               style={inputStyle} 
-              placeholder="Ej: 38 × 14 mm" 
+              placeholder="Ej: Ø 25 mm" 
             />
           </div>
         </div>
@@ -300,7 +363,7 @@ const ProductForm = () => {
             <input type="checkbox" checked={hasVariants} onChange={(e) => setHasVariants(e.target.checked)} />
             <div>
               <span className="toggle-label">🎨 ¿Viene en varios colores?</span>
-              <span className="toggle-desc">Cada color tendrá su propia foto</span>
+              <span className="toggle-desc">Cada color puede tener múltiples fotos (ej. cerrado y sin tapa)</span>
             </div>
           </label>
           <div className={`admin-collapsible ${hasVariants ? 'expanded' : ''}`}>
@@ -308,100 +371,126 @@ const ProductForm = () => {
               <Droppable droppableId="variants">
                 {(provided) => (
                   <div {...provided.droppableProps} ref={provided.innerRef} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {formData.variants.map((variant, index) => (
-                      <Draggable key={index.toString()} draggableId={`variant-${index}`} index={index}>
-                        {(provided) => (
-                          <div 
-                            ref={provided.innerRef} 
-                            {...provided.draggableProps} 
-                            style={{ ...provided.draggableProps.style, padding: '0.85rem', border: '1px solid var(--color-border)', borderRadius: '10px', backgroundColor: 'var(--color-bg-secondary)' }}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', alignItems: 'center' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                <div {...provided.dragHandleProps} style={{ cursor: 'grab', display: 'flex', alignItems: 'center', padding: '0.15rem', color: 'var(--color-text-secondary)' }} title="Arrastrar para reordenar">
-                                  ⠿
+                    {formData.variants.map((variant, index) => {
+                      const currentImages = variant.imageUrls || (variant.imageUrl ? [variant.imageUrl] : []);
+                      return (
+                        <Draggable key={index.toString()} draggableId={`variant-${index}`} index={index}>
+                          {(provided) => (
+                            <div 
+                              ref={provided.innerRef} 
+                              {...provided.draggableProps} 
+                              style={{ ...provided.draggableProps.style, padding: '0.85rem', border: '1px solid var(--color-border)', borderRadius: '10px', backgroundColor: 'var(--color-bg-secondary)' }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                  <div {...provided.dragHandleProps} style={{ cursor: 'grab', display: 'flex', alignItems: 'center', padding: '0.15rem', color: 'var(--color-text-secondary)' }} title="Arrastrar para reordenar">
+                                    ⠿
+                                  </div>
+                                  <span style={{ fontWeight: '700', fontSize: '0.85rem' }}>Color {index + 1}</span>
                                 </div>
-                                <span style={{ fontWeight: '700', fontSize: '0.85rem' }}>Color {index + 1}</span>
+                                <button type="button" onClick={() => removeVariant(index)} style={{ color: '#b91c1c', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: '0.82rem', padding: '0.25rem' }}>Quitar</button>
                               </div>
-                              <button type="button" onClick={() => removeVariant(index)} style={{ color: '#b91c1c', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: '0.82rem', padding: '0.25rem' }}>Quitar</button>
-                            </div>
-                  
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 60px', gap: '0.6rem', marginBottom: '0.75rem' }}>
-                              <div>
-                                <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600' }}>Nombre</label>
-                                <input type="text" value={variant.colorName} onChange={(e) => updateVariant(index, 'colorName', e.target.value)} style={{...inputStyle, padding: '0.6rem'}} required placeholder="Azul" />
-                              </div>
-                              <div>
-                                <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600' }}>Color</label>
-                                <input type="color" value={variant.hex} onChange={(e) => updateVariant(index, 'hex', e.target.value)} style={{ width: '100%', height: '38px', padding: '0.15rem', border: '1px solid var(--color-border)', borderRadius: '8px', cursor: 'pointer' }} />
-                              </div>
-                              <div>
-                                <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600' }}>C2</label>
-                                <div style={{ position: 'relative' }}>
-                                  <input type="color" value={variant.hex2 || '#ffffff'} onChange={(e) => updateVariant(index, 'hex2', e.target.value)} style={{ width: '100%', height: '38px', padding: '0.15rem', border: '1px solid var(--color-border)', borderRadius: '8px', cursor: 'pointer', opacity: variant.hex2 ? 1 : 0.3 }} />
-                                  {!variant.hex2 && (
-                                    <button type="button" onClick={() => updateVariant(index, 'hex2', '#000000')} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', background: 'transparent', border: 'none', cursor: 'pointer' }} title="Añadir segundo color" />
-                                  )}
-                                  {variant.hex2 && (
-                                    <button type="button" onClick={() => updateVariant(index, 'hex2', '')} style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '18px', height: '18px', fontSize: '9px', cursor: 'pointer' }}>X</button>
-                                  )}
+                    
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 75px 75px', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.2rem', fontWeight: '600' }}>Nombre</label>
+                                  <input type="text" value={variant.colorName} onChange={(e) => updateVariant(index, 'colorName', e.target.value)} style={{...inputStyle, padding: '0.6rem'}} required placeholder="Rojo" />
                                 </div>
-                              </div>
-                            </div>
-
-                            {/* Photo upload zone */}
-                            <div style={{ marginBottom: '0.5rem', padding: '0.75rem', border: '2px dashed var(--color-border)', borderRadius: '8px', textAlign: 'center', backgroundColor: 'var(--color-bg-card)' }}>
-                              {(() => {
-                                const currentImages = variant.imageUrls || (variant.imageUrl ? [variant.imageUrl] : []);
-                                return (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                    {currentImages.length > 0 && (
-                                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                                        {currentImages.map((imgUrl, i) => (
-                                          <div key={i} style={{ position: 'relative', display: 'inline-block' }}>
-                                            <img src={imgUrl} alt={`Preview ${i}`} style={{ height: '70px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--color-border)' }} />
-                                            <button 
-                                              type="button" 
-                                              onClick={() => {
-                                                const newImages = currentImages.filter((_, idx) => idx !== i);
-                                                const newVariants = [...formData.variants];
-                                                newVariants[index].imageUrls = newImages;
-                                                newVariants[index].imageUrl = newImages[0] || '';
-                                                setFormData({ ...formData, variants: newVariants });
-                                              }}
-                                              style={{ position: 'absolute', top: '-6px', right: '-6px', backgroundColor: 'black', color: 'white', borderRadius: '50%', width: '20px', height: '20px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '10px' }}
-                                            >X</button>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
-                                    
-                                    {uploadingVariantIndex === index ? (
-                                      <span style={{ color: 'var(--color-text-secondary)', fontWeight: '600', fontSize: '0.82rem' }}>Subiendo...</span>
-                                    ) : (
-                                      <label style={{ cursor: 'pointer', color: 'var(--color-primary)', fontWeight: '700', fontSize: '0.82rem', display: 'block', padding: '0.5rem 0' }}>
-                                        {currentImages.length > 0 ? "+ Otra foto" : "📸 Subir foto"}
-                                        <input 
-                                          type="file" 
-                                          accept="image/*" 
-                                          style={{ display: 'none' }} 
-                                          onChange={(e) => handleImageUpload(index, e.target.files[0])}
-                                        />
-                                      </label>
+                                <div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: '600' }}>Color</label>
+                                    <button 
+                                      type="button" 
+                                      onClick={() => handleEyeDropper(index, 'hex')}
+                                      title="Usar gotero para capturar color exacto"
+                                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', padding: 0 }}
+                                    >
+                                      💧
+                                    </button>
+                                  </div>
+                                  <input type="color" value={variant.hex} onChange={(e) => updateVariant(index, 'hex', e.target.value)} style={{ width: '100%', height: '38px', padding: '0.15rem', border: '1px solid var(--color-border)', borderRadius: '8px', cursor: 'pointer' }} />
+                                </div>
+                                <div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: '600' }}>C2</label>
+                                    {variant.hex2 && (
+                                      <button 
+                                        type="button" 
+                                        onClick={() => handleEyeDropper(index, 'hex2')}
+                                        title="Usar gotero para segundo color"
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', padding: 0 }}
+                                      >
+                                        💧
+                                      </button>
                                     )}
                                   </div>
-                                );
-                              })()}
-                            </div>
+                                  <div style={{ position: 'relative' }}>
+                                    <input type="color" value={variant.hex2 || '#ffffff'} onChange={(e) => updateVariant(index, 'hex2', e.target.value)} style={{ width: '100%', height: '38px', padding: '0.15rem', border: '1px solid var(--color-border)', borderRadius: '8px', cursor: 'pointer', opacity: variant.hex2 ? 1 : 0.3 }} />
+                                    {!variant.hex2 && (
+                                      <button type="button" onClick={() => updateVariant(index, 'hex2', '#000000')} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', background: 'transparent', border: 'none', cursor: 'pointer' }} title="Añadir segundo color" />
+                                    )}
+                                    {variant.hex2 && (
+                                      <button type="button" onClick={() => updateVariant(index, 'hex2', '')} style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '18px', height: '18px', fontSize: '9px', cursor: 'pointer' }}>X</button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
 
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: '600' }}>
-                              <input type="checkbox" checked={variant.available} onChange={(e) => updateVariant(index, 'available', e.target.checked)} />
-                              Hay stock
-                            </label>
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
+                              {/* Photo upload zone (Multi-Photo) */}
+                              <div style={{ marginBottom: '0.5rem', padding: '0.75rem', border: '2px dashed var(--color-border)', borderRadius: '8px', textAlign: 'center', backgroundColor: 'var(--color-bg-card)' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                  {currentImages.length > 0 && (
+                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                      {currentImages.map((imgUrl, i) => (
+                                        <div key={i} style={{ position: 'relative', display: 'inline-block' }}>
+                                          <img src={imgUrl} alt={`Preview ${i}`} style={{ height: '70px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--color-border)' }} />
+                                          <button 
+                                            type="button" 
+                                            onClick={() => {
+                                              const newImages = currentImages.filter((_, idx) => idx !== i);
+                                              const newVariants = [...formData.variants];
+                                              newVariants[index].imageUrls = newImages;
+                                              newVariants[index].imageUrl = newImages[0] || '';
+                                              setFormData({ ...formData, variants: newVariants });
+                                            }}
+                                            style={{ position: 'absolute', top: '-6px', right: '-6px', backgroundColor: 'black', color: 'white', borderRadius: '50%', width: '20px', height: '20px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '10px' }}
+                                          >X</button>
+                                          {i === 0 && (
+                                            <span style={{ position: 'absolute', bottom: '2px', left: '2px', backgroundColor: 'rgba(0,0,0,0.65)', color: '#47FF00', fontSize: '9px', padding: '1px 4px', borderRadius: '3px', fontWeight: '700' }}>
+                                              Principal
+                                            </span>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  
+                                  {uploadingVariantIndex === index ? (
+                                    <span style={{ color: 'var(--color-text-secondary)', fontWeight: '600', fontSize: '0.82rem' }}>Subiendo imágenes...</span>
+                                  ) : (
+                                    <label style={{ cursor: 'pointer', color: 'var(--color-primary)', fontWeight: '700', fontSize: '0.85rem', display: 'block', padding: '0.5rem 0' }}>
+                                      {currentImages.length > 0 ? "📸 + Agregar otra foto" : "📸 Subir fotos (Cerrado, Abierto, etc.)"}
+                                      <input 
+                                        type="file" 
+                                        accept="image/*" 
+                                        multiple 
+                                        style={{ display: 'none' }} 
+                                        onChange={(e) => handleImageUpload(index, e.target.files)}
+                                      />
+                                    </label>
+                                  )}
+                                </div>
+                              </div>
+
+                              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: '600' }}>
+                                <input type="checkbox" checked={variant.available} onChange={(e) => updateVariant(index, 'available', e.target.checked)} />
+                                Hay stock
+                              </label>
+                            </div>
+                          )}
+                        </Draggable>
+                      );
+                    })}
                     {provided.placeholder}
                   </div>
                 )}
@@ -414,26 +503,59 @@ const ProductForm = () => {
           </div>
         </div>
 
-        {/* Single Photo Upload (when no variants) */}
+        {/* Multi-Photo Upload (when no variants) */}
         {!hasVariants && (
           <div style={{ backgroundColor: 'var(--color-bg-card)', padding: '1.25rem', borderRadius: '14px', border: '1px solid var(--color-border)' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.85rem' }}>📸 Foto del Producto</label>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.85rem' }}>📸 Fotos del Producto (General)</label>
             <div style={{ padding: '1rem', border: '2px dashed var(--color-border)', borderRadius: '10px', textAlign: 'center', backgroundColor: 'var(--color-bg-secondary)' }}>
-              {formData.singleImageUrl ? (
-                <div>
-                  <img src={formData.singleImageUrl} alt="Preview" style={{ height: '120px', objectFit: 'cover', borderRadius: '8px', marginBottom: '0.75rem' }} />
+              {(() => {
+                const singleImgs = formData.singleImageUrls || (formData.singleImageUrl ? [formData.singleImageUrl] : []);
+                return (
                   <div>
-                    <button type="button" onClick={() => setFormData({...formData, singleImageUrl: ''})} className="btn" style={{ padding: '0.4rem 0.8rem', border: '1px solid #fee2e2', color: '#b91c1c', backgroundColor: 'var(--color-bg-card)', fontSize: '0.82rem', borderRadius: '8px' }}>Quitar</button>
+                    {singleImgs.length > 0 && (
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '0.75rem' }}>
+                        {singleImgs.map((imgUrl, i) => (
+                          <div key={i} style={{ position: 'relative', display: 'inline-block' }}>
+                            <img src={imgUrl} alt={`Preview ${i}`} style={{ height: '90px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--color-border)' }} />
+                            <button 
+                              type="button" 
+                              onClick={() => {
+                                const newImages = singleImgs.filter((_, idx) => idx !== i);
+                                setFormData({
+                                  ...formData,
+                                  singleImageUrls: newImages,
+                                  singleImageUrl: newImages[0] || ''
+                                });
+                              }}
+                              style={{ position: 'absolute', top: '-6px', right: '-6px', backgroundColor: 'black', color: 'white', borderRadius: '50%', width: '20px', height: '20px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '10px' }}
+                            >X</button>
+                            {i === 0 && (
+                              <span style={{ position: 'absolute', bottom: '2px', left: '2px', backgroundColor: 'rgba(0,0,0,0.65)', color: '#47FF00', fontSize: '9px', padding: '1px 4px', borderRadius: '3px', fontWeight: '700' }}>
+                                Principal
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {uploadingSingleImage ? (
+                      <p style={{ color: 'var(--color-primary)', fontWeight: '700', fontSize: '0.85rem' }}>Subiendo imágenes...</p>
+                    ) : (
+                      <label style={{ cursor: 'pointer', color: 'var(--color-primary)', fontWeight: '700', display: 'block', padding: '0.75rem 0', fontSize: '0.9rem' }}>
+                        {singleImgs.length > 0 ? "📸 + Agregar otra foto" : "📸 Toca para subir fotos (Permite varias a la vez)"}
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          multiple 
+                          style={{ display: 'none' }} 
+                          onChange={(e) => handleSingleImageUpload(e.target.files)} 
+                        />
+                      </label>
+                    )}
                   </div>
-                </div>
-              ) : uploadingSingleImage ? (
-                <p style={{ color: 'var(--color-primary)', fontWeight: '700', fontSize: '0.85rem' }}>Subiendo imagen...</p>
-              ) : (
-                <label style={{ cursor: 'pointer', color: 'var(--color-primary)', fontWeight: '700', display: 'block', padding: '1.5rem 0', fontSize: '0.9rem' }}>
-                  📸 Toca para subir foto
-                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleSingleImageUpload(e.target.files[0])} />
-                </label>
-              )}
+                );
+              })()}
             </div>
           </div>
         )}

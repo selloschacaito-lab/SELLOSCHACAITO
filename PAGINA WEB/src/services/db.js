@@ -13,6 +13,18 @@ export const toggleProductLike = async (productId, isLiking) => {
   }
 };
 
+export const toggleProductVisibility = async (productId, isVisible) => {
+  try {
+    const docRef = doc(db, 'products', productId);
+    await updateDoc(docRef, {
+      isVisible: isVisible
+    });
+  } catch (error) {
+    console.error("Error al cambiar visibilidad del producto:", error);
+    throw error;
+  }
+};
+
 // Colecciones en Firestore
 const PRODUCTS_COLLECTION = 'products';
 const CATEGORIES_COLLECTION = 'categories';

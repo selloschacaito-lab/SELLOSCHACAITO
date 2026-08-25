@@ -28,7 +28,17 @@ const ProductCard = ({ product, isResellerMode = false }) => {
   // App-style Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // For touch swipes
+  // Pull-down-to-close modal state
+  const [modalDragY, setModalDragY] = useState(0);
+  const [isDraggingModal, setIsDraggingModal] = useState(false);
+  const modalTouchStartY = useRef(0);
+  const modalScrollTop = useRef(0);
+  const modalContainerRef = useRef(null);
+
+  // Auto-slideshow state (every 1.5s)
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+
+  // For touch swipes on image
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
 
@@ -38,6 +48,57 @@ const ProductCard = ({ product, isResellerMode = false }) => {
       setSelectedVariantIndex(getFirstAvailableVariantIndex(product.variants));
     }
   }, [product]);
+
+  // Reset auto-play and drag offset when opening modal
+  useEffect(() => {
+    if (isModalOpen) {
+      setIsAutoPlaying(true);
+      setModalDragY(0);
+    }
+  }, [isModalOpen]);
+
+  // Auto-slideshow effect every 1.5s
+  useEffect(() => {
+    if (!isModalOpen || !isAutoPlaying || !hasVariants || variants.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setSelectedVariantIndex((prev) => (prev + 1) % variants.length);
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [isModalOpen, isAutoPlaying, hasVariants, variants.length]);
+
+  const stopAutoPlay = () => {
+    if (isAutoPlaying) setIsAutoPlaying(false);
+  };
+
+  // Pull-down modal gesture handlers
+  const onModalTouchStart = (e) => {
+    modalTouchStartY.current = e.targetTouches[0].clientY;
+    modalScrollTop.current = modalContainerRef.current ? modalContainerRef.current.scrollTop : 0;
+    setIsDraggingModal(true);
+  };
+
+  const onModalTouchMove = (e) => {
+    if (!isDraggingModal) return;
+    const currentY = e.targetTouches[0].clientY;
+    const deltaY = currentY - modalTouchStartY.current;
+
+    // Solo arrastrar hacia abajo si el scroll interno está en la parte superior
+    if (deltaY > 0 && modalScrollTop.current <= 5) {
+      setModalDragY(deltaY);
+    }
+  };
+
+  const onModalTouchEnd = () => {
+    setIsDraggingModal(false);
+    if (modalDragY > 80) {
+      setIsModalOpen(false);
+      setModalDragY(0);
+    } else {
+      setModalDragY(0);
+    }
+  };
 
   // Ocultar botón flotante de WhatsApp global mientras el modal esté abierto
   useEffect(() => {
@@ -57,39 +118,39 @@ const ProductCard = ({ product, isResellerMode = false }) => {
   }, [selectedVariantIndex]);
 
   const currentVariant = hasVariants ? variants[selectedVariantIndex] : null;
-  const currentImages = currentVariant?.imageUrls || (currentVariant?.imageUrl ? [currentVariant.imageUrl] : []);
+  const currentImages = currentVariant
+    ? (currentVariant.imageUrls && currentVariant.imageUrls.length > 0 ? currentVariant.imageUrls : (currentVariant.imageUrl ? [currentVariant.imageUrl] : []))
+    : (product.singleImageUrls && product.singleImageUrls.length > 0 ? product.singleImageUrls : (product.singleImageUrl ? [product.singleImageUrl] : (product.imageUrls || [])));
 
   const price = isResellerMode ? (product.resellerPrice || Math.round(product.price * 0.8)) : product.price;
 
   const handleNextImage = (e) => {
     if (e) e.stopPropagation();
-    if (selectedImageIndex < currentImages.length - 1) {
-      setSelectedImageIndex(selectedImageIndex + 1);
+    stopAutoPlay();
+    if (currentImages.length > 1) {
+      setSelectedImageIndex((prev) => (prev + 1) % currentImages.length);
     } else if (variants.length > 1) {
       const nextVariantIndex = (selectedVariantIndex + 1) % variants.length;
       setSelectedVariantIndex(nextVariantIndex);
-      setSelectedImageIndex(0);
-    } else {
       setSelectedImageIndex(0);
     }
   };
 
   const handlePrevImage = (e) => {
     if (e) e.stopPropagation();
-    if (selectedImageIndex > 0) {
-      setSelectedImageIndex(selectedImageIndex - 1);
+    stopAutoPlay();
+    if (currentImages.length > 1) {
+      setSelectedImageIndex((prev) => (prev - 1 + currentImages.length) % currentImages.length);
     } else if (variants.length > 1) {
       const prevVariantIndex = (selectedVariantIndex - 1 + variants.length) % variants.length;
       setSelectedVariantIndex(prevVariantIndex);
-      const prevVariantImages = variants[prevVariantIndex].imageUrls || (variants[prevVariantIndex].imageUrl ? [variants[prevVariantIndex].imageUrl] : []);
-      setSelectedImageIndex(Math.max(0, prevVariantImages.length - 1));
-    } else {
-      setSelectedImageIndex(currentImages.length - 1);
+      setSelectedImageIndex(0);
     }
   };
 
   const minSwipeDistance = 50;
   const onTouchStart = (e) => {
+    stopAutoPlay();
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
   };
@@ -251,7 +312,11 @@ const ProductCard = ({ product, isResellerMode = false }) => {
       }} onClick={() => setIsModalOpen(false)}>
         
         <div 
+          ref={modalContainerRef}
           onClick={(e) => e.stopPropagation()}
+          onTouchStart={onModalTouchStart}
+          onTouchMove={onModalTouchMove}
+          onTouchEnd={onModalTouchEnd}
           style={{
             backgroundColor: 'var(--color-bg-main)',
             width: '100%', maxWidth: '500px',
@@ -259,13 +324,16 @@ const ProductCard = ({ product, isResellerMode = false }) => {
             borderTopLeftRadius: '24px', borderTopRightRadius: '24px',
             position: 'relative',
             display: 'flex', flexDirection: 'column',
-            animation: 'slideUp 0.25s ease-out',
-            boxShadow: '0 -10px 40px rgba(0,0,0,0.3)'
+            transform: modalDragY > 0 ? `translateY(${modalDragY}px)` : 'none',
+            transition: isDraggingModal ? 'none' : 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+            animation: modalDragY === 0 ? 'slideUp 0.25s ease-out' : 'none',
+            boxShadow: '0 -10px 40px rgba(0,0,0,0.3)',
+            touchAction: 'pan-y'
           }}
         >
-          {/* Close Handle / Header */}
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '0.85rem 0 0.35rem 0' }}>
-            <div style={{ width: '36px', height: '4px', backgroundColor: 'var(--color-border)', borderRadius: '10px' }} />
+          {/* Close Handle / Pull Down Bar */}
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '0.85rem 0 0.35rem 0', cursor: 'grab' }}>
+            <div style={{ width: '42px', height: '5px', backgroundColor: 'var(--color-border)', borderRadius: '10px' }} />
           </div>
           <button 
             onClick={() => setIsModalOpen(false)}
@@ -319,7 +387,7 @@ const ProductCard = ({ product, isResellerMode = false }) => {
               position: 'relative', borderBottom: '1px solid var(--color-border)'
             }}
           >
-            {currentVariant ? (
+            {currentImages.length > 0 ? (
               <>
                 {(currentImages.length > 1 || variants.length > 1) && (
                   <button 
@@ -332,8 +400,8 @@ const ProductCard = ({ product, isResellerMode = false }) => {
                 
                 <img 
                   key={`${selectedVariantIndex}-${selectedImageIndex}`}
-                  src={currentImages[selectedImageIndex]} 
-                  alt={`${product.name} en ${currentVariant.colorName}`} 
+                  src={currentImages[selectedImageIndex] || currentImages[0]} 
+                  alt={`${product.name} ${currentVariant ? `en ${currentVariant.colorName}` : ''}`} 
                   className="content-fade-in"
                   style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '1rem', userSelect: 'none' }} 
                 />
@@ -347,13 +415,13 @@ const ProductCard = ({ product, isResellerMode = false }) => {
                   </button>
                 )}
                 {currentImages.length > 1 && (
-                  <div style={{ position: 'absolute', bottom: '10px', display: 'flex', gap: '0.4rem' }}>
+                  <div style={{ position: 'absolute', bottom: '8px', display: 'flex', gap: '0.4rem', zIndex: 5 }}>
                     {currentImages.map((_, i) => (
-                      <span key={i} style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: i === selectedImageIndex ? 'var(--color-primary)' : 'var(--color-border)' }} />
+                      <span key={i} style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: i === selectedImageIndex ? 'var(--color-primary)' : 'rgba(0,0,0,0.25)' }} />
                     ))}
                   </div>
                 )}
-                {!currentVariant.available && (
+                {currentVariant && !currentVariant.available && (
                   <div style={{
                     position: 'absolute', inset: 0,
                     backgroundColor: 'rgba(255,255,255,0.7)',
@@ -369,6 +437,42 @@ const ProductCard = ({ product, isResellerMode = false }) => {
               <span style={{ color: 'var(--color-text-secondary)' }}>Sin fotos</span>
             )}
           </div>
+
+          {/* Fila de Miniaturas Interactivas (ej. Con tapa / Sin tapa) */}
+          {currentImages.length > 1 && (
+            <div style={{
+              display: 'flex',
+              gap: '0.5rem',
+              justifyContent: 'center',
+              padding: '0.65rem 0.75rem',
+              borderBottom: '1px solid var(--color-border)',
+              backgroundColor: 'var(--color-bg-secondary)',
+              overflowX: 'auto'
+            }}>
+              {currentImages.map((imgUrl, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setSelectedImageIndex(i)}
+                  style={{
+                    width: '52px',
+                    height: '52px',
+                    padding: '3px',
+                    borderRadius: '10px',
+                    border: i === selectedImageIndex ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                    backgroundColor: 'var(--color-bg-main)',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    transition: 'all 0.2s ease',
+                    opacity: i === selectedImageIndex ? 1 : 0.65,
+                    boxShadow: i === selectedImageIndex ? '0 2px 8px rgba(71, 255, 0, 0.25)' : 'none'
+                  }}
+                >
+                  <img src={imgUrl} alt={`Foto ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Details Body */}
           <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column' }}>
@@ -453,7 +557,10 @@ const ProductCard = ({ product, isResellerMode = false }) => {
                     return (
                       <div
                         key={index}
-                        onClick={() => setSelectedVariantIndex(index)}
+                        onClick={() => {
+                          stopAutoPlay();
+                          setSelectedVariantIndex(index);
+                        }}
                         title={`${variant.colorName}${!isAvailable ? ' (Agotado)' : ''}`}
                         className={`color-circle ${selectedVariantIndex === index ? 'selected' : ''}`}
                         style={{
