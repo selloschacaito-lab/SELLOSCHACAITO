@@ -1,0 +1,5 @@
+﻿# Dependencias de GRAVY PROTOCOL
+colorama>=0.4.6
+rich>=13.7.1
+windows-curses>=2.3.3; platform_system == "Windows"
+pyinstaller>=6.4.0

@@ -1,0 +1,72 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Drag Simulator - Prototipo Físico</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>PIXEL DRAG SIMULATOR</h1>
+            <div class="car-selector">
+                <button id="btnSelectCivic">🚗 Honda Civic 1.6L (FWD)</button>
+                <button id="btnSelectMustang">🏎️ Mustang 5.0L V8 (RWD)</button>
+                <button id="btnRestart">🔄 Reiniciar Carrera</button>
+            </div>
+        </div>
+
+        <div class="canvas-wrapper">
+            <div id="raceBanner" class="race-banner">¡PREPÁRATE EN LA LÍNEA!</div>
+            <canvas id="gameCanvas" width="928" height="300"></canvas>
+        </div>
+
+        <div class="dashboard">
+            <!-- Panel Izquierdo: Velocidad y RPM -->
+            <div class="panel">
+                <span class="label">Vehículo Activo</span>
+                <span id="carNameDisplay" style="color: #38bdf8; font-weight: bold; margin-bottom: 6px;">Kanso Civic EX 1.6</span>
+                
+                <span class="label">Velocidad</span>
+                <div><span id="speedDisplay" class="value-large">0</span> <span style="color:#64748b;">KM/H</span></div>
+
+                <span class="label" style="margin-top: 6px;">Tacómetro</span>
+                <div><span id="rpmDisplay" class="value-large" style="color:#fbbf24;">850</span> <span style="color:#64748b;">RPM</span></div>
+            </div>
+
+            <!-- Panel Central: Caja de Marchas y Shift Light -->
+            <div class="gear-box">
+                <div class="shift-light" id="shiftLight"></div>
+                <span class="label">MARCHA</span>
+                <span id="gearDisplay" style="font-size: 50px; font-weight: 900; color: #94a3b8;">N</span>
+            </div>
+
+            <!-- Panel Derecho: Telemetría y Física de Neumático -->
+            <div class="panel">
+                <span class="label">Distancia Recorrida</span>
+                <div id="distDisplay" style="font-weight: bold; font-size: 15px;">0.0 m / 402 m</div>
+
+                <span class="label" style="margin-top: 6px;">Tiempo Transcurrido</span>
+                <div id="timerDisplay" style="font-weight: bold; font-size: 18px; color:#38bdf8;">0.000 s</div>
+
+                <span class="label" style="margin-top: 6px;">Estado de Neumáticos</span>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span id="tempDisplay" style="color:#f59e0b; font-weight:bold;">40 °C</span>
+                    <span id="gripDisplay" style="color:#4ade80; font-weight:bold; font-size:12px;">TRACCIÓN OK</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-hint">
+            <span>Acelerador: <b>Espacio / Flecha Derecha / D</b></span>
+            <span>Embrague (Clutch): <b>Shift Izq / C</b></span>
+            <span>Subir Marcha: <b>W / Flecha Arriba</b></span>
+            <span>Bajar Marcha: <b>S / Flecha Abajo</b></span>
+            <span>Reiniciar: <b>R</b></span>
+        </div>
+    </div>
+
+    <script type="module" src="src/game.js"></script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+﻿# Dependencias de GRAVY PROTOCOL REVOLUTION 2.0
+pygame-ce>=2.5.0
+numpy>=1.26.0
+pyinstaller>=6.4.0
