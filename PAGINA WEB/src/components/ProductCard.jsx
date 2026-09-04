@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useSelection } from '../context/SelectionContext';
 import LikeButton from './LikeButton';
+import { trackViewContent, trackContact } from '../services/analytics';
 
 const formatDimensions = (dim) => {
   if (!dim) return '';
@@ -49,13 +50,14 @@ const ProductCard = ({ product, isResellerMode = false }) => {
     }
   }, [product]);
 
-  // Reset auto-play and drag offset when opening modal
+  // Reset auto-play and drag offset when opening modal + Track ViewContent
   useEffect(() => {
     if (isModalOpen) {
       setIsAutoPlaying(true);
       setModalDragY(0);
+      trackViewContent(product);
     }
-  }, [isModalOpen]);
+  }, [isModalOpen, product]);
 
   // Auto-slideshow effect every 1.5s
   useEffect(() => {
@@ -166,6 +168,10 @@ const ProductCard = ({ product, isResellerMode = false }) => {
     if (e) e.stopPropagation();
     if (!currentVariant) return;
     const isReseller = window.location.pathname.includes('/mayoristas') || isResellerMode;
+    
+    // Rastrear evento de contacto / pedido WhatsApp en Meta y Google
+    trackContact(product, isReseller);
+
     let text = isReseller ? `*--- PEDIDO MAYORISTA ---*\n\n` : '';
     text += `Hola, estoy interesado en:\n\n${product.name}\n`;
     if (product.dimensions) text += `Medida: ${formatDimensions(product.dimensions)}\n`;

@@ -1,5 +1,5 @@
-('C:\\Users\\User\\Documents\\JUEGO TECLADO V2 - GRAVY PROTOCOL '
- 'REVOLUTION\\build\\GravyProtocolRevolution\\PYZ-00.pyz',
+('C:\\Users\\User\\Documents\\SELLOS CHACAITO\\JUEGO TECLADO '
+ 'V2\\build\\GravyProtocolRevolution\\PYZ-00.pyz',
  [('__future__',
    'C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\__future__.py',
    'PYMODULE'),
@@ -170,12 +170,12 @@
    'PYMODULE'),
   ('content', '-', 'PYMODULE'),
   ('content.campaign_50_levels',
-   'C:\\Users\\User\\Documents\\JUEGO TECLADO V2 - GRAVY PROTOCOL '
-   'REVOLUTION\\content\\campaign_50_levels.py',
+   'C:\\Users\\User\\Documents\\SELLOS CHACAITO\\JUEGO TECLADO '
+   'V2\\content\\campaign_50_levels.py',
    'PYMODULE'),
   ('content.shop_catalog',
-   'C:\\Users\\User\\Documents\\JUEGO TECLADO V2 - GRAVY PROTOCOL '
-   'REVOLUTION\\content\\shop_catalog.py',
+   'C:\\Users\\User\\Documents\\SELLOS CHACAITO\\JUEGO TECLADO '
+   'V2\\content\\shop_catalog.py',
    'PYMODULE'),
   ('contextlib',
    'C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\contextlib.py',
@@ -188,20 +188,20 @@
    'PYMODULE'),
   ('core', '-', 'PYMODULE'),
   ('core.city_background',
-   'C:\\Users\\User\\Documents\\JUEGO TECLADO V2 - GRAVY PROTOCOL '
-   'REVOLUTION\\core\\city_background.py',
+   'C:\\Users\\User\\Documents\\SELLOS CHACAITO\\JUEGO TECLADO '
+   'V2\\core\\city_background.py',
    'PYMODULE'),
   ('core.particle_system',
-   'C:\\Users\\User\\Documents\\JUEGO TECLADO V2 - GRAVY PROTOCOL '
-   'REVOLUTION\\core\\particle_system.py',
+   'C:\\Users\\User\\Documents\\SELLOS CHACAITO\\JUEGO TECLADO '
+   'V2\\core\\particle_system.py',
    'PYMODULE'),
   ('core.save_manager',
-   'C:\\Users\\User\\Documents\\JUEGO TECLADO V2 - GRAVY PROTOCOL '
-   'REVOLUTION\\core\\save_manager.py',
+   'C:\\Users\\User\\Documents\\SELLOS CHACAITO\\JUEGO TECLADO '
+   'V2\\core\\save_manager.py',
    'PYMODULE'),
   ('core.sound_engine',
-   'C:\\Users\\User\\Documents\\JUEGO TECLADO V2 - GRAVY PROTOCOL '
-   'REVOLUTION\\core\\sound_engine.py',
+   'C:\\Users\\User\\Documents\\SELLOS CHACAITO\\JUEGO TECLADO '
+   'V2\\core\\sound_engine.py',
    'PYMODULE'),
   ('csv',
    'C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\csv.py',
@@ -304,12 +304,12 @@
    'PYMODULE'),
   ('game', '-', 'PYMODULE'),
   ('game.boss_engine',
-   'C:\\Users\\User\\Documents\\JUEGO TECLADO V2 - GRAVY PROTOCOL '
-   'REVOLUTION\\game\\boss_engine.py',
+   'C:\\Users\\User\\Documents\\SELLOS CHACAITO\\JUEGO TECLADO '
+   'V2\\game\\boss_engine.py',
    'PYMODULE'),
   ('game.combat_manager',
-   'C:\\Users\\User\\Documents\\JUEGO TECLADO V2 - GRAVY PROTOCOL '
-   'REVOLUTION\\game\\combat_manager.py',
+   'C:\\Users\\User\\Documents\\SELLOS CHACAITO\\JUEGO TECLADO '
+   'V2\\game\\combat_manager.py',
    'PYMODULE'),
   ('getopt',
    'C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\getopt.py',
@@ -1093,24 +1093,24 @@
    'PYMODULE'),
   ('ui', '-', 'PYMODULE'),
   ('ui.black_market_ui',
-   'C:\\Users\\User\\Documents\\JUEGO TECLADO V2 - GRAVY PROTOCOL '
-   'REVOLUTION\\ui\\black_market_ui.py',
+   'C:\\Users\\User\\Documents\\SELLOS CHACAITO\\JUEGO TECLADO '
+   'V2\\ui\\black_market_ui.py',
    'PYMODULE'),
   ('ui.gravy_hologram',
-   'C:\\Users\\User\\Documents\\JUEGO TECLADO V2 - GRAVY PROTOCOL '
-   'REVOLUTION\\ui\\gravy_hologram.py',
+   'C:\\Users\\User\\Documents\\SELLOS CHACAITO\\JUEGO TECLADO '
+   'V2\\ui\\gravy_hologram.py',
    'PYMODULE'),
   ('ui.hud_telemetry',
-   'C:\\Users\\User\\Documents\\JUEGO TECLADO V2 - GRAVY PROTOCOL '
-   'REVOLUTION\\ui\\hud_telemetry.py',
+   'C:\\Users\\User\\Documents\\SELLOS CHACAITO\\JUEGO TECLADO '
+   'V2\\ui\\hud_telemetry.py',
    'PYMODULE'),
   ('ui.trophy_room_ui',
-   'C:\\Users\\User\\Documents\\JUEGO TECLADO V2 - GRAVY PROTOCOL '
-   'REVOLUTION\\ui\\trophy_room_ui.py',
+   'C:\\Users\\User\\Documents\\SELLOS CHACAITO\\JUEGO TECLADO '
+   'V2\\ui\\trophy_room_ui.py',
    'PYMODULE'),
   ('ui.visual_keyboard',
-   'C:\\Users\\User\\Documents\\JUEGO TECLADO V2 - GRAVY PROTOCOL '
-   'REVOLUTION\\ui\\visual_keyboard.py',
+   'C:\\Users\\User\\Documents\\SELLOS CHACAITO\\JUEGO TECLADO '
+   'V2\\ui\\visual_keyboard.py',
    'PYMODULE'),
   ('unittest',
    'C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\unittest\\__init__.py',

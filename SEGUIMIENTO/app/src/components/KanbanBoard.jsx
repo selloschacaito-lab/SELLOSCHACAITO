@@ -1,18 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import OrderCard from './OrderCard';
 import ImageUploadModal from './ImageUploadModal';
 import DeliveryModal from './DeliveryModal';
 import CheckoutModal from './CheckoutModal';
 import FinishedPhotoModal from './FinishedPhotoModal';
+import POSModal from './POSModal';
 import { db } from '../firebase/config';
 import { ref, update, get, remove } from 'firebase/database';
+import { logActivity } from '../services/activityLogger';
 import confetti from 'canvas-confetti';
+import { toast } from 'react-hot-toast';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { Minimize2, Maximize2, Plus, ChevronRight, LayoutPanelLeft, Palette, Receipt, Printer, Cog, CheckCircle2, Package, CheckCheck } from 'lucide-react';
 
 const STATUSES = [
-  { id: "design_sent", name: "Diseño Enviado", color: "color-blue", icon: Palette },
+  { id: "design_sent", name: "Iniciando Pedido", color: "color-blue", icon: Palette },
   { id: "fina", name: "Pagado", color: "color-red", icon: Receipt },
   { id: "printing", name: "Impresión", color: "color-orange", icon: Printer },
   { id: "production", name: "En Producción", color: "color-indigo", icon: Cog },
@@ -21,13 +24,24 @@ const STATUSES = [
   { id: "delivered", name: "Entregado", color: "color-gray", isHidden: true, icon: CheckCheck }
 ];
 
-function KanbanBoard({ orders, searchTerm = '', showArchived = false, onOrderClick }) {
+function KanbanBoard({ orders, searchTerm = '', showArchived = false, onOrderClick, highlightedOrderId = null }) {
   const [uploadingOrder, setUploadingOrder] = useState(null);
   const [missingTypes, setMissingTypes] = useState([]);
   const [deliveringOrder, setDeliveringOrder] = useState(null);
   const [checkoutOrder, setCheckoutOrder] = useState(null);
   const [packedOrder, setPackedOrder] = useState(null);
+  const [posOrder, setPosOrder] = useState(null);
   const [uploadTargetStatus, setUploadTargetStatus] = useState(null);
+
+  const [columnLimits, setColumnLimits] = useState({
+    design_sent: 50,
+    fina: 50,
+    printing: 50,
+    production: 50,
+    finished: 50,
+    packed: 50,
+    delivered: 50
+  });
 
   const [collapsedCols, setCollapsedCols] = useState(() => {
     try {
@@ -37,6 +51,25 @@ function KanbanBoard({ orders, searchTerm = '', showArchived = false, onOrderCli
       return {};
     }
   });
+
+  // Si hay un pedido resaltado en una columna colapsada, descolapsarla para mostrarlo
+  useEffect(() => {
+    if (highlightedOrderId && orders) {
+      const order = orders[highlightedOrderId] || Object.values(orders).find(o => o.id === highlightedOrderId);
+      if (order) {
+        let rawStatus = order.status || order.statusId || 'design_sent';
+        if (rawStatus === 'waiting_payment') rawStatus = 'fina';
+        setCollapsedCols(prev => {
+          if (prev[rawStatus]) {
+            const next = { ...prev, [rawStatus]: false };
+            localStorage.setItem('kanban_collapsed_cols', JSON.stringify(next));
+            return next;
+          }
+          return prev;
+        });
+      }
+    }
+  }, [highlightedOrderId, orders]);
 
   const toggleCollapse = (statusId) => {
     setCollapsedCols(prev => {
@@ -66,53 +99,64 @@ function KanbanBoard({ orders, searchTerm = '', showArchived = false, onOrderCli
     delivered: countRef8
   };
 
-  const ordersByStatus = STATUSES.reduce((acc, status) => {
-    acc[status.id] = [];
-    return acc;
-  }, {});
+  const ordersByStatus = useMemo(() => {
+    const accStatus = STATUSES.reduce((acc, status) => {
+      acc[status.id] = [];
+      return acc;
+    }, {});
 
-  const term = searchTerm.toLowerCase();
+    const term = searchTerm.toLowerCase();
 
-  Object.entries(orders || {}).forEach(([id, order]) => {
-    if (term) {
-      const matchName = order.clientName?.toLowerCase().includes(term);
-      const matchDetails = order.details?.toLowerCase().includes(term);
-      const matchDesigner = order.designer?.toLowerCase().includes(term);
-      if (!matchName && !matchDetails && !matchDesigner) return;
-    }
+    Object.entries(orders || {}).forEach(([id, order]) => {
+      if (!order) return;
 
-    const legacyStatusMap = {
-      "Diseño Enviado": "design_sent",
-      "Diseo Enviado": "design_sent",
-      "Espera de Pago": "fina",
-      "FINA": "fina",
-      "RECIBO": "fina",
-      "Impresión": "printing",
-      "Impresin": "printing",
-      "En Producción": "production",
-      "En Produccin": "production",
-      "Terminado": "finished",
-      "Empacado": "packed",
-      "Entregado": "delivered"
-    };
+      // Excluir pedidos cancelados o eliminados del tablero Kanban
+      if (order.status === 'cancelled' || order.statusId === 'cancelled' || order.isCancelled) {
+        return;
+      }
 
-    let rawStatus = order.status || order.statusId || legacyStatusMap[order.status] || "design_sent";
-    if (rawStatus === 'waiting_payment') rawStatus = 'fina';
-    
-    if (ordersByStatus[rawStatus]) {
-      ordersByStatus[rawStatus].push({ id, ...order });
-    } else {
-      ordersByStatus["design_sent"].push({ id, ...order });
-    }
-  });
+      if (term) {
+        const matchName = order.clientName?.toLowerCase().includes(term);
+        const matchDetails = order.details?.toLowerCase().includes(term);
+        const matchDesigner = order.designer?.toLowerCase().includes(term);
+        if (!matchName && !matchDetails && !matchDesigner) return;
+      }
 
-  Object.keys(ordersByStatus).forEach(status => {
-    ordersByStatus[status].sort((a, b) => {
-      const dateA = new Date(a.createdAt || 0);
-      const dateB = new Date(b.createdAt || 0);
-      return dateB - dateA;
+      const legacyStatusMap = {
+        "Diseño Enviado": "design_sent",
+        "Diseo Enviado": "design_sent",
+        "Espera de Pago": "fina",
+        "FINA": "fina",
+        "RECIBO": "fina",
+        "Impresión": "printing",
+        "Impresin": "printing",
+        "En Producción": "production",
+        "En Produccin": "production",
+        "Terminado": "finished",
+        "Empacado": "packed",
+        "Entregado": "delivered"
+      };
+
+      let rawStatus = order.status || order.statusId || legacyStatusMap[order.status] || "design_sent";
+      if (rawStatus === 'waiting_payment') rawStatus = 'fina';
+      
+      if (accStatus[rawStatus]) {
+        accStatus[rawStatus].push({ id, ...order });
+      } else if (rawStatus !== 'cancelled') {
+        accStatus["design_sent"].push({ id, ...order });
+      }
     });
-  });
+
+    Object.keys(accStatus).forEach(status => {
+      accStatus[status].sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0);
+        const dateB = new Date(b.createdAt || 0);
+        return dateB - dateA;
+      });
+    });
+
+    return accStatus;
+  }, [orders, searchTerm]);
 
   const performAdvanceLogic = (id, nextStatus) => {
     const order = Object.entries(orders || {}).find(([oid]) => oid === id)?.[1];
@@ -129,16 +173,22 @@ Le notificaremos cuando esté listo para retiro o despacho. ¡Saludos!`);
       }
     };
 
-    if (nextStatus === 'fina' || nextStatus === 'printing') {
-      const missing = [];
-      if (order.requiresDesign !== false && !order.hasReference) missing.push('reference');
-      if (!order.hasFinaReceipt) missing.push('fina_receipt');
-      
-      if (missing.length > 0) {
+    // 1. Interceptar paso a PAGADO (fina) si no tiene venta/recibo registrada
+    if (nextStatus === 'fina') {
+      if (!order.hasFinaReceipt) {
+        setPosOrder({ ...order, id });
+        return false;
+      }
+    }
+
+    // 2. Interceptar paso a IMPRESIÓN si no tiene diseño aprobado
+    if (nextStatus === 'printing') {
+      if (order.requiresDesign !== false && !order.hasReference) {
+        toast.error('⛔ ¡Falta el diseño! No puedes pasar a Impresión sin haber subido el diseño aprobado.', { duration: 4000 });
         setUploadingOrder({ ...order, id });
-        setMissingTypes(missing);
-        setUploadTargetStatus(nextStatus);
-        return false; 
+        setMissingTypes(['reference']);
+        setUploadTargetStatus('printing');
+        return false;
       }
     }
 
@@ -184,11 +234,32 @@ Le notificaremos cuando esté listo para retiro o despacho. ¡Saludos!`);
     }
 
     const orderRef = ref(db, `orders/${id}`);
+    const nowTime = Date.now();
+    const nowISO = new Date().toISOString();
+    const statusName = STATUSES.find(s => s.id === nextStatus)?.name || nextStatus;
+    
+    const timestampUpdates = {};
+    if (nextStatus === 'fina' && !order?.paidAt) {
+      timestampUpdates.paidAt = nowISO;
+    }
+    if (nextStatus === 'printing' && !order?.printedAt) {
+      timestampUpdates.printedAt = nowISO;
+    }
+    if (nextStatus === 'finished' && !order?.finishedAt) {
+      timestampUpdates.finishedAt = nowISO;
+    }
+    if (nextStatus === 'delivered' && !order?.deliveredAt) {
+      timestampUpdates.deliveredAt = nowISO;
+    }
+
     update(orderRef, { 
       status: nextStatus,
       statusId: nextStatus,
-      updatedAt: new Date().toISOString() 
+      currentStatusStartedAt: nowTime,
+      updatedAt: nowISO,
+      ...timestampUpdates
     }).then(() => {
+      logActivity("Cambio de Estado", `Movió pedido #${order?.orderNumber || id.slice(-5)} a ${statusName}`, id);
       if (nextStatus === 'fina') {
         triggerFinaWhatsapp({ ...order, id });
       }
@@ -211,11 +282,18 @@ Le notificaremos cuando esté listo para retiro o despacho. ¡Saludos!`);
     const currentIndex = STATUSES.findIndex(s => s.id === currentStatus);
     if (currentIndex > 0) {
       const prevStatus = STATUSES[currentIndex - 1].id;
+      const prevStatusName = STATUSES[currentIndex - 1].name;
       const orderRef = ref(db, `orders/${id}`);
+      const nowTime = Date.now();
+      const order = orders ? orders[id] : null;
+
       update(orderRef, { 
         status: prevStatus,
         statusId: prevStatus,
+        currentStatusStartedAt: nowTime,
         updatedAt: new Date().toISOString() 
+      }).then(() => {
+        logActivity("Retroceder Estado", `Retrocedió pedido #${order?.orderNumber || id.slice(-5)} a ${prevStatusName}`, id);
       }).catch(err => {
         console.error("Error retrocediendo pedido:", err);
       });
@@ -246,13 +324,67 @@ Le notificaremos cuando esté listo para retiro o despacho. ¡Saludos!`);
   };
 
   const handlePackedPhotoComplete = async (result = { skipped: true }) => {
-    if (packedOrder) {
-      const orderRef = ref(db, `orders/${packedOrder.id}`);
-      
-      // Si subió foto, intentar copiarla al portapapeles para que pueda hacer Ctrl+V directamente en WhatsApp
+    if (!packedOrder) return;
+    const currentPacked = packedOrder;
+    const orderId = currentPacked.id;
+    setPackedOrder(null);
+
+    // 1. Formatear teléfono para WhatsApp
+    const rawPhone = String(currentPacked.whatsapp || '');
+    let cleanPhone = rawPhone.replace(/\D/g, '');
+    if (cleanPhone.startsWith('0')) cleanPhone = '58' + cleanPhone.slice(1);
+    else if (!cleanPhone.startsWith('58') && cleanPhone.length === 10) cleanPhone = '58' + cleanPhone;
+
+    // 2. Construir mensaje de WhatsApp detallado comunicando las opciones de envío o lo registrado
+    const clientName = (currentPacked.clientName || 'Cliente').toUpperCase();
+    const publicLink = `https://seguimiento-sellos-chacaito.web.app/orden/${orderId}`;
+    
+    let messageText = `Hola ${clientName}, tu sello en Sellos Chacaito esta LISTO Y EMPACADO.\n\n`;
+
+    if (!result.skipped) {
+      messageText += `Foto de tu pedido:\n${publicLink}\n\n`;
+    }
+
+    if (currentPacked.hasDelivery && currentPacked.deliveryType && currentPacked.deliveryType !== 'pickup') {
+      messageText += `Entrega: Se despachara segun lo acordado.\n`;
+    } else {
+      messageText += `Retiro en Tienda: CC ARTA Chacaito, Piso 1, Local 1-6 (Lunes a Viernes 8:00 a.m. a 5:00 p.m.).\n`;
+    }
+
+    const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}` : null;
+
+    // 3. Abrir WhatsApp de inmediato
+    if (waUrl) {
+      window.open(waUrl, '_blank');
+      toast((t) => (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', width: '100%' }}>
+          <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>✅ ¡Pedido Empacado!</span>
+          <button
+            onClick={() => {
+              window.open(waUrl, '_blank');
+              toast.dismiss(t.id);
+            }}
+            style={{
+              background: '#22c55e',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '5px 10px',
+              fontWeight: 800,
+              fontSize: '0.78rem',
+              cursor: 'pointer'
+            }}
+          >
+            💬 Abrir WhatsApp
+          </button>
+        </div>
+      ), { duration: 8000 });
+    }
+
+    // 4. Copiar imagen al portapapeles y actualizar BD
+    try {
       if (!result.skipped) {
-        try {
-          const finishedSnap = await get(ref(db, `orderAssets/finished_photo/${packedOrder.id}`));
+        get(ref(db, `orderAssets/finished_photo/${orderId}`)).then(async (finishedSnap) => {
           if (finishedSnap.exists() && finishedSnap.val()?.fullDataUrl) {
             const base64Data = finishedSnap.val().fullDataUrl;
             const res = await fetch(base64Data);
@@ -263,32 +395,17 @@ Le notificaremos cuando esté listo para retiro o despacho. ¡Saludos!`);
               ]);
             }
           }
-        } catch (err) {
-          console.warn("No se pudo copiar imagen al portapapeles:", err);
-        }
+        }).catch(e => console.warn("Clipboard photo error:", e));
       }
 
-      update(orderRef, { 
+      await update(ref(db, `orders/${orderId}`), { 
         status: 'packed',
         statusId: 'packed',
         updatedAt: new Date().toISOString() 
-      }).then(() => {
-        if (packedOrder.whatsapp) {
-          const publicLink = `https://seguimiento-sellos-chacaito.web.app/orden/${packedOrder.id}`;
-          
-          let messageText = `¡Hola! 👋 Tu pedido en Sellos Chacaíto ya se encuentra listo.`;
-          if (!result.skipped) {
-            messageText += `\n📸 Puedes ver el resultado aquí:\n${publicLink}`;
-          }
-          
-          messageText += `\n\nRecuerda visitar nuestra web https://sellos-chacaito.web.app/ y seguirnos en Instagram: https://instagram.com/sellos.chacaito\n\n🕒 Entregas: Lunes a Viernes de 8:00 a. m. a 5:00 p. m.\n📍 Chacaíto, CC ARTA`;
-          
-          const message = encodeURIComponent(messageText);
-          window.open(`https://wa.me/${packedOrder.whatsapp}?text=${message}`, '_blank');
-        }
       });
+    } catch (err) {
+      console.error("Error al actualizar a packed:", err);
     }
-    setPackedOrder(null);
   };
 
   const handleDragEnd = (result) => {
@@ -351,7 +468,7 @@ Le notificaremos cuando esté listo para retiro o despacho. ¡Saludos!`);
                     color: '#64748b',
                     boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
                   }}>
-                    {ordersByStatus[status.id].length}
+                    {(ordersByStatus[status.id] || []).length}
                   </span>
                 </div>
               </div>
@@ -367,7 +484,7 @@ Le notificaremos cuando esté listo para retiro o despacho. ¡Saludos!`);
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span className="column-count" ref={countRefs[status.id]}>
-                    {ordersByStatus[status.id].length}
+                    {(ordersByStatus[status.id] || []).length}
                   </span>
                   {!showArchived && (
                     <button 
@@ -404,7 +521,7 @@ Le notificaremos cuando esté listo para retiro o despacho. ¡Saludos!`);
                       border: snapshot.isDraggingOver ? '1px dashed var(--primary)' : '1px solid rgba(226, 232, 240, 0.5)'
                     }}
                   >
-                    {ordersByStatus[status.id].map((order, orderIndex) => (
+                    {(ordersByStatus[status.id] || []).slice(0, columnLimits[status.id] || 50).map((order, orderIndex) => (
                       <Draggable key={order.id} draggableId={order.id} index={orderIndex}>
                         {(provided, snapshot) => (
                           <div
@@ -424,13 +541,33 @@ Le notificaremos cuando esté listo para retiro o despacho. ¡Saludos!`);
                               onAdvance={() => handleAdvance(order.id, status.id)}
                               onRegress={() => handleRegress(order.id, status.id)}
                               onClick={() => onOrderClick && onOrderClick(order)}
+                              isHighlighted={highlightedOrderId === order.id}
                             />
                           </div>
                         )}
                       </Draggable>
                     ))}
+                    {(ordersByStatus[status.id] || []).length > (columnLimits[status.id] || 50) && (
+                      <button
+                        onClick={() => setColumnLimits(prev => ({ ...prev, [status.id]: (prev[status.id] || 50) + 50 }))}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          background: 'rgba(255, 255, 255, 0.6)',
+                          border: '1px dashed #cbd5e1',
+                          borderRadius: '8px',
+                          color: '#475569',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: 'pointer',
+                          marginTop: '4px'
+                        }}
+                      >
+                        Cargar más ({(ordersByStatus[status.id] || []).length - (columnLimits[status.id] || 50)} restantes)
+                      </button>
+                    )}
                     {provided.placeholder}
-                    {ordersByStatus[status.id].length === 0 && (
+                    {(ordersByStatus[status.id] || []).length === 0 && (
                       <div className="empty-column" style={{ border: 'none' }}>
                         Vacío
                       </div>
@@ -464,6 +601,14 @@ Le notificaremos cuando esté listo para retiro o despacho. ¡Saludos!`);
             order={packedOrder}
             onClose={() => setPackedOrder(null)}
             onComplete={handlePackedPhotoComplete}
+          />
+        )}
+
+        {posOrder && (
+          <POSModal 
+            order={posOrder}
+            onClose={() => setPosOrder(null)}
+            onSuccess={() => setPosOrder(null)}
           />
         )}
       </div>

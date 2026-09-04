@@ -268,33 +268,33 @@ export default function PaymentView() {
     }
 
     // Build WhatsApp message
-    let msg = `😁 DATOS PARA FACTURACIÓN (${clientType === 'empresa' ? 'EMPRESA' : 'PERSONAL'}):\n\n`;
-    msg += `👤 ${nameLabel.toUpperCase()}: ${formData.nombre}\n`;
-    msg += `🪪 ${rifLabel.toUpperCase()}: ${formData.rif}\n`;
-    msg += `📞 TELÉFONO: ${formData.telefono}\n`;
-    msg += `📍 ${clientType === 'empresa' ? 'DIRECCIÓN FISCAL' : 'DIRECCIÓN'}: ${formData.direccion || 'N/A'}\n\n`;
+    let msg = `DATOS PARA FACTURACION (${clientType === 'empresa' ? 'EMPRESA' : 'PERSONAL'}):\n\n`;
+    msg += `* ${nameLabel.toUpperCase()}: ${formData.nombre}\n`;
+    msg += `* ${rifLabel.toUpperCase()}: ${formData.rif}\n`;
+    msg += `* TELEFONO: ${formData.telefono}\n`;
+    msg += `* ${clientType === 'empresa' ? 'DIRECCION FISCAL' : 'DIRECCION'}: ${formData.direccion || 'N/A'}\n\n`;
 
     if (shippingMethod === 'delivery') {
-      msg += `🛵 SERVICIO DE DELIVERY (CARACAS):\n`;
+      msg += `SERVICIO DE DELIVERY (CARACAS):\n`;
       if (formData.deliveryMapLink) {
-        msg += `📍 Link Ubicación: ${formData.deliveryMapLink}\n`;
+        msg += `- Link Ubicacion: ${formData.deliveryMapLink}\n`;
       }
       if (formData.deliveryCoords) {
-        msg += `📌 Coordenadas PIN: ${formData.deliveryCoords.lat.toFixed(6)}, ${formData.deliveryCoords.lng.toFixed(6)}\n`;
+        msg += `- Coordenadas PIN: ${formData.deliveryCoords.lat.toFixed(6)}, ${formData.deliveryCoords.lng.toFixed(6)}\n`;
       }
-      msg += `*(El costo del delivery se cancela directamente al motorizado al recibir)*\n\n`;
+      msg += `(El costo del delivery se cancela directamente al motorizado al recibir)\n\n`;
     } else if (shippingMethod === 'shipping') {
-      msg += `📦 ENVÍO NACIONAL:\n`;
-      msg += `🏢 EMPRESA DE ENVÍO: ${formData.courierCompany}\n`;
-      msg += `📍 AGENCIA / DIRECCIÓN: ${formData.courierAgencyAddress}\n\n`;
+      msg += `ENVIO NACIONAL:\n`;
+      msg += `- EMPRESA DE ENVIO: ${formData.courierCompany}\n`;
+      msg += `- AGENCIA / DIRECCION: ${formData.courierAgencyAddress}\n\n`;
     }
 
     if (receiptUrl) {
-      msg += `📎 COMPROBANTE DE PAGO: ${receiptUrl}\n`;
+      msg += `COMPROBANTE DE PAGO: ${receiptUrl}\n`;
     } else if (receiptImage) {
-      msg += `⚠️ (El cliente seleccionó comprobante en la web)\n`;
+      msg += `(El cliente selecciono comprobante en la web)\n`;
     } else {
-      msg += `⚠️ (El cliente no adjuntó comprobante en la web)\n`;
+      msg += `(El cliente no adjunto comprobante en la web)\n`;
     }
 
     // Save client to Firestore in background

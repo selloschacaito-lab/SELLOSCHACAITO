@@ -2,12 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Upload, FileText, Copy, CheckCircle2 } from 'lucide-react';
 import { compressImageToBase64 } from '../utils/imageUtils';
 import { toast } from 'react-hot-toast';
-import { GoogleGenAI } from '@google/genai';
-
-// Initialize the Google Gen AI client with the Vite environment variable
-const ai = new GoogleGenAI({ 
-  apiKey: import.meta.env.VITE_GEMINI_API_KEY 
-});
+import { generateWithGemini } from '../utils/aiHelper';
 
 export default function Texto() {
   const [imagePreview, setImagePreview] = useState(null);
@@ -73,8 +68,7 @@ Reglas:
         return;
       }
 
-      const result = await ai.models.generateContent({
-        model: 'gemini-1.5-flash',
+      const result = await generateWithGemini({
         contents: [
           {
             role: 'user',
@@ -120,41 +114,64 @@ Reglas:
   };
 
   return (
-    <div className="animate-fade-in" style={{ padding: '2rem', maxWidth: '1200px', width: '100%', margin: '0 auto' }}>
-      <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Extraer Texto de Imagen</h2>
-        <p style={{ color: 'var(--text-muted)' }}>Sube o pega (Ctrl+V) una imagen para leer su contenido automáticamente.</p>
+    <div className="animate-fade-in" style={{ padding: '24px 20px 80px', maxWidth: '1200px', width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+      
+      {/* Header Whitestamp */}
+      <div style={{
+        background: '#ffffff',
+        border: '1px solid #e2e8f0',
+        borderRadius: '20px',
+        padding: '22px 28px',
+        marginBottom: '20px',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+      }}>
+        <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
+          Extraer Texto de Imagen (OCR IA)
+        </h1>
+        <p style={{ color: '#64748b', fontSize: '13px', margin: 0, fontWeight: 500 }}>
+          Sube o pega (Ctrl+V) una imagen o comprobante para leer y extraer todo su contenido automáticamente.
+        </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
         {/* Lado Izquierdo: Imagen */}
-        <div className="glass-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }} ref={containerRef}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Upload size={18} /> Subir Imagen
+        <div style={{
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '20px',
+          padding: '24px',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+        }} ref={containerRef}>
+          <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Upload size={18} color="#10b981" /> Subir Imagen
           </h3>
           
           {!imagePreview ? (
             <div 
               style={{ 
-                border: '2px dashed var(--border-strong)', 
-                borderRadius: '0.75rem', 
+                border: '2px dashed #cbd5e1', 
+                borderRadius: '12px', 
                 flex: 1,
-                minHeight: '400px',
+                minHeight: '360px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: 'rgba(255,255,255,0.5)',
+                backgroundColor: '#f8fafc',
                 cursor: 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                padding: '20px',
+                textAlign: 'center'
               }}
               onClick={() => document.getElementById('ocr-file-upload').click()}
             >
-              <Upload size={48} color="var(--text-muted)" style={{ margin: '0 auto 1rem' }} />
-              <p style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '1rem' }}>
+              <Upload size={44} color="#94a3b8" style={{ margin: '0 auto 12px' }} />
+              <p style={{ fontWeight: 700, color: '#0f172a', fontSize: '15px', margin: 0 }}>
                 Haz clic aquí o presiona Ctrl+V para pegar
               </p>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.5rem' }}>Soporta JPG, PNG, WEBP</p>
+              <p style={{ color: '#64748b', fontSize: '13px', marginTop: '4px' }}>Soporta JPG, PNG, WEBP</p>
               <input 
                 type="file" 
                 id="ocr-file-upload"
@@ -164,11 +181,24 @@ Reglas:
               />
             </div>
           ) : (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ border: '1px solid var(--border-strong)', borderRadius: '0.75rem', padding: '0.5rem', backgroundColor: '#fff', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '350px' }}>
-                <img src={imagePreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '400px', objectFit: 'contain' }} />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px', backgroundColor: '#f8fafc', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '320px' }}>
+                <img src={imagePreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '380px', objectFit: 'contain' }} />
               </div>
-              <button onClick={() => { setImagePreview(null); setExtractedText(''); }} className="btn-secondary" style={{ alignSelf: 'center' }}>
+              <button 
+                onClick={() => { setImagePreview(null); setExtractedText(''); }} 
+                style={{
+                  alignSelf: 'center',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0',
+                  background: '#ffffff',
+                  color: '#64748b',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
                 Subir otra imagen
               </button>
             </div>
@@ -176,12 +206,20 @@ Reglas:
         </div>
 
         {/* Lado Derecho: Texto */}
-        <div className="glass-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <FileText size={18} /> Texto Extraído
+        <div style={{
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '20px',
+          padding: '24px',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+              <FileText size={18} color="#10b981" /> Texto Extraído
             </h3>
-            {isProcessing && <span style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '0.85rem' }}>Procesando...</span>}
+            {isProcessing && <span style={{ color: '#10b981', fontWeight: 800, fontSize: '13px' }}>Procesando con IA...</span>}
           </div>
           
           <textarea
@@ -190,27 +228,42 @@ Reglas:
             style={{ 
               width: '100%', 
               flex: 1, 
-              minHeight: '400px', 
-              padding: '1rem', 
-              borderRadius: '0.75rem', 
-              border: '1px solid var(--border-strong)', 
-              fontSize: '1rem',
-              backgroundColor: 'rgba(255,255,255,0.7)',
+              minHeight: '360px', 
+              padding: '14px', 
+              borderRadius: '12px', 
+              border: '1.5px solid #e2e8f0', 
+              fontSize: '14px',
+              backgroundColor: '#f8fafc',
+              color: '#0f172a',
               resize: 'none',
-              fontFamily: 'monospace'
+              fontFamily: 'monospace',
+              outline: 'none',
+              boxSizing: 'border-box'
             }}
             placeholder={isProcessing ? "Leyendo..." : "El texto extraído aparecerá aquí."}
             disabled={isProcessing}
           />
 
-          <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'flex-end' }}>
             <button 
-              className="btn-primary" 
               onClick={handleCopy} 
               disabled={!extractedText || isProcessing}
-              style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              style={{
+                padding: '10px 20px',
+                borderRadius: '10px',
+                border: 'none',
+                background: !extractedText || isProcessing ? '#cbd5e1' : '#10b981',
+                color: '#ffffff',
+                fontSize: '13px',
+                fontWeight: 800,
+                cursor: !extractedText || isProcessing ? 'not-allowed' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: !extractedText || isProcessing ? 'none' : '0 2px 6px rgba(16, 185, 129, 0.25)'
+              }}
             >
-              {isCopied ? <CheckCircle2 size={18} /> : <Copy size={18} />}
+              {isCopied ? <CheckCircle2 size={16} /> : <Copy size={16} />}
               {isCopied ? '¡Copiado!' : 'Copiar Texto'}
             </button>
           </div>

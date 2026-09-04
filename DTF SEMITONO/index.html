@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DTF Semitono Studio - Generador Profesional de Medios Tonos y DTF</title>
+  <link rel="stylesheet" href="styles.css?v=20260903d">
+</head>
+<body>
+
+  <!-- Input de archivo invisible (activado nativamente por los labels) -->
+  <input type="file" id="fileInput" accept="image/*,.png,.jpg,.jpeg,.webp,.svg,.bmp" style="position: absolute; left: -9999px; top: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none;">
+
+  <!-- Overlay visual de arrastrar y soltar -->
+  <div class="drop-overlay" id="dropOverlay">
+    <div class="drop-overlay-box">
+      <svg width="50" height="50" fill="var(--accent)" viewBox="0 0 24 24">
+        <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+      </svg>
+      <h2>¡Suelta tu imagen aquí!</h2>
+      <p>Soporta PNG transparente, JPG, WebP, SVG y BMP</p>
+    </div>
+  </div>
+
+  <!-- 1. BARRA SUPERIOR DE HERRAMIENTAS (ESTILO HALFTONE MAKER) -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="brand-badge">
+        <span class="brand-icon">DTF</span>
+        <span class="brand-title">SEMITONO STUDIO</span>
+      </div>
+
+      <!-- Herramientas rápidas -->
+      <div class="quick-tools">
+        <label for="fileInput" class="tool-icon-btn" title="Abrir archivo de imagen">
+          <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+          <span>Abrir</span>
+        </label>
+        <button class="tool-icon-btn" id="btnQuickKnockout" title="Eliminar fondo negro/blanco para DTF">
+          <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+          <span>Knockout</span>
+        </button>
+        <button class="tool-icon-btn" id="btnResetAll" title="Restablecer todos los ajustes">
+          <svg fill="currentColor" viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+          <span>Resetear</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Selector de formas en la barra superior (como Halftone Maker) -->
+    <div class="shape-selector-bar">
+      <button class="shape-btn active" data-grid="hex" data-pattern="0" id="shapeHex" title="Puntos en Cuadrícula Hexagonal (Panal - Estándar DTF)">
+        <span>⬡ Hexagonal</span>
+      </button>
+      <button class="shape-btn" data-grid="square" data-pattern="0" id="shapeSquare" title="Puntos en Cuadrícula Cuadrada Clásica">
+        <span>▦ Cuadrado</span>
+      </button>
+      <button class="shape-btn" data-grid="square" data-pattern="1" id="shapeWavy" title="Líneas Onduladas (Líquido)">
+        <span>≋ Ondulado</span>
+      </button>
+      <button class="shape-btn" data-grid="square" data-pattern="3" id="shapeLine" title="Líneas Rectas Paralelas">
+        <span>═ Líneas</span>
+      </button>
+      <button class="shape-btn" data-grid="square" data-pattern="4" id="shapeDiamond" title="Diamantes / Rombos">
+        <span>✦ Diamante</span>
+      </button>
+      <button class="shape-btn" data-grid="square" data-pattern="5" id="shapeRing" title="Anillos Concéntricos">
+        <span>◎ Anillo</span>
+      </button>
+      <button class="shape-btn" data-grid="square" data-pattern="6" id="shapeStipple" title="Punteado (Stippling / Dotwork)">
+        <span>⁖ Punteado</span>
+      </button>
+    </div>
+
+    <!-- Toggle Rápido Color vs Monocromo -->
+    <div class="shape-selector-bar">
+      <button class="shape-btn active" id="btnQuickBW" title="Modo Monocromo Tinta Pura (K)">🖤 B&W</button>
+      <button class="shape-btn" id="btnQuickColor" title="Modo Full Color Pop">🎨 Color</button>
+    </div>
+
+    <!-- Botones de la derecha -->
+    <div class="topbar-right">
+      <button class="btn btn-secondary" id="btnCopyClipboard" title="Copiar PNG al portapapeles para pegar en Illustrator o Photoshop">
+        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+        Copiar PNG
+      </button>
+      <button class="btn btn-secondary" id="btnExportSVG" title="Exportar trazados vectoriales limpios SVG para Illustrator/Corel">
+        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>
+        Descargar SVG
+      </button>
+      <button class="btn btn-primary" id="btnExportPNG" title="Descargar PNG con fondo transparente en alta resolución (300 DPI)">
+        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+        Descargar PNG (300 DPI)
+      </button>
+    </div>
+  </header>
+
+  <!-- 2. ESPACIO DE TRABAJO PRINCIPAL (LIENZO + INSPECTOR LATERAL DERECHO) -->
+  <div class="main-workspace">
+
+    <!-- Visor Central Interactivo -->
+    <main class="viewport-area" id="viewportContainer">
+      <div class="canvas-wrapper" id="canvasWrapper">
+        <canvas id="mainCanvas"></canvas>
+      </div>
+
+      <!-- HUD Flotante de Zoom y Dimensiones (Arriba Derecha) -->
+      <div class="canvas-floating-hud">
+        <button id="btnZoomOut" title="Reducir (-)">-</button>
+        <span class="hud-pill" id="zoomLevel">100%</span>
+        <button id="btnZoomIn" title="Aumentar (+)">+</button>
+        <span style="color: var(--border-subtle)">|</span>
+        <button id="btnFit" title="Ajustar a ventana">Ajustar</button>
+        <span style="color: var(--border-subtle)">|</span>
+        <span class="hud-pill" id="imgDimensions">Cargando...</span>
+      </div>
+
+      <!-- Barra Flotante Inferior de Descarga (Estilo Halftone Maker) -->
+      <div class="canvas-bottom-bar">
+        <button class="btn btn-primary" id="btnBarDownloadPNG" style="font-size: 11px; padding: 5px 12px;">
+          ⬇ Descargar PNG (300 DPI)
+        </button>
+        <button class="btn btn-secondary" id="btnBarDownloadSVG" style="font-size: 11px; padding: 5px 12px;">
+          📐 Descargar SVG
+        </button>
+        <button class="btn btn-secondary" id="btnBarCopy" style="font-size: 11px; padding: 5px 12px;">
+          📋 Copiar PNG
+        </button>
+      </div>
+    </main>
+
+    <!-- Panel Lateral Derecho (Inspector de Ajustes estilo Halftone Maker) -->
+    <aside class="inspector-sidebar">
+
+      <!-- Caja de Subida Directa -->
+      <label for="fileInput" class="upload-box" id="uploadBox">
+        <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+        </svg>
+        <h4>Haz clic aquí para cargar imagen</h4>
+        <p>o arrastra cualquier imagen (o pega con Ctrl+V)</p>
+      </label>
+
+      <!-- Gráficos de Prueba Rápidos -->
+      <div style="display: flex; gap: 5px; margin-top: -4px;">
+        <button class="btn btn-secondary" id="btnSampleToucan" style="flex: 1; font-size: 10px; padding: 5px 2px;" title="Cargar tucán tropical">🦜 Tucán</button>
+        <button class="btn btn-secondary" id="btnSampleSkull" style="flex: 1; font-size: 10px; padding: 5px 2px;" title="Cargar calavera vintage (Prueba Sombras)">💀 Calavera</button>
+        <button class="btn btn-secondary" id="btnSampleSunset" style="flex: 1; font-size: 10px; padding: 5px 2px;" title="Cargar paisaje synthwave (Prueba Ondas)">🌴 Sunset</button>
+      </div>
+
+      <!-- SECCIÓN 1: LIENZO Y AJUSTES (HALFTONE MAKER EXACT CONTROLS) -->
+      <div class="section-box">
+        <div class="section-head">
+          Lienzo y Ajustes
+          <span class="tag-badge">Tono</span>
+        </div>
+
+        <!-- Desenfoque CSS: El secreto para que ilustraciones planas creen degradados de puntos suaves -->
+        <div class="control-row">
+          <div class="control-label-row">
+            <label for="preBlur" title="Desenfoque previo: Suaviza los colores planos para que los puntos varíen gradualmente de grandes a pequeños">Desenfoque CSS</label>
+            <span class="control-val" id="valPreBlur">4 px</span>
+          </div>
+          <input type="range" id="preBlur" min="0" max="20" value="4" step="1">
+        </div>
+
+        <!-- Gamma: Curva de respuesta tonal -->
+        <div class="control-row">
+          <div class="control-label-row">
+            <label for="gamma" title="Gamma: Ajusta el equilibrio de medios tonos">Gamma</label>
+            <span class="control-val" id="valGamma">1.00</span>
+          </div>
+          <input type="range" id="gamma" min="0.2" max="2.5" value="1.00" step="0.05">
+        </div>
+
+        <!-- Contraste -->
+        <div class="control-row">
+          <div class="control-label-row">
+            <label for="contrast" title="Contraste general">Contraste</label>
+            <span class="control-val" id="valContrast">1.10x</span>
+          </div>
+          <input type="range" id="contrast" min="0.5" max="2.5" value="1.10" step="0.05">
+        </div>
+
+        <!-- Sujetar Sombras (Clamp Max / Fusión Sólida): Permite fusionar sombras en 100% negro sólido -->
+        <div class="control-row">
+          <div class="control-label-row">
+            <label for="clampMax" title="Sujetar Sombras: Al 85%-90%, las áreas oscuras se fusionan por completo en masa sólida continua de tinta">Sujetar Sombras (Fusión Sólida)</label>
+            <span class="control-val" id="valClampMax">90%</span>
+          </div>
+          <input type="range" id="clampMax" min="65" max="100" value="90" step="1">
+        </div>
+
+        <!-- Sujetar Luces (Clamp Min / Corte): Elimina puntos sucios en áreas claras -->
+        <div class="control-row">
+          <div class="control-label-row">
+            <label for="clampMin" title="Sujetar Luces: Elimina puntos aislados en las zonas más claras">Sujetar Luces (Corte Limpio)</label>
+            <span class="control-val" id="valClampMin">4%</span>
+          </div>
+          <input type="range" id="clampMin" min="0" max="25" value="4" step="1">
+        </div>
+      </div>
+
+      <!-- SECCIÓN 2: CUADRÍCULA & MEDIOS TONOS -->
+      <div class="section-box">
+        <div class="section-head">
+          Cuadrícula
+          <span class="tag-badge">Grid</span>
+        </div>
+
+        <div class="control-row">
+          <label class="control-label-row" for="gridLayoutSelect">Tipo de Disposición</label>
+          <select id="gridLayoutSelect">
+            <option value="hex" selected>Hexagonal (Panal / Tresbolillo - Óptimo DTF)</option>
+            <option value="square">Cuadrada Clásica (Ortogonal)</option>
+          </select>
+        </div>
+
+        <div class="control-row">
+          <div class="control-label-row">
+            <label for="scale" title="Espaciado / Frecuencia de la trama (LPI)">Espaciado / Frecuencia (LPI)</label>
+            <span class="control-val" id="valScale">70</span>
+          </div>
+          <input type="range" id="scale" min="15" max="160" value="70" step="1">
+        </div>
+
+        <div class="control-row">
+          <div class="control-label-row">
+            <label for="angle" title="Ángulo de rotación de la trama">Ángulo de Rotación</label>
+            <span class="control-val" id="valAngle">45°</span>
+          </div>
+          <input type="range" id="angle" min="0" max="180" value="45" step="1">
+        </div>
+
+        <div class="control-row">
+          <div class="control-label-row">
+            <label for="maxDotSize" title="Tamaño máximo del punto">Tamaño Máximo de Punto</label>
+            <span class="control-val" id="valMaxDotSize">135%</span>
+          </div>
+          <input type="range" id="maxDotSize" min="70" max="160" value="135" step="5">
+        </div>
+
+        <!-- Controles exclusivos de Ondas (Wavy) -->
+        <div id="wavyControlsBlock" style="display: none; flex-direction: column; gap: 8px;">
+          <div class="control-row">
+            <div class="control-label-row">
+              <label for="waveFreq">Frecuencia de Onda</label>
+              <span class="control-val" id="valWaveFreq">15</span>
+            </div>
+            <input type="range" id="waveFreq" min="2" max="50" value="15" step="1">
+          </div>
+          <div class="control-row">
+            <div class="control-label-row">
+              <label for="waveAmp">Amplitud de Onda</label>
+              <span class="control-val" id="valWaveAmp">0.20</span>
+            </div>
+            <input type="range" id="waveAmp" min="0.0" max="0.5" value="0.20" step="0.01">
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 3: COLOR & SEPARACIÓN TEXTIL (DTF) -->
+      <div class="section-box">
+        <div class="section-head">
+          Color & Separación Textil
+          <span class="tag-badge">DTF</span>
+        </div>
+
+        <div class="control-row">
+          <label class="control-label-row" for="colorModeSelect">Modo de Color</label>
+          <select id="colorModeSelect">
+            <option value="3" selected>Monocromo Tinta Pura (Negro K / Serigrafía)</option>
+            <option value="0">Full Color Pop (Color Original Tramado)</option>
+            <option value="1">Paletas Retro Vintage</option>
+            <option value="2">Dúo Tono Personalizado</option>
+          </select>
+        </div>
+
+        <div class="control-row" id="paletteSelectGroup" style="display: none;">
+          <label class="control-label-row" for="paletteIdSelect">Paleta Vintage</label>
+          <select id="paletteIdSelect">
+            <option value="0" selected>Toucan Pop (Cálido Tropical)</option>
+            <option value="1">Retro 70s Sunset (Púrpura & Naranja)</option>
+            <option value="2">Cyber Neon 80s (Cian & Magenta)</option>
+            <option value="3">Vintage Comic Book (Retro Print)</option>
+            <option value="4">Golden Bronze (Dorado Ocre)</option>
+          </select>
+        </div>
+
+        <div class="control-row" id="duotoneSelectGroup" style="display: none;">
+          <div class="control-label-row">Colores Dúo Tono</div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type="color" id="customInkPicker" value="#050608" style="width:36px; height:28px;">
+            <span style="font-size:11px;">Tinta</span>
+            <input type="color" id="customPaperPicker" value="#ffffff" style="width:36px; height:28px;">
+            <span style="font-size:11px;">Fondo</span>
+          </div>
+        </div>
+
+        <div class="control-row" id="saturationGroup" style="display: none;">
+          <div class="control-label-row">
+            <label for="saturationSlider">Saturación ColorPop</label>
+            <span class="control-val" id="valSaturation">1.25x</span>
+          </div>
+          <input type="range" id="saturationSlider" min="0.0" max="2.5" value="1.25" step="0.05">
+        </div>
+
+        <!-- Knockout Textil -->
+        <div class="control-row" style="margin-top: 4px;">
+          <label class="control-label-row" for="knockoutSelect">Modo Knockout (Prenda)</label>
+          <select id="knockoutSelect">
+            <option value="0" selected>Desactivado (Papel Blanco Sólido)</option>
+            <option value="1">Knockout Black (Prendas Negras / Oscuras)</option>
+            <option value="2">Knockout White (Prendas Blancas / Claras)</option>
+            <option value="3">Solo Tinta (100% Fondo Transparente)</option>
+          </select>
+        </div>
+
+        <div class="control-row" id="knockoutThresholdRow" style="display: none;">
+          <div class="control-label-row">
+            <label for="knockoutThreshSlider">Umbral Knockout</label>
+            <span class="control-val" id="valKnockoutThresh">0.15</span>
+          </div>
+          <input type="range" id="knockoutThreshSlider" min="0.02" max="0.55" value="0.15" step="0.01">
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-top: 4px;">
+          <span>Invertir Negativo / Positivo</span>
+          <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+            <input type="checkbox" id="invertCheckbox">
+            <span>Invertir</span>
+          </label>
+        </div>
+
+        <!-- Muestrario de Prendas Textiles -->
+        <div class="control-row" style="margin-top: 6px;">
+          <div class="control-label-row">Simulador de Color de Prenda</div>
+          <div class="textile-swatches">
+            <button class="textile-btn active" data-color="#ffffff" style="background: #fff;" title="Fondo Blanco"></button>
+            <button class="textile-btn" data-color="#111111" style="background: #111;" title="Camiseta Negra"></button>
+            <button class="textile-btn" data-color="#4a4f57" style="background: #4a4f57;" title="Gris Jaspe"></button>
+            <button class="textile-btn" data-color="#141c2b" style="background: #141c2b;" title="Azul Marino"></button>
+            <button class="textile-btn" data-color="checker" style="background: #252525;" title="Cuadrícula Transparente">▦</button>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+
+  <div class="toast" id="toast">Notificación</div>
+
+  <!-- Script Principal -->
+  <script src="app.js?v=20260903d"></script>
+
+</body>
+</html>

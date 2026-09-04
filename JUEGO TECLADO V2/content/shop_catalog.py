@@ -1,4 +1,4 @@
-﻿# Catálogo expandido del Mercado Negro (6 Categorías escalonadas hasta 250,000 PTS)
+# Catálogo expandido del Mercado Negro (6 Categorías escalonadas hasta 250,000 PTS)
 
 BLACK_MARKET_CATALOG = {
     "cyberdecks": [
@@ -6,14 +6,16 @@ BLACK_MARKET_CATALOG = {
         {"id": "deck_netrunner", "name": "Rig de Netrunner Callejero", "price": 5000, "req_sector": 1, "desc": "+15% Escudo de absorción de daños.", "shield_bonus": 15},
         {"id": "deck_military", "name": "Consola Militar Táctica", "price": 20000, "req_sector": 2, "desc": "+30% Escudo y recarga rápida de plasma.", "shield_bonus": 30},
         {"id": "deck_quantum", "name": "Terminal Cuántica de I+D", "price": 60000, "req_sector": 3, "desc": "+50% Escudo y bonificación de créditos x1.25.", "shield_bonus": 50},
-        {"id": "deck_agi", "name": "Cyber-Deck de Soberanía AGI", "price": 150000, "req_sector": 5, "desc": "+100% Escudo y blindaje impenetrable contra jefes.", "shield_bonus": 100}
+        {"id": "deck_agi", "name": "Cyber-Deck de Soberanía AGI", "price": 150000, "req_sector": 5, "desc": "+100% Escudo y blindaje impenetrable contra jefes.", "shield_bonus": 100},
+        {"id": "deck_protocol_gravy", "name": "👑 PROTOTIPO PROTOCOLO GRAVY", "price": 250000, "req_sector": 5, "req_difficulty": 4, "desc": "¡LEGENDARIO! +150% Escudo y +50% Carga Cuántica más rápida.", "shield_bonus": 150}
     ],
     "lasers": [
         {"id": "cyan", "name": "Plasma Cyan Neón", "price": 0, "req_sector": 0, "desc": "Disparos estándar de plasma cyan brillante.", "color": (0, 240, 255)},
         {"id": "crimson", "name": "Rayo Láser Carmesí", "price": 4000, "req_sector": 1, "desc": "Haz concentrado de fotones rojos penetrantes.", "color": (255, 30, 70)},
         {"id": "gold", "name": "Voltaje Dorado Cuántico", "price": 15000, "req_sector": 2, "desc": "Rayos de alto voltaje relampagueantes.", "color": (255, 220, 0)},
         {"id": "glitch_fire", "name": "Pulso de Fuego Glitch", "price": 35000, "req_sector": 3, "desc": "Llamas de código corrupto multicolor.", "color": (255, 0, 220)},
-        {"id": "antimatter", "name": "Onda de Vacío Antimateria", "price": 90000, "req_sector": 4, "desc": "Vórtice cósmico de color blanco puro.", "color": (255, 255, 255)}
+        {"id": "antimatter", "name": "Onda de Vacío Antimateria", "price": 90000, "req_sector": 4, "desc": "Vórtice cósmico de color blanco puro.", "color": (255, 255, 255)},
+        {"id": "supernova_rainbow", "name": "👑 LÁSER SUPERNOVA CÓSMICA", "price": 180000, "req_sector": 4, "req_difficulty": 3, "desc": "¡LEGENDARIO! Haz prismático reluciente de alta energía.", "color": (120, 255, 220)}
     ],
     "switches": [
         {"id": "blue", "name": "Cherry MX Blue (Clicky nítido)", "price": 0, "req_sector": 0, "desc": "Resonancia acústica nítida y aguda."},
@@ -35,7 +37,8 @@ BLACK_MARKET_CATALOG = {
         {"id": "valkyrie", "name": "Forma Androide Valkiria", "price": 18000, "req_sector": 2, "desc": "Avatar robótico con alas translúcidas de datos."},
         {"id": "resonator", "name": "Orbe Cuántico Resonante", "price": 45000, "req_sector": 3, "desc": "Esfera geométrica que late al compás de tu música."},
         {"id": "samurai", "name": "Cyber-Samurái Katana", "price": 95000, "req_sector": 4, "desc": "Entidad de combate con casco y máscara oni neón."},
-        {"id": "deity", "name": "Diosa AGI Omnipresente Dorada", "price": 200000, "req_sector": 5, "desc": "La manifestación visual suprema de la inteligencia artificial."}
+        {"id": "deity", "name": "Diosa AGI Omnipresente Dorada", "price": 200000, "req_sector": 5, "desc": "La manifestación visual suprema de la inteligencia artificial."},
+        {"id": "oni_nightmare", "name": "👑 GRAVY ENTIDAD PESADILLA ONI", "price": 300000, "req_sector": 5, "req_difficulty": 5, "desc": "¡LEGENDARIO! La forma definitiva conseguida en Protocolo Gravy."}
     ],
     "themes": [
         {"id": "cyberpunk_neon", "name": "Cyberpunk Neon 2077", "price": 0, "req_sector": 0, "desc": "Cyan eléctrico, magenta y amarillo neón."},

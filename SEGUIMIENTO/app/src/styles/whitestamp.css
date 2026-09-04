@@ -1,0 +1,158 @@
+/* ==========================================================================
+   THEME: WHITESTAMP DESIGN SYSTEM
+   Base de diseño minimalista, limpia, moderna y altamente modular.
+   Inspirada en estética SaaS moderna (Stripe / Apple / Linear).
+   Permite mezclar paletas de colores modificando las variables CSS de acento.
+   ========================================================================== */
+
+:root {
+  /* --- PALETA BASE NEUTRA (Limpia & Minimalista) --- */
+  --ws-bg-canvas: #f8fafc;        /* Fondo principal de aplicación */
+  --ws-card-bg: #ffffff;          /* Fondo de tarjetas / superficies */
+  --ws-card-bg-subtle: #f1f5f9;   /* Fondo secundario para inputs/badges */
+  
+  /* --- TIPOGRAFÍA Y CONTRASTES --- */
+  --ws-text-primary: #0f172a;     /* Títulos y texto principal de alto contraste */
+  --ws-text-secondary: #64748b;   /* Subtítulos, labels y estados */
+  --ws-text-muted: #94a3b8;       /* Placeholders, sufijos y notas */
+  --ws-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* --- BORDES Y LÍNEAS SUTILES --- */
+  --ws-border-subtle: #e2e8f0;    /* Bordes generales de tarjetas y divisores */
+  --ws-border-focus: #cbd5e1;     /* Borde al pasar cursor / hover */
+
+  /* --- RADIOS DE CURVATURA SUAVES (Anti-tosquedad) --- */
+  --ws-radius-sm: 8px;
+  --ws-radius-md: 12px;
+  --ws-radius-lg: 16px;
+  --ws-radius-xl: 20px;
+  --ws-radius-pill: 9999px;
+
+  /* --- SOMBRAS SUAVES Y VOLUMEN ELEGANTE --- */
+  --ws-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --ws-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --ws-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+
+  /* --- SISTEMA DE ACENTOS DE COLOR (Fácilmente intercambiable en el futuro) --- */
+  /* Color Principal (Por defecto: Verde Esmeralda Marca Sellos Chacaíto) */
+  --ws-accent-primary: #10b981;
+  --ws-accent-primary-hover: #059669;
+  --ws-accent-primary-light: #ecfdf5;
+  --ws-accent-primary-border: #a7f3d0;
+  --ws-accent-primary-text: #065f46;
+
+  /* Estados complementarios */
+  --ws-accent-secondary: #F533E2;
+  --ws-accent-secondary-light: #fdf2fc;
+  --ws-accent-secondary-border: #fbcfe8;
+  --ws-accent-secondary-text: #9d174d;
+
+  --ws-accent-warn: #f59e0b;
+  --ws-accent-warn-light: #fffbeb;
+  --ws-accent-danger: #ef4444;
+  --ws-accent-danger-light: #fef2f2;
+  --ws-accent-danger-text: #991b1b;
+}
+
+/* ==========================================================================
+   CLASES DE UTILIDAD GLOBALES WHITESTAMP (Listas para usar en cualquier vista)
+   ========================================================================== */
+
+/* Contenedor estándar de tarjeta */
+.ws-card {
+  background: var(--ws-card-bg);
+  border: 1px solid var(--ws-border-subtle);
+  border-radius: var(--ws-radius-xl);
+  box-shadow: var(--ws-shadow-md);
+  box-sizing: border-box;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ws-card:hover {
+  box-shadow: var(--ws-shadow-lg);
+}
+
+/* Inputs Modernos Whitestamp */
+.ws-input-container {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--ws-border-subtle);
+  border-radius: var(--ws-radius-md);
+  background: var(--ws-bg-canvas);
+  transition: all 0.15s ease;
+  overflow: hidden;
+}
+
+.ws-input-container:focus-within {
+  background: #ffffff;
+  border-color: var(--ws-accent-primary);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.ws-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--ws-text-primary);
+  font-family: var(--ws-font-family);
+  font-weight: 600;
+}
+
+/* Botón de Acción Principal Whitestamp */
+.ws-btn-primary {
+  background: var(--ws-accent-primary);
+  color: #ffffff;
+  border: 1px solid var(--ws-accent-primary);
+  border-radius: var(--ws-radius-md);
+  font-weight: 600;
+  padding: 10px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+  transition: all 0.15s ease;
+}
+
+.ws-btn-primary:hover {
+  background: var(--ws-accent-primary-hover);
+}
+
+.ws-btn-primary:active {
+  transform: scale(0.98);
+}
+
+/* Botón Secundario Whitestamp */
+.ws-btn-secondary {
+  background: #ffffff;
+  color: var(--ws-text-primary);
+  border: 1px solid var(--ws-border-subtle);
+  border-radius: var(--ws-radius-md);
+  font-weight: 600;
+  padding: 10px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: var(--ws-shadow-sm);
+  transition: all 0.15s ease;
+}
+
+.ws-btn-secondary:hover {
+  background: var(--ws-bg-canvas);
+  border-color: var(--ws-border-focus);
+}
+
+/* Badges / Etiquetas */
+.ws-badge {
+  background: var(--ws-card-bg-subtle);
+  color: var(--ws-text-secondary);
+  padding: 4px 10px;
+  border-radius: var(--ws-radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+}

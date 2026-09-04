@@ -1,20 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { MoreHorizontal, MessageCircle, ChevronLeft } from 'lucide-react';
 import { db } from '../firebase/config';
 import { ref, update } from 'firebase/database';
+import { normalizeWhatsApp } from '../utils/formatters';
 
 const WA_MESSAGES = {
-  greeting: '¡Hola! Comenzando nuevo pedido.',
-  approve: '¡Hola! Estamos a la espera de que nos apruebes el diseño para poder avanzar con el pago y comenzar a trabajar en tu pedido. ¡Quedamos atentos!',
-  payment: '¡Hola! Nos encontramos a la espera del comprobante (soporte) de pago para proceder con la elaboración y despacho de tu pedido. ¡Gracias por tu confianza!'
+  greeting: 'Hola! Comenzando nuevo pedido.',
+  approve: 'Hola! Estamos a la espera de que nos apruebes el diseno para poder avanzar con el pago y comenzar a trabajar en tu pedido. Quedamos atentos!',
+  payment: 'Hola! Nos encontramos a la espera del comprobante (soporte) de pago para proceder con la elaboracion y despacho de tu pedido. Gracias por tu confianza!'
 };
 
 function WhatsAppModal({ whatsapp, onClose }) {
   const openWhatsApp = (message) => {
-    const base = `https://wa.me/${whatsapp}`;
+    const cleanPhone = normalizeWhatsApp(whatsapp);
+    if (!cleanPhone) {
+      alert("No hay un numero de telefono valido para este cliente.");
+      return;
+    }
+    const base = `https://wa.me/${cleanPhone}`;
     const url = message ? `${base}?text=${encodeURIComponent(message)}` : base;
-    window.location.href = url;
+    window.open(url, '_blank');
     onClose();
   };
 
@@ -46,25 +52,25 @@ function WhatsAppModal({ whatsapp, onClose }) {
         }} 
         onClick={e => e.stopPropagation()}
       >
-        <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1.1rem', color: '#1e293b' }}>📱 Opciones de WhatsApp</h3>
-        <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', color: '#64748b' }}>Selecciona cómo deseas contactar al cliente:</p>
+        <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1.1rem', color: '#1e293b' }}>Opciones de WhatsApp</h3>
+        <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', color: '#64748b' }}>Selecciona como deseas contactar al cliente:</p>
         
         <button 
           type="button"
           onClick={() => openWhatsApp('')}
           style={{ fontSize: '0.9rem', padding: '0.875rem', color: '#1e293b', borderRadius: '0.5rem', display: 'block', background: '#f8fafc', border: '1px solid #e2e8f0', fontWeight: 500, cursor: 'pointer', textAlign: 'left', width: '100%' }}
         >
-          💬 Hablar con el cliente (Normal)
+          Hablar con el cliente (Normal)
         </button>
         
-        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginTop: '0.5rem', letterSpacing: '0.05em' }}>Respuestas Rápidas</div>
+        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginTop: '0.5rem', letterSpacing: '0.05em' }}>Respuestas Rapidas</div>
         
         <button 
           type="button"
           onClick={() => openWhatsApp(WA_MESSAGES.greeting)}
           style={{ fontSize: '0.9rem', padding: '0.875rem', color: '#16a34a', borderRadius: '0.5rem', display: 'block', background: '#dcfce7', border: '1px solid #bbf7d0', fontWeight: 600, cursor: 'pointer', textAlign: 'left', width: '100%' }}
         >
-          👋 Empezar Pedido (Saludo Inicial)
+          Empezar Pedido (Saludo Inicial)
         </button>
         
         <button 
@@ -72,7 +78,7 @@ function WhatsAppModal({ whatsapp, onClose }) {
           onClick={() => openWhatsApp(WA_MESSAGES.approve)}
           style={{ fontSize: '0.9rem', padding: '0.875rem', color: '#1e293b', borderRadius: '0.5rem', display: 'block', background: '#f0fdf4', border: '1px solid #bbf7d0', fontWeight: 500, cursor: 'pointer', textAlign: 'left', width: '100%' }}
         >
-          ✏️ APROBACIÓN (Diseño)
+          Aprobacion (Diseno)
         </button>
         
         <button 
@@ -80,7 +86,7 @@ function WhatsAppModal({ whatsapp, onClose }) {
           onClick={() => openWhatsApp(WA_MESSAGES.payment)}
           style={{ fontSize: '0.9rem', padding: '0.875rem', color: '#1e293b', borderRadius: '0.5rem', display: 'block', background: '#fefce8', border: '1px solid #fef08a', fontWeight: 500, cursor: 'pointer', textAlign: 'left', width: '100%' }}
         >
-          💳 PAGO (Soporte)
+          Pago (Soporte)
         </button>
         
         <button 
@@ -96,8 +102,19 @@ function WhatsAppModal({ whatsapp, onClose }) {
   );
 }
 
-function OrderCard({ order, statusConfig, onAdvance, onRegress, onClick }) {
+function OrderCard({ order, statusConfig, onAdvance, onRegress, onClick, isHighlighted = false }) {
   const [showWaMenu, setShowWaMenu] = useState(false);
+  const cardRef = useRef(null);
+
+  useEffect(() => {
+    if (isHighlighted && cardRef.current) {
+      // Scroll into view with slight delay to ensure tab/column layout is rendered
+      const timer = setTimeout(() => {
+        cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isHighlighted]);
 
   const getDesignerClass = (designer) => {
     if (!designer) return "designer-none";
@@ -108,8 +125,74 @@ function OrderCard({ order, statusConfig, onAdvance, onRegress, onClick }) {
     return "designer-none";
   };
 
+  // Follow-up logic for design_sent
+  let isStaleDesign = false;
+  let timeText = '';
+  if (statusConfig.id === 'design_sent' && order.createdAt) {
+    const createdDate = new Date(order.createdAt);
+    const now = new Date();
+    const diffMs = now - createdDate;
+    const diffHours = diffMs / (1000 * 60 * 60);
+    
+    if (diffHours > 3) {
+      isStaleDesign = true;
+      if (now.getDate() !== createdDate.getDate() || diffHours > 24) {
+        timeText = '⏱️ Ayer+';
+      } else {
+        timeText = `⏱️ ${Math.floor(diffHours)}h`;
+      }
+    }
+  }
+
+  // Heatmap calculation
+  const getHeatMapStyle = (startedAtRaw) => {
+    if (!startedAtRaw) return { bg: '#ffffff', border: '#e2e8f0', label: '0h', textColor: '#64748b' };
+    const startedAt = typeof startedAtRaw === 'number' ? startedAtRaw : new Date(startedAtRaw).getTime();
+    if (isNaN(startedAt)) return { bg: '#ffffff', border: '#e2e8f0', label: '0h', textColor: '#64748b' };
+
+    const now = Date.now();
+    const diffMs = Math.max(0, now - startedAt);
+    const hours = diffMs / (1000 * 60 * 60);
+
+    const totalMinutes = Math.floor(diffMs / (1000 * 60));
+    let label = '';
+    if (totalMinutes < 60) {
+      label = `${totalMinutes}m`;
+    } else if (totalMinutes < 24 * 60) {
+      const h = Math.floor(totalMinutes / 60);
+      const m = totalMinutes % 60;
+      label = `${h}h ${m}m`;
+    } else {
+      const d = Math.floor(totalMinutes / (24 * 60));
+      const h = Math.floor((totalMinutes % (24 * 60)) / 60);
+      label = `${d}d ${h}h`;
+    }
+
+    if (hours < 2) return { bg: '#ffffff', border: '#e2e8f0', label, textColor: '#64748b' };
+    if (hours < 6) return { bg: '#fef9c3', border: '#fef08a', label, textColor: '#854d0e' };
+    if (hours < 12) return { bg: '#ffedd5', border: '#fed7aa', label, textColor: '#c2410c' };
+    return { bg: '#fee2e2', border: '#fca5a5', label, textColor: '#dc2626' };
+  };
+
+  const heat = getHeatMapStyle(order.currentStatusStartedAt || order.updatedAt || order.createdAt);
+
   return (
-    <div className="order-card group" onClick={onClick} style={{ cursor: 'pointer' }}>
+    <div 
+      ref={cardRef}
+      className={`order-card group ${isStaleDesign ? 'stale-order' : ''} ${isHighlighted ? 'order-card-highlight-pulse' : ''}`} 
+      onClick={onClick} 
+      style={{ 
+        cursor: 'pointer', 
+        background: heat.bg,
+        border: `1.5px solid ${heat.border}`,
+        transition: 'all 0.3s ease'
+      }}
+    >
+      {isHighlighted && (
+        <div className="duplicate-highlight-badge">
+          ⚠️ ¡ESTE ES EL PEDIDO REPETIDO! (Toca para ver)
+        </div>
+      )}
       <div className={`card-indicator ${statusConfig.color}`} />
       
       <div className="card-content">
@@ -124,9 +207,17 @@ function OrderCard({ order, statusConfig, onAdvance, onRegress, onClick }) {
         </div>
 
         <div className="card-badges">
+          <span className="badge" style={{ background: heat.bg, color: heat.textColor, border: `1px solid ${heat.border}`, fontWeight: 700 }}>
+            ⏱️ {heat.label}
+          </span>
           {order.designer && (
             <span className={`badge ${getDesignerClass(order.designer)}`}>
               {order.designer}
+            </span>
+          )}
+          {isStaleDesign && (
+            <span className="badge" style={{ background: '#fef2f2', color: '#ef4444', border: '1px solid #fca5a5', fontWeight: 800 }}>
+              {timeText}
             </span>
           )}
           {order.requiresDesign === false && (
@@ -215,13 +306,21 @@ function OrderCard({ order, statusConfig, onAdvance, onRegress, onClick }) {
           </button>
         )}
 
-        {/* Botón directo de Saludo Inicial para nuevos pedidos */}
+        {/* Botón directo de contacto rápido en Diseño Enviado */}
         {statusConfig.id === 'design_sent' && order.whatsapp && (
           <button 
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              const url = `https://wa.me/${order.whatsapp}?text=${encodeURIComponent(WA_MESSAGES.greeting)}`;
+              const message = isStaleDesign 
+                ? 'Hola! Queriamos saber si pudiste revisar la informacion o el diseno que te enviamos. Quedamos atentos a tu confirmacion!' 
+                : WA_MESSAGES.greeting;
+              const cleanPhone = normalizeWhatsApp(order.whatsapp);
+              if (!cleanPhone) {
+                alert("No hay un numero de telefono valido para este cliente.");
+                return;
+              }
+              const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
               window.open(url, '_blank');
             }}
             style={{
@@ -229,9 +328,9 @@ function OrderCard({ order, statusConfig, onAdvance, onRegress, onClick }) {
               width: '100%',
               fontSize: '0.8rem',
               padding: '0.5rem',
-              color: '#16a34a',
-              background: '#dcfce7',
-              border: '1px solid #bbf7d0',
+              color: isStaleDesign ? '#b91c1c' : '#16a34a',
+              background: isStaleDesign ? '#fee2e2' : '#dcfce7',
+              border: `1px solid ${isStaleDesign ? '#fecaca' : '#bbf7d0'}`,
               borderRadius: '0.5rem',
               fontWeight: 600,
               cursor: 'pointer',
@@ -242,7 +341,7 @@ function OrderCard({ order, statusConfig, onAdvance, onRegress, onClick }) {
               boxShadow: 'var(--shadow-sm)'
             }}
           >
-            👋 Enviar Saludo Inicial
+            {isStaleDesign ? 'Hacer Seguimiento' : 'Enviar Saludo Inicial'}
           </button>
         )}
 
@@ -293,4 +392,4 @@ function OrderCard({ order, statusConfig, onAdvance, onRegress, onClick }) {
   );
 }
 
-export default OrderCard;
+export default React.memo(OrderCard);

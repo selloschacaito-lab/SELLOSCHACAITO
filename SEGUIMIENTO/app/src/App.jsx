@@ -1,6 +1,11 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { ProfileProvider } from './contexts/ProfileContext';
+import { UpdateProvider } from './contexts/UpdateContext';
+import UpdateModal from './components/UpdateModal';
+import ProfileRoute from './components/ProfileRoute';
+import ProfileAdmin from './pages/ProfileAdmin';
 import { Toaster, toast } from 'react-hot-toast';
 import PrivateRoute from './components/PrivateRoute';
 import Layout from './components/Layout';
@@ -17,11 +22,16 @@ import Texto from './pages/Texto';
 import Retenciones from './pages/Retenciones';
 import Presupuestos from './pages/Presupuestos';
 import Costos from './pages/Costos';
+import Ventas from './pages/Ventas';
+import Facturacion from './pages/Facturacion';
+import Herramientas from './pages/Herramientas';
 import VerGuia from './pages/VerGuia';
 import VerOrden from './pages/VerOrden';
 import DeliveryView from './pages/DeliveryView';
 import PaymentView from './pages/PaymentView';
 import VerRecibo from './pages/VerRecibo';
+import CatalogoPublico from './pages/CatalogoPublico';
+import Madera from './pages/Madera';
 import { db } from './firebase/config';
 import { ref, set } from 'firebase/database';
 
@@ -48,7 +58,7 @@ function AutoAddHandler() {
 
       set(ref(db, `orders/${orderId}`), payload)
         .then(() => {
-          toast.success(`¡Pedido de ${name} registrado en Diseño Enviado!`, { duration: 3000 });
+          toast.success(`¡Pedido de ${name} registrado en Iniciando Pedido!`, { duration: 3000 });
           setTimeout(() => {
             if (window.opener || window.history.length > 1) {
               window.close();
@@ -68,37 +78,48 @@ function AutoAddHandler() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AutoAddHandler />
-        <Toaster position="top-right" />
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/guia/:orderId" element={<VerGuia />} />
-          <Route path="/orden/:orderId" element={<VerOrden />} />
-          <Route path="/delivery/:orderId" element={<DeliveryView />} />
-          <Route path="/pagar" element={<PaymentView />} />
-          <Route path="/ver-recibo" element={<VerRecibo />} />
-          
-          <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
-            {/* The main Kanban is the dashboard index for now */}
-            <Route index element={<Dashboard />} />
-            
-            <Route path="recibos" element={<Receipts />} />
-            <Route path="clientes" element={<Clients />} />
-            <Route path="productos" element={<Products />} />
-            <Route path="inventario" element={<Inventory />} />
-            <Route path="marketing" element={<Marketing />} />
-            <Route path="cambio" element={<Calculator />} />
-            <Route path="costos" element={<Costos />} />
-            <Route path="texto" element={<Texto />} />
-            <Route path="retenciones" element={<Retenciones />} />
-            <Route path="presupuestos" element={<Presupuestos />} />
-            <Route path="configuracion" element={<Config />} />
-          </Route>
-          
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+      <ProfileProvider>
+        <UpdateProvider>
+          <BrowserRouter>
+            <AutoAddHandler />
+            <Toaster position="top-right" />
+            <UpdateModal />
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/guia/:orderId" element={<VerGuia />} />
+              <Route path="/orden/:orderId" element={<VerOrden />} />
+              <Route path="/delivery/:orderId" element={<DeliveryView />} />
+              <Route path="/pagar" element={<PaymentView />} />
+              <Route path="/ver-recibo" element={<VerRecibo />} />
+              <Route path="/catalogo" element={<CatalogoPublico />} />
+              
+              <Route path="/" element={<PrivateRoute><ProfileRoute><Layout /></ProfileRoute></PrivateRoute>}>
+                {/* The main Kanban is the dashboard index for now */}
+                <Route index element={<Dashboard />} />
+                
+                <Route path="ventas" element={<Ventas />} />
+                <Route path="facturacion" element={<Facturacion />} />
+                <Route path="herramientas" element={<Herramientas />} />
+                <Route path="recibos" element={<Receipts />} />
+                <Route path="clientes" element={<Clients />} />
+                <Route path="productos" element={<Navigate to="/inventario" replace />} />
+                <Route path="inventario" element={<Inventory />} />
+                <Route path="marketing" element={<Marketing />} />
+                <Route path="presupuestos" element={<Presupuestos />} />
+                <Route path="madera" element={<Madera />} />
+                <Route path="costos" element={<Navigate to="/herramientas?tab=costos" replace />} />
+                <Route path="retenciones" element={<Navigate to="/herramientas?tab=retenciones" replace />} />
+                <Route path="cambio" element={<Calculator />} />
+                <Route path="texto" element={<Texto />} />
+                <Route path="configuracion" element={<Config />} />
+                <Route path="usuarios" element={<ProfileAdmin />} />
+              </Route>
+              
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </UpdateProvider>
+      </ProfileProvider>
     </AuthProvider>
   );
 }

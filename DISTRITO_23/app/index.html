@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DISTRITO 23 // SISTEMA DE CONTROL DE DESARROLLO</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Orbitron & Rajdhani -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            cyber: {
+              black: '#08080c',
+              dark: '#0f1016',
+              card: '#151722',
+              border: '#232738',
+              cyan: '#00f3ff',
+              neonPink: '#ff0055',
+              yellow: '#ffe600',
+              text: '#d1d5db',
+              muted: '#6b7280'
+            }
+          },
+          fontFamily: {
+            orbitron: ['Orbitron', 'sans-serif'],
+            rajdhani: ['Rajdhani', 'sans-serif'],
+            mono: ['Share Tech Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-cyber-black text-cyber-text font-rajdhani min-h-screen flex flex-col antialiased selection:bg-cyber-cyan selection:text-black">
+
+  <!-- Scanline effect overlay -->
+  <div class="scanlines pointer-events-none fixed inset-0 z-50"></div>
+
+  <!-- Top Header Bar -->
+  <header class="border-b border-cyber-border bg-cyber-dark/80 backdrop-blur sticky top-0 z-40 px-6 py-3 flex items-center justify-between shadow-lg shadow-cyan-950/20">
+    <div class="flex items-center space-x-4">
+      <div class="h-9 w-9 bg-cyber-cyan text-black font-orbitron font-extrabold flex items-center justify-center text-xl rounded shadow-[0_0_15px_rgba(0,243,255,0.6)]">
+        23
+      </div>
+      <div>
+        <h1 class="font-orbitron font-extrabold text-lg text-white tracking-widest flex items-center gap-2">
+          DISTRITO 23 <span class="text-xs text-cyber-cyan bg-cyber-card px-2 py-0.5 rounded border border-cyber-cyan/30 font-mono tracking-normal">GODOT v4.x</span>
+        </h1>
+        <p class="text-xs text-cyber-muted font-mono tracking-wider">PANEL DE MANDO & TRACKER DE FASES</p>
+      </div>
+    </div>
+
+    <!-- Progress summary & Action buttons -->
+    <div class="flex items-center gap-6">
+      <div class="hidden md:flex flex-col items-end">
+        <div class="text-xs font-mono text-cyber-cyan flex items-center gap-2">
+          <span class="inline-block w-2 h-2 rounded-full bg-cyber-cyan animate-ping"></span>
+          PROGRESO GENERAL: <span id="global-progress-percent" class="font-bold text-white">0%</span>
+        </div>
+        <div class="w-48 bg-cyber-border rounded-full h-2 mt-1 overflow-hidden">
+          <div id="global-progress-bar" class="bg-gradient-to-r from-cyber-cyan to-cyber-neonPink h-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button id="btn-export" title="Exportar respaldo JSON" class="px-3 py-1.5 bg-cyber-card hover:bg-cyber-cyan/20 border border-cyber-border hover:border-cyber-cyan text-xs font-mono text-cyber-cyan rounded transition flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+          Exportar
+        </button>
+        <label class="px-3 py-1.5 bg-cyber-card hover:bg-cyber-yellow/20 border border-cyber-border hover:border-cyber-yellow text-xs font-mono text-cyber-yellow rounded transition cursor-pointer flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+          Importar
+          <input type="file" id="file-import" accept=".json" class="hidden">
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="w-full md:w-64 border-r border-cyber-border bg-cyber-dark/50 p-4 flex flex-row md:flex-col gap-2 shrink-0 overflow-x-auto md:overflow-visible">
+      <div class="text-[10px] font-mono uppercase tracking-widest text-cyber-muted px-2 py-1 hidden md:block">Vistas del Proyecto</div>
+      
+      <button onclick="switchTab('roadmap')" id="nav-roadmap" class="tab-btn active-tab flex items-center gap-3 px-3 py-2.5 rounded font-orbitron text-xs font-semibold tracking-wider transition">
+        <svg class="w-4 h-4 text-cyber-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+        <span>ROADMAP (11 Fases)</span>
+      </button>
+
+      <button onclick="switchTab('prompts')" id="nav-prompts" class="tab-btn flex items-center gap-3 px-3 py-2.5 rounded font-orbitron text-xs font-semibold tracking-wider transition">
+        <svg class="w-4 h-4 text-cyber-neonPink" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+        <span>PROMPTS ANTIGRAVITY</span>
+      </button>
+
+      <button onclick="switchTab('docs')" id="nav-docs" class="tab-btn flex items-center gap-3 px-3 py-2.5 rounded font-orbitron text-xs font-semibold tracking-wider transition">
+        <svg class="w-4 h-4 text-cyber-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+        <span>DOC MAESTRO & LORE</span>
+      </button>
+
+      <div class="mt-auto hidden md:block pt-4 border-t border-cyber-border/40">
+        <div class="bg-cyber-card p-3 rounded border border-cyber-border">
+          <div class="text-[11px] font-mono text-cyber-muted">REGLA FUNDAMENTAL:</div>
+          <div class="text-xs text-cyber-text mt-1 italic leading-tight">
+            "No avanzar de fase hasta validar el control y sensación de la actual."
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto p-6 max-w-6xl mx-auto w-full">
+
+      <!-- TAB 1: ROADMAP & CHECKLIST -->
+      <section id="view-roadmap" class="space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-cyber-border pb-4">
+          <div>
+            <h2 class="font-orbitron text-2xl font-bold text-white tracking-wider flex items-center gap-2">
+              <span class="text-cyber-cyan">#</span> ROADMAP DE DESARROLLO
+            </h2>
+            <p class="text-sm text-cyber-muted mt-0.5">Control paso a paso de cada fase técnica en Godot 4.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-mono text-cyber-muted">Filtro:</span>
+            <select id="phase-filter" class="bg-cyber-card border border-cyber-border text-xs font-mono text-cyber-cyan rounded px-2.5 py-1.5 focus:outline-none focus:border-cyber-cyan">
+              <option value="all">Ver Todas las Fases</option>
+              <option value="pending">Solo Fases Pendientes</option>
+              <option value="completed">Solo Fases Completadas</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Dynamic Container for Phases -->
+        <div id="phases-container" class="space-y-4">
+          <!-- Populated by JS -->
+        </div>
+      </section>
+
+      <!-- TAB 2: PROMPTS ANTIGRAVITY -->
+      <section id="view-prompts" class="hidden space-y-6">
+        <div class="border-b border-cyber-border pb-4">
+          <h2 class="font-orbitron text-2xl font-bold text-white tracking-wider flex items-center gap-2">
+            <span class="text-cyber-neonPink">#</span> PROMPTS LISTOS PARA ANTIGRAVITY
+          </h2>
+          <p class="text-sm text-cyber-muted mt-0.5">Copia y pega directamente en Antigravity para ejecutar la fase correspondiente con límites claros.</p>
+        </div>
+
+        <!-- Prompt 01 Card -->
+        <div class="bg-cyber-card border border-cyber-neonPink/40 rounded-lg p-5 relative overflow-hidden shadow-lg shadow-pink-950/20">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-3">
+              <span class="px-2.5 py-1 bg-cyber-neonPink/20 text-cyber-neonPink border border-cyber-neonPink text-xs font-mono font-bold rounded">PROMPT #01</span>
+              <span class="font-orbitron text-white text-sm font-semibold">Fundación + Prototipo de Control (Fases 0 y 1)</span>
+            </div>
+            <button onclick="copyPrompt('prompt-01')" class="px-3 py-1.5 bg-cyber-neonPink hover:bg-pink-600 text-white font-mono text-xs font-bold rounded transition flex items-center gap-1.5 shadow-[0_0_10px_rgba(255,0,85,0.5)]">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+              Copiar Prompt
+            </button>
+          </div>
+          <pre id="prompt-01" class="bg-cyber-black p-4 rounded text-xs font-mono text-cyber-cyan/90 overflow-x-auto whitespace-pre-wrap max-h-96 border border-cyber-border/70 select-all"></pre>
+        </div>
+
+        <!-- Custom Prompt Builder Placeholder -->
+        <div class="bg-cyber-card border border-cyber-border rounded-lg p-5">
+          <h3 class="font-orbitron text-white text-sm font-semibold mb-2 flex items-center gap-2">
+            <span class="text-cyber-cyan">★</span> REGLAS CRÍTICAS PARA PROMPTEAR EN CADA FASE
+          </h3>
+          <ul class="text-xs text-cyber-text space-y-2 list-disc list-inside font-mono">
+            <li>Exige que el código quede dividido en módulos: <code class="text-cyber-yellow">Input</code>, <code class="text-cyber-yellow">Locomotion</code>, <code class="text-cyber-yellow">Aiming</code>, <code class="text-cyber-yellow">Weapon</code>, <code class="text-cyber-yellow">Camera</code>.</li>
+            <li>No permitas que Antigravity añada enemigos ni inventario antes de terminar la Fase 2.</li>
+            <li>Prueba siempre en PC con mouse/teclado y verifica que los inputs táctiles virtuales funcionen idénticamente.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- TAB 3: DOCUMENTO MAESTRO & LORE -->
+      <section id="view-docs" class="hidden space-y-6">
+        <div class="border-b border-cyber-border pb-4 flex items-center justify-between">
+          <div>
+            <h2 class="font-orbitron text-2xl font-bold text-white tracking-wider flex items-center gap-2">
+              <span class="text-cyber-yellow">#</span> DOCUMENTO MAESTRO // DISTRITO 23
+            </h2>
+            <p class="text-sm text-cyber-muted mt-0.5">Especificaciones cerradas de jugabilidad, cámara, controles, arsenal e historia.</p>
+          </div>
+          <a href="../docs/DISTRITO_23_MASTER.md" target="_blank" class="text-xs font-mono text-cyber-yellow hover:underline flex items-center gap-1">
+            Abrir archivo Markdown &rarr;
+          </a>
+        </div>
+
+        <div id="master-doc-content" class="bg-cyber-card border border-cyber-border rounded-lg p-6 font-mono text-sm leading-relaxed text-gray-300 space-y-4 max-h-[70vh] overflow-y-auto">
+          <!-- Loaded by JS -->
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <footer class="border-t border-cyber-border bg-cyber-dark px-6 py-2.5 text-center text-xs font-mono text-cyber-muted flex items-center justify-between">
+    <span>DISTRITO 23 // PROYECTO ANDROID EN GODOT</span>
+    <span class="text-cyber-cyan">LOCAL STORAGE ACTIVE • READY FOR GODOT</span>
+  </footer>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-cyber-cyan text-black font-orbitron font-bold text-xs px-4 py-2.5 rounded shadow-lg shadow-cyan-500/50 transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-2">
+    <span>PROMPT COPIADO AL PORTAPAPELES</span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

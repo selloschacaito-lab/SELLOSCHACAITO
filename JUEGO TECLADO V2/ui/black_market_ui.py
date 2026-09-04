@@ -1,4 +1,4 @@
-﻿import pygame
+import pygame
 from content.shop_catalog import BLACK_MARKET_CATALOG
 
 class BlackMarketUI:
@@ -77,7 +77,12 @@ class BlackMarketUI:
                 active = profile.get("active_theme") == item["id"]
 
             req_sec = item.get("req_sector", 0)
+            req_diff = item.get("req_difficulty", 0)
+            diff_names = {3: "VETERANO", 4: "CYBER-ÉLITE", 5: "PROTOCOLO GRAVY"}
+            max_d_beaten = max(profile.get("subsector_difficulty", {}).values(), default=0)
+
             boss_locked = bosses_beaten < req_sec
+            diff_locked = max_d_beaten < req_diff
 
             bg_c = (20, 24, 34) if not is_sel else (32, 40, 58)
             border_c = c_acc if is_sel else (50, 60, 80)
@@ -96,6 +101,9 @@ class BlackMarketUI:
                 tag_t = self.font_item.render("✔ [EN USO]", True, (0, 255, 150))
             elif owned:
                 tag_t = self.font_item.render("[ADQUIRIDO - Click o Enter para equipar]", True, (0, 220, 255))
+            elif diff_locked:
+                d_name = diff_names.get(req_diff, "Dificultad Alta")
+                tag_t = self.font_item.render(f"🔒 [BLOQUEADO - Supera niveles en {d_name}]", True, (255, 60, 60))
             elif boss_locked:
                 tag_t = self.font_item.render(f"🔒 [BLOQUEADO - Requiere vencer al Jefe del Sector {req_sec}]", True, (255, 60, 60))
             else:

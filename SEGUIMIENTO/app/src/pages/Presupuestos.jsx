@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, FileText, Plus, Trash2, Calculator, Settings } from 'lucide-react';
+import { useOutletContext } from 'react-router-dom';
+import { Download, FileText, Plus, Trash2, Calculator, Settings, PanelLeft } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { toast } from 'react-hot-toast';
+import '../styles/whitestamp.css';
 import './Presupuestos.css';
 
 export default function Presupuestos() {
+  const { toggleSidebar } = useOutletContext() || {};
   const [bcvRate, setBcvRate] = useState('');
   const [dateStr, setDateStr] = useState('');
   const [quoteNumber, setQuoteNumber] = useState('');
@@ -25,11 +28,35 @@ export default function Presupuestos() {
   const [invBase, setInvBase] = useState(0);
 
   const previewRef = useRef(null);
+  const viewportRef = useRef(null);
+
+  // Zoom / Scale State
+  const [zoomMode, setZoomMode] = useState('fit'); // 'fit' | '100' | '75'
+  const [computedScale, setComputedScale] = useState(0.75);
 
   useEffect(() => {
     fetchBCV();
     initQuoteNumber();
   }, []);
+
+  // Compute scale dynamically so preview fits available space without cutting off
+  useEffect(() => {
+    function updateScale() {
+      if (!viewportRef.current) return;
+      if (zoomMode === 'fit') {
+        const availableW = viewportRef.current.clientWidth - 40;
+        const docW = 794; // A4 standard width in px
+        const s = Math.min(1.0, Math.max(0.35, availableW / docW));
+        setComputedScale(s);
+      } else {
+        setComputedScale(Number(zoomMode) / 100);
+      }
+    }
+
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, [zoomMode]);
 
   const fetchBCV = async () => {
     try {
@@ -98,13 +125,15 @@ export default function Presupuestos() {
       toast.error("Máximo 10 productos por presupuesto");
       return;
     }
-    setItems([...items, { desc: '', qty: 1, price: '' }]);
+    setItems([...items, { desc: '', qty: 1, price: '', discount: '' }]);
   };
 
   const updateItem = (index, field, value) => {
     const newItems = [...items];
     if (field === 'price') {
       newItems[index][field] = value.replace(/[^\d.,]/g, '');
+    } else if (field === 'discount') {
+      newItems[index][field] = value.replace(/[^\d.,%]/g, '');
     } else {
       newItems[index][field] = value.toUpperCase();
     }
@@ -120,20 +149,40 @@ export default function Presupuestos() {
   const parseNum = (str) => parseFloat(String(str).replace(/,/g, '.')) || 0;
   const fmt = (n, dec = 2) => Number(n).toLocaleString('es-VE', { minimumFractionDigits: dec, maximumFractionDigits: dec });
 
+  const calculateItemFinalPrice = (item) => {
+    const rawPrice = parseNum(item.price);
+    let discVal = 0;
+    const discStr = String(item.discount || '').trim();
+    if (discStr.endsWith('%')) {
+      const pct = parseNum(discStr.replace('%', ''));
+      discVal = rawPrice * (pct / 100);
+    } else {
+      discVal = parseNum(discStr);
+    }
+    return Math.max(0, rawPrice - discVal);
+  };
+
   const fillRows = () => {
     const rows = [];
     for (let i = 0; i < 10; i++) {
       const item = items[i];
       if (item) {
-        // Asumimos que el precio ingresado es CON IVA, así que le extraemos la base imponible
-        const inputPrice = parseNum(item.price);
-        const basePrice = inputPrice > 0 ? (inputPrice / 1.16) : 0;
+        // Asumimos que el precio ingresado es CON IVA, aplicamos descuento y extraemos base imponible
+        const finalPriceConIva = calculateItemFinalPrice(item);
+        const basePrice = finalPriceConIva > 0 ? (finalPriceConIva / 1.16) : 0;
         const itemTotalBase = parseNum(item.qty) * basePrice;
         
         rows.push(
           <tr key={i}>
             <td className="col-num">{i + 1}</td>
-            <td className="col-desc">{item.desc}</td>
+            <td className="col-desc">
+              <div>{item.desc}</div>
+              {item.discount && parseNum(item.discount) > 0 && (
+                <div style={{ fontSize: '9px', color: '#64748b', fontStyle: 'italic' }}>
+                  (Incluye descuento de {item.discount})
+                </div>
+              )}
+            </td>
             <td className="col-qty">{item.qty}</td>
             <td className="col-price">{basePrice > 0 ? fmt(basePrice) : ''}</td>
             <td className="col-total">{itemTotalBase > 0 ? fmt(itemTotalBase) : ''}</td>
@@ -154,10 +203,11 @@ export default function Presupuestos() {
     return rows;
   };
 
-  // Recalcular totales asumiendo que los items ingresados son CON IVA
+  // Recalcular totales asumiendo que los items ingresados son CON IVA con su descuento aplicado
   const getTotalConIva = () => {
     return items.reduce((acc, item) => {
-      return acc + (parseNum(item.qty) * parseNum(item.price));
+      const finalPrice = calculateItemFinalPrice(item);
+      return acc + (parseNum(item.qty) * finalPrice);
     }, 0);
   };
 
@@ -170,43 +220,80 @@ export default function Presupuestos() {
 
   const exportJPG = async () => {
     if (!previewRef.current) return;
-    const canvas = await html2canvas(previewRef.current, { scale: 2 });
-    const imgData = canvas.toDataURL('image/jpeg', 0.9);
-    const link = document.createElement('a');
-    link.download = `Presupuesto-${quoteNumber}.jpg`;
-    link.href = imgData;
-    link.click();
-    toast.success("Imagen descargada");
+    const el = previewRef.current;
+    const prevTransform = el.style.transform;
+    const prevMargin = el.style.marginBottom;
+    el.style.transform = 'none';
+    el.style.marginBottom = '0';
+    try {
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true, logging: false });
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const link = document.createElement('a');
+      link.download = `Presupuesto-${quoteNumber}.jpg`;
+      link.href = imgData;
+      link.click();
+      toast.success("Imagen descargada con éxito");
+    } catch (err) {
+      console.error("Error al exportar JPG:", err);
+      toast.error("Error al exportar imagen");
+    } finally {
+      el.style.transform = prevTransform;
+      el.style.marginBottom = prevMargin;
+    }
   };
 
   const exportPDF = async () => {
     if (!previewRef.current) return;
-    const canvas = await html2canvas(previewRef.current, { scale: 2 });
-    const imgData = canvas.toDataURL('image/jpeg', 0.9);
-    
-    // El presupuesto tiene proporción vertical (A4 aprox)
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    
-    pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`Presupuesto-${quoteNumber}.pdf`);
-    toast.success("PDF descargado");
+    const el = previewRef.current;
+    const prevTransform = el.style.transform;
+    const prevMargin = el.style.marginBottom;
+    el.style.transform = 'none';
+    el.style.marginBottom = '0';
+    try {
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true, logging: false });
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Presupuesto-${quoteNumber}.pdf`);
+      toast.success("PDF descargado con éxito");
+    } catch (err) {
+      console.error("Error al exportar PDF:", err);
+      toast.error("Error al exportar PDF");
+    } finally {
+      el.style.transform = prevTransform;
+      el.style.marginBottom = prevMargin;
+    }
   };
 
   return (
     <div className="animate-fade-in pres-container">
       
-      {/* Controles */}
-      <div className="pres-controls glass-card">
-        <h2 className="controls-title">Generador de Presupuestos</h2>
+      {/* Controles / Formulario con Scroll Interno */}
+      <div className="pres-controls">
+        <div className="pres-header-top">
+          {toggleSidebar && (
+            <button 
+              onClick={toggleSidebar} 
+              className="pres-sidebar-btn" 
+              title="Abrir menú"
+              type="button"
+            >
+              <PanelLeft size={18} />
+            </button>
+          )}
+          <h2 className="controls-title">Presupuestos</h2>
+        </div>
         
         <div className="pres-section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
             <div>
               <label className="input-label">N° Presupuesto</label>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <span style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{quoteNumber}</span>
+                <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--ink)' }}>{quoteNumber}</span>
                 <button onClick={incrementQuoteNumber} className="btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>+1 (Avanzar)</button>
               </div>
             </div>
@@ -217,7 +304,7 @@ export default function Presupuestos() {
                 value={bcvRate} 
                 onChange={(e) => setBcvRate(e.target.value.replace(/[^\d.,]/g, ''))} 
                 className="input-field" 
-                style={{ width: '100px', fontWeight: 'bold' }} 
+                style={{ width: '105px', fontWeight: 'bold' }} 
               />
             </div>
           </div>
@@ -225,13 +312,13 @@ export default function Presupuestos() {
 
         <div className="pres-section">
           <h3 className="section-title">Calculadora Inversa (Base Imponible)</h3>
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
             <div style={{ flex: 1 }}>
               <label className="input-label">Total con IVA (Ej. 35)</label>
               <input type="text" value={invTotal} onChange={handleInvChange} className="input-field" />
             </div>
             <div style={{ flex: 1 }}>
-              <label className="input-label">Base Imponible (4 dec.)</label>
+              <label className="input-label">Base Imponible</label>
               <input type="text" readOnly value={fmt(invBase, 4)} className="input-field" style={{ backgroundColor: '#f1f5f9', fontWeight: 'bold', color: '#0f172a' }} />
             </div>
             <button 
@@ -240,6 +327,7 @@ export default function Presupuestos() {
                 toast.success("Base imponible copiada");
               }}
               className="btn-secondary"
+              style={{ height: '38px' }}
             >
               Copiar
             </button>
@@ -248,9 +336,9 @@ export default function Presupuestos() {
 
         <div className="pres-section">
           <h3 className="section-title">Datos del Cliente</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
             <input type="text" placeholder="CLIENTE" className="input-field" value={client.name} onChange={(e) => setClient({...client, name: e.target.value.toUpperCase()})} />
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
               <input type="text" placeholder="RIF / C.I." className="input-field" value={client.rif} onChange={(e) => setClient({...client, rif: e.target.value.toUpperCase()})} />
               <input type="text" placeholder="TELÉFONOS" className="input-field" value={client.phone} onChange={(e) => setClient({...client, phone: e.target.value.toUpperCase()})} />
             </div>
@@ -260,118 +348,241 @@ export default function Presupuestos() {
         </div>
 
         <div className="pres-section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 className="section-title" style={{ margin: 0 }}>Productos ({items.length}/10)</h3>
-            <button onClick={addItem} className="btn-primary" style={{ padding: '0.25rem 0.5rem', width: 'auto', display: 'flex', gap: '0.25rem', fontSize: '0.85rem' }} disabled={items.length >= 10}>
-              <Plus size={16} /> Agregar
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+            <h3 className="section-title" style={{ margin: 0, border: 'none' }}>Productos ({items.length}/10)</h3>
+            <button onClick={addItem} className="btn-primary" style={{ padding: '0.3rem 0.6rem', width: 'auto', display: 'flex', gap: '0.25rem', fontSize: '0.8rem', marginTop: 0 }} disabled={items.length >= 10}>
+              <Plus size={15} /> Agregar
             </button>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {items.map((item, idx) => (
-              <div key={idx} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-                <span style={{ padding: '0.5rem', fontWeight: 'bold', color: '#64748b' }}>{idx+1}</span>
-                <input type="text" placeholder="Descripción" className="input-field" value={item.desc} onChange={(e) => updateItem(idx, 'desc', e.target.value)} style={{ flex: 3 }} />
-                <input type="number" placeholder="Cant." className="input-field" value={item.qty} onChange={(e) => updateItem(idx, 'qty', e.target.value)} style={{ flex: 1 }} />
-                <input type="text" placeholder="Precio" className="input-field" value={item.price} onChange={(e) => updateItem(idx, 'price', e.target.value)} style={{ flex: 1.5 }} />
-                <button onClick={() => removeItem(idx)} style={{ padding: '0.5rem', color: '#ef4444', background: 'transparent' }}>
-                  <Trash2 size={20} />
-                </button>
-              </div>
-            ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+            {items.map((item, idx) => {
+              const rawPrice = parseNum(item.price);
+              let discVal = 0;
+              const discStr = String(item.discount || '').trim();
+              if (discStr.endsWith('%')) {
+                const pct = parseNum(discStr.replace('%', ''));
+                discVal = rawPrice * (pct / 100);
+              } else {
+                discVal = parseNum(discStr);
+              }
+              const finalPrice = Math.max(0, rawPrice - discVal);
+
+              return (
+                <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: '#f8fafc', padding: '6px 8px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--text-muted)', width: '16px' }}>{idx+1}</span>
+                    <input 
+                      type="text" 
+                      placeholder="Descripción" 
+                      className="input-field" 
+                      value={item.desc} 
+                      onChange={(e) => updateItem(idx, 'desc', e.target.value)} 
+                      style={{ flex: 3, height: '34px', fontSize: '12px' }} 
+                    />
+                    <input 
+                      type="number" 
+                      placeholder="Cant." 
+                      className="input-field" 
+                      value={item.qty} 
+                      onChange={(e) => updateItem(idx, 'qty', e.target.value)} 
+                      style={{ flex: 1, minWidth: '40px', height: '34px', fontSize: '12px', textAlign: 'center' }} 
+                    />
+                    <input 
+                      type="text" 
+                      placeholder="Precio" 
+                      className="input-field" 
+                      value={item.price} 
+                      onChange={(e) => updateItem(idx, 'price', e.target.value)} 
+                      style={{ flex: 1.3, minWidth: '55px', height: '34px', fontSize: '12px', fontWeight: 'bold' }} 
+                    />
+                    <input 
+                      type="text" 
+                      placeholder="Desc. (ej: 10% o 50)" 
+                      title="Descuento por cada sello: escribe monto fijo o porcentaje (ej: 10% ó 50)" 
+                      className="input-field" 
+                      value={item.discount || ''} 
+                      onChange={(e) => updateItem(idx, 'discount', e.target.value)} 
+                      style={{ 
+                        flex: 1.2, 
+                        minWidth: '55px', 
+                        height: '34px', 
+                        fontSize: '11px', 
+                        color: discVal > 0 ? '#15803d' : '#64748b', 
+                        background: discVal > 0 ? '#ecfdf5' : '#ffffff',
+                        borderColor: discVal > 0 ? '#86efac' : '#cbd5e1',
+                        fontWeight: discVal > 0 ? 800 : 500
+                      }} 
+                    />
+                    <button 
+                      onClick={() => removeItem(idx)} 
+                      style={{ padding: '0.2rem', color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer' }} 
+                      title="Eliminar"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+
+                  {/* Detalle pequeño si tiene descuento */}
+                  {discVal > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', padding: '0 4px', color: '#15803d', fontWeight: 700 }}>
+                      <span>Descuento: -{fmt(discVal)} c/u</span>
+                      <span>Neto unitario: {fmt(finalPrice)} Bs</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Resumen flotante */}
-        <div style={{ background: '#e0f2fe', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #bae6fd' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+        {/* Resumen Totales */}
+        <div style={{ background: '#e0f2fe', padding: '0.85rem 1rem', borderRadius: 'var(--radius-sm)', border: '1.5px solid #bae6fd', marginTop: 'auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '0.95rem', color: '#0f172a' }}>
             <span>Total Bs:</span>
             <span>{fmt(total)} Bs</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0369a1' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0284c7', fontWeight: 700, fontSize: '0.9rem', marginTop: '0.25rem' }}>
             <span>Equiv. USD:</span>
             <span>{fmt(totalUSD)} $</span>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-          <button onClick={exportJPG} className="btn-secondary" style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
-            <Download size={18} /> JPG
+        {/* Botones de Descarga */}
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button onClick={exportJPG} className="btn-secondary" style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: '0.4rem', padding: '0.6rem' }}>
+            <Download size={16} /> Descargar JPG
           </button>
-          <button onClick={exportPDF} className="btn-primary" style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
-            <FileText size={18} /> PDF
+          <button onClick={exportPDF} className="btn-primary" style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: '0.4rem', padding: '0.6rem', marginTop: 0 }}>
+            <FileText size={16} /> Descargar PDF
           </button>
         </div>
 
       </div>
 
-      {/* Vista Previa (El Documento) */}
+      {/* Panel Derecho: Vista Previa Adaptable con Auto-Fit */}
       <div className="pres-preview-wrapper">
-        <div className="pres-document" ref={previewRef}>
-          {/* Logo y Encabezado */}
-          <div className="pres-header">
-            <div className="pres-logo">
-              <img src="/logo-pauta.png?v=3" alt="Logo" style={{ width: '110px', height: '110px', objectFit: 'contain' }} />
-            </div>
-            <div className="pres-company-name">Pauta Publicitaria C.A.</div>
-            <div className="pres-company-rif">Rif: J-31570568-0</div>
+        <div className="pres-preview-toolbar">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--ink)' }}>Vista Previa A4:</span>
+            <button 
+              onClick={() => setZoomMode('fit')} 
+              className="btn-secondary" 
+              style={{ 
+                padding: '0.2rem 0.65rem', 
+                fontSize: '0.72rem', 
+                background: zoomMode === 'fit' ? 'var(--green-neon-20)' : 'transparent', 
+                borderColor: zoomMode === 'fit' ? 'var(--green-neon)' : 'var(--border)' 
+              }}
+            >
+              Ajustar al ancho
+            </button>
+            <button 
+              onClick={() => setZoomMode('100')} 
+              className="btn-secondary" 
+              style={{ 
+                padding: '0.2rem 0.65rem', 
+                fontSize: '0.72rem', 
+                background: zoomMode === '100' ? 'var(--green-neon-20)' : 'transparent', 
+                borderColor: zoomMode === '100' ? 'var(--green-neon)' : 'var(--border)' 
+              }}
+            >
+              100%
+            </button>
+            <button 
+              onClick={() => setZoomMode('75')} 
+              className="btn-secondary" 
+              style={{ 
+                padding: '0.2rem 0.65rem', 
+                fontSize: '0.72rem', 
+                background: zoomMode === '75' ? 'var(--green-neon-20)' : 'transparent', 
+                borderColor: zoomMode === '75' ? 'var(--green-neon)' : 'var(--border)' 
+              }}
+            >
+              75%
+            </button>
           </div>
-
-          <div className="pres-title-row">
-            <div className="pres-date">{dateStr}</div>
-            <div className="pres-title">PRESUPUESTO</div>
-            <div className="pres-number">N° {quoteNumber}</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+            Zoom: {Math.round(computedScale * 100)}%
           </div>
+        </div>
 
-          <div className="pres-client-info">
-            <div className="pres-row"><span className="pres-label">Cliente:</span> <span className="pres-val">{client.name}</span></div>
-            <div className="pres-row"><span className="pres-label">RIF / C.I.:</span> <span className="pres-val">{client.rif}</span></div>
-            <div className="pres-row" style={{ alignItems: 'flex-start' }}>
-              <span className="pres-label">Dirección:</span> 
-              <span className="pres-val" style={{ lineHeight: '1.2' }}>{client.address}</span>
-            </div>
-            <div className="pres-row"><span className="pres-label">Teléfonos:</span> <span className="pres-val">{client.phone}</span></div>
-            <div className="pres-row"><span className="pres-label">Email:</span> <span className="pres-val">{client.email}</span></div>
-          </div>
-
-          <table className="pres-table">
-            <thead>
-              <tr>
-                <th colSpan="2" style={{ width: '60%' }}>DESCRIPCIÓN</th>
-                <th style={{ width: '10%' }}>CANTIDAD</th>
-                <th style={{ width: '15%' }}>PRECIO</th>
-                <th style={{ width: '15%' }}>TOTAL</th>
-              </tr>
-            </thead>
-            <tbody>
-              {fillRows()}
-            </tbody>
-          </table>
-
-          <div className="pres-totals-container">
-            <div className="pres-notes">
-              <div>ESTE PRESUPUESTO INCLUYE IVA</div>
-              <div>CAMBIO BCV {bcvRate}</div>
-            </div>
-            <div className="pres-totals">
-              <div className="pres-total-row">
-                <span className="pres-total-label">Subtotal:</span>
-                <span className="pres-total-val">{fmt(subtotal)}</span>
+        <div className="pres-preview-viewport" ref={viewportRef}>
+          <div 
+            className="pres-document" 
+            ref={previewRef}
+            style={{
+              transform: `scale(${computedScale})`,
+              transformOrigin: 'top center',
+              marginBottom: computedScale < 1 ? `-${Math.round(1123 * (1 - computedScale))}px` : '20px',
+              transition: 'transform 0.18s ease-out'
+            }}
+          >
+            {/* Logo y Encabezado */}
+            <div className="pres-header">
+              <div className="pres-logo">
+                <img src="/logo-pauta.png?v=3" alt="Logo" style={{ width: '110px', height: '110px', objectFit: 'contain' }} />
               </div>
-              <div className="pres-total-row">
-                <span className="pres-total-label">I.V.A 16%:</span>
-                <span className="pres-total-val">{fmt(iva)}</span>
+              <div className="pres-company-name">Pauta Publicitaria C.A.</div>
+              <div className="pres-company-rif">Rif: J-31570568-0</div>
+            </div>
+
+            <div className="pres-title-row">
+              <div className="pres-date">{dateStr}</div>
+              <div className="pres-title">PRESUPUESTO</div>
+              <div className="pres-number">N° {quoteNumber}</div>
+            </div>
+
+            <div className="pres-client-info">
+              <div className="pres-row"><span className="pres-label">Cliente:</span> <span className="pres-val">{client.name}</span></div>
+              <div className="pres-row"><span className="pres-label">RIF / C.I.:</span> <span className="pres-val">{client.rif}</span></div>
+              <div className="pres-row" style={{ alignItems: 'flex-start' }}>
+                <span className="pres-label">Dirección:</span> 
+                <span className="pres-val" style={{ lineHeight: '1.2' }}>{client.address}</span>
               </div>
-              <div className="pres-total-row pres-total-final">
-                <span className="pres-total-label">Total:</span>
-                <span className="pres-total-val">{fmt(total)}</span>
+              <div className="pres-row"><span className="pres-label">Teléfonos:</span> <span className="pres-val">{client.phone}</span></div>
+              <div className="pres-row"><span className="pres-label">Email:</span> <span className="pres-val">{client.email}</span></div>
+            </div>
+
+            <table className="pres-table">
+              <thead>
+                <tr>
+                  <th colSpan="2" style={{ width: '60%' }}>DESCRIPCIÓN</th>
+                  <th style={{ width: '10%' }}>CANTIDAD</th>
+                  <th style={{ width: '15%' }}>PRECIO</th>
+                  <th style={{ width: '15%' }}>TOTAL</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fillRows()}
+              </tbody>
+            </table>
+
+            <div className="pres-totals-container">
+              <div className="pres-notes">
+                <div>ESTE PRESUPUESTO INCLUYE IVA</div>
+                <div>CAMBIO BCV {bcvRate}</div>
+              </div>
+              <div className="pres-totals">
+                <div className="pres-total-row">
+                  <span className="pres-total-label">Subtotal:</span>
+                  <span className="pres-total-val">{fmt(subtotal)}</span>
+                </div>
+                <div className="pres-total-row">
+                  <span className="pres-total-label">I.V.A 16%:</span>
+                  <span className="pres-total-val">{fmt(iva)}</span>
+                </div>
+                <div className="pres-total-row pres-total-final">
+                  <span className="pres-total-label">Total:</span>
+                  <span className="pres-total-val">{fmt(total)}</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="pres-footer">
-            Centro Comercial ARTA, primer piso, oficina 1-6, Chacaito, frente a BECO.<br/>
-            Teléfonos: 0212-953-5551 / 0424-134-5488 // @sellos.chacaito // selloschacaito@gmail.com
+            <div className="pres-footer">
+              Centro Comercial ARTA, primer piso, oficina 1-6, Chacaito, frente a BECO.<br/>
+              Teléfonos: 0212-953-5551 / 0424-134-5488 // @sellos.chacaito // selloschacaito@gmail.com
+            </div>
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-﻿import pygame
+import pygame
 import math
 
 class HUDTelemetry:
@@ -29,10 +29,11 @@ class HUDTelemetry:
         t_stats = self.font_mid.render(f"CRÉDITOS: {pts:,} PTS │ NIVEL: {lvl} │ RANGO: {rango}", True, c_acc)
         surface.blit(t_stats, (1240 - t_stats.get_width() - 10, 24))
 
-    def draw_combat_hud(self, surface, theme, wpm, acc, combo, cpm, shields, max_shields, buffer_pct):
+    def draw_combat_hud(self, surface, theme, wpm, acc, combo, cpm, shields, max_shields, buffer_pct, energy_pct=0.0, unlocked_skills=None, active_overclock=False):
         c_pri = theme["primary"]
         c_sec = theme["secondary"]
         c_acc = theme["accent"]
+        unlocked_skills = unlocked_skills or []
 
         # Panel de métricas biométricas
         m_rect = pygame.Rect(20, 75, 420, 80)
@@ -55,7 +56,7 @@ class HUDTelemetry:
         surface.blit(txt_cpm, (330, 118))
 
         # Barra de Escudos del Operador
-        s_rect = pygame.Rect(460, 75, 520, 36)
+        s_rect = pygame.Rect(460, 75, 520, 32)
         pygame.draw.rect(surface, (14, 18, 26), s_rect, border_radius=4)
         pygame.draw.rect(surface, c_pri, s_rect, 1, border_radius=4)
 
@@ -69,7 +70,7 @@ class HUDTelemetry:
         surface.blit(s_txt, (s_rect.centerx - s_txt.get_width() // 2, s_rect.centery - s_txt.get_height() // 2))
 
         # Barra de Progreso del Buffer
-        p_rect = pygame.Rect(460, 120, 520, 24)
+        p_rect = pygame.Rect(460, 112, 520, 20)
         pygame.draw.rect(surface, (14, 18, 26), p_rect, border_radius=4)
         pygame.draw.rect(surface, (40, 50, 70), p_rect, 1, border_radius=4)
 
@@ -79,3 +80,43 @@ class HUDTelemetry:
 
         b_txt = self.font_small.render(f"BUFFER DESCARGADO: {int(buffer_pct)}%", True, (255, 255, 255))
         surface.blit(b_txt, (p_rect.centerx - b_txt.get_width() // 2, p_rect.centery - b_txt.get_height() // 2))
+
+        # Barra de Energía Cuántica (para Habilidades Activas)
+        e_rect = pygame.Rect(460, 137, 520, 18)
+        pygame.draw.rect(surface, (14, 18, 26), e_rect, border_radius=4)
+        pygame.draw.rect(surface, (80, 40, 120), e_rect, 1, border_radius=4)
+
+        clamped_e = max(0.0, min(100.0, energy_pct))
+        ew = int((e_rect.width - 4) * (clamped_e / 100.0))
+        if ew > 0:
+            e_col = (180, 50, 255) if clamped_e < 75 else (0, 240, 255)
+            pygame.draw.rect(surface, e_col, (e_rect.x + 2, e_rect.y + 2, ew, e_rect.height - 4), border_radius=3)
+
+        e_txt = self.font_small.render(f"⚡ ENERGÍA CUÁNTICA: {int(clamped_e)}% (Escribe aciertos para recargar)", True, (255, 255, 255))
+        surface.blit(e_txt, (e_rect.centerx - e_txt.get_width() // 2, e_rect.centery - e_txt.get_height() // 2))
+
+        # Indicadores de Habilidades Activas
+        skills_info = [
+            ("emp_nova", "[ESPACIO] EMP NOVA (50%)", 50, (255, 215, 0)),
+            ("time_overclock", "[L-SHIFT] OVERCLOCK (75%)" if not active_overclock else "⏳ OVERCLOCK ACTIVO!", 75, (0, 240, 255)),
+            ("nano_shield", "[ALT] NANO-ESCUDO (100%)", 100, (0, 255, 140))
+        ]
+
+        sk_x = 460
+        sk_w = 168
+        for sk_id, sk_lbl, req_e, active_c in skills_info:
+            has_sk = sk_id in unlocked_skills
+            is_ready = has_sk and (clamped_e >= req_e)
+            b_box = pygame.Rect(sk_x, 160, sk_w, 22)
+
+            bg_c = (28, 36, 50) if is_ready else (14, 16, 22)
+            border_c = active_c if is_ready else (60, 70, 85) if has_sk else (40, 45, 55)
+            pygame.draw.rect(surface, bg_c, b_box, border_radius=4)
+            pygame.draw.rect(surface, border_c, b_box, 1, border_radius=4)
+
+            txt_c = active_c if is_ready else (150, 160, 180) if has_sk else (75, 80, 95)
+            display_txt = sk_lbl if has_sk else "🔒 BLOQUEADO"
+            s_render = self.font_small.render(display_txt, True, txt_c)
+            surface.blit(s_render, (b_box.centerx - s_render.get_width() // 2, b_box.centery - s_render.get_height() // 2))
+
+            sk_x += sk_w + 8

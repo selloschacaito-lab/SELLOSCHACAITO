@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sellos Chacaíto - Impresión</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="brand-title">
+            <span>⚡ SELLOS CHACAÍTO</span>
+        </div>
+        <div class="brand-badge">PRO v1.1</div>
+    </header>
+
+    <!-- Pestañas -->
+    <nav class="tab-navigation">
+        <button class="tab-btn active" data-tab="sizes">📏 Medidas</button>
+        <button class="tab-btn" data-tab="process">🖨️ Procesar</button>
+        <button class="tab-btn" data-tab="icons">🎨 Iconos</button>
+    </nav>
+
+    <!-- Pestaña 1: MEDIDAS -->
+    <section id="tab-sizes" class="tab-panel active">
+        <div class="card">
+            <div class="card-title">
+                <span>Generador de Medidas</span>
+                <button id="btn-open-add-size" class="mini-btn">+ Crear Botón</button>
+            </div>
+            
+            <p style="font-size: 10px; color: var(--text-muted); margin-bottom: 8px;">
+                Al hacer clic, crea el recuadro exterior (0.25pt gris 40%) y el límite interior (-1mm sin borde), agrupados.
+            </p>
+
+            <div id="sizes-container" class="sizes-grid">
+                <!-- Se llenan dinámicamente con JavaScript -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Pestaña 2: PROCESAR (LÁSER & FOTOPOLÍMERO) -->
+    <section id="tab-process" class="tab-panel">
+        <div class="card">
+            <div class="card-title">Acciones de Impresión & Grabado</div>
+            <div class="process-btn-group">
+                <button id="btn-process-laser" class="action-btn action-btn-laser">
+                    <div class="btn-info">
+                        <span class="btn-title">🔴 GRABADO LÁSER</span>
+                        <span class="btn-subtitle">Negativo + MODO ESPEJO + PNG 2400 PPP (Medida exacta)</span>
+                    </div>
+                    <span>⚡</span>
+                </button>
+
+                <button id="btn-process-photo" class="action-btn action-btn-photo">
+                    <div class="btn-info">
+                        <span class="btn-title">🟢 FOTOPOLÍMERO</span>
+                        <span class="btn-subtitle">Negativo + 7.5mm + Acomodar en mesa</span>
+                    </div>
+                    <span>🖨️</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Ajustes de Impresión</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Margen Extra Láser (mm):</label>
+                    <input type="number" id="laser-margin" value="0.0" step="0.5" title="0 = Se exporta exactamente al tamaño de tu diseño">
+                </div>
+                <div class="form-group">
+                    <label>Resolución Láser (DPI):</label>
+                    <input type="number" id="laser-dpi" value="2400" step="100">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Margen Fotopolímero (mm):</label>
+                    <input type="number" id="photo-margin" value="7.5" step="0.5">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pestaña 3: ICONOS -->
+    <section id="tab-icons" class="tab-panel">
+        <div class="card">
+            <div class="card-title">
+                <span>Biblioteca de Iconos</span>
+                <div class="card-title-actions">
+                    <button id="btn-save-selected-icon" class="mini-btn mini-btn-accent" title="Guarda el vector que tengas seleccionado en Illustrator">+ Guardar Selección</button>
+                    <button id="btn-browse-icons-folder" class="mini-btn action-btn-secondary" title="Vincular carpeta externa de iconos">📂 Carpeta</button>
+                    <button id="btn-refresh-icons" class="mini-btn action-btn-secondary" title="Recargar iconos">🔄</button>
+                </div>
+            </div>
+
+            <!-- Buscador Rápido -->
+            <div class="search-box-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="icon-search-input" placeholder="Buscar icono (ej: doctor, cruz, balanza...)" autocomplete="off">
+                <button id="btn-clear-search" class="clear-search-btn" title="Limpiar búsqueda">&times;</button>
+            </div>
+
+            <!-- Barra de Categorías / Filtros -->
+            <div class="categories-bar-container">
+                <div class="categories-bar" id="categories-bar">
+                    <!-- Se llenan dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Info Bar de Resultados -->
+            <div class="icons-status-bar">
+                <span id="icons-count-label">0 iconos</span>
+                <span id="icons-folder-label" class="folder-path-label" title=""></span>
+            </div>
+
+            <!-- Cuadrícula de Iconos -->
+            <div id="icons-grid" class="icons-grid">
+                <!-- Se llenan dinámicamente con JavaScript -->
+            </div>
+
+            <!-- Estado Vacío -->
+            <div id="icons-empty-state" class="empty-state" style="display: none;">
+                <span class="empty-icon">🎨</span>
+                <p id="empty-state-text">No hay iconos para mostrar.</p>
+                <button id="btn-empty-add-icon" class="btn-primary" style="margin-top: 8px; font-size: 10px; width: auto; padding: 5px 12px;">+ Guardar Vector Seleccionado</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Terminal de Logs / Historial -->
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-title">Registro de Actividad</div>
+        <div id="console-output" class="console-box"></div>
+    </div>
+
+    <!-- Modal: Agregar Nueva Medida -->
+    <div id="add-size-modal" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <span class="modal-title">📐 Crear Botón de Medida</span>
+                <button id="btn-close-modal" class="modal-close">&times;</button>
+            </div>
+            <form id="form-add-size">
+                <div class="form-group" style="margin-bottom: 8px;">
+                    <label>Nombre del Botón / Modelo:</label>
+                    <input type="text" id="new-size-name" placeholder="Ej: 45x45, 4913 Especial, R-542..." required>
+                </div>
+                <div class="form-group" style="margin-bottom: 8px;">
+                    <label>Forma:</label>
+                    <select id="new-size-shape">
+                        <option value="rectangle">◽ Rectángulo / Cuadrado</option>
+                        <option value="circle">⚪ Círculo / Redondo</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Ancho (mm):</label>
+                        <input type="number" id="new-size-width" placeholder="45" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Alto (mm):</label>
+                        <input type="number" id="new-size-height" placeholder="45" step="0.1" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary">Guardar Botón</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Guardar Selección como Icono -->
+    <div id="save-icon-modal" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <span class="modal-title">⭐ Guardar Vector como Icono</span>
+                <button id="btn-close-icon-modal" class="modal-close">&times;</button>
+            </div>
+            <form id="form-save-icon">
+                <p style="font-size: 10px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.3;">
+                    Selecciona en Illustrator el dibujo o trazado del icono y asígnale un nombre para tenerlo a mano:
+                </p>
+                <div class="form-group" style="margin-bottom: 8px;">
+                    <label>Nombre del Icono:</label>
+                    <input type="text" id="new-icon-name" placeholder="Ej: Caduceo Médico, Balanza, Diente..." required>
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Categoría:</label>
+                    <div style="display: flex; gap: 5px;">
+                        <select id="new-icon-category" style="flex: 1;">
+                            <option value="Médicos y Salud">Médicos y Salud</option>
+                            <option value="Leyes y Abogados">Leyes y Abogados</option>
+                            <option value="Odontología">Odontología</option>
+                            <option value="Educación y Grados">Educación y Grados</option>
+                            <option value="Redes y Contacto">Redes y Contacto</option>
+                            <option value="Comercio y Negocios">Comercio y Negocios</option>
+                            <option value="Símbolos y Figuras">Símbolos y Figuras</option>
+                            <option value="Mascotas y Animales">Mascotas y Animales</option>
+                            <option value="General">General</option>
+                            <option value="__custom__">+ Otra categoría...</option>
+                        </select>
+                        <input type="text" id="custom-icon-category" placeholder="Nueva categoría..." style="display: none; flex: 1;">
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary" id="btn-submit-save-icon">Guardar en Biblioteca</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/CSInterface.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

@@ -25,6 +25,8 @@ function DeliveryView() {
 
         const data = orderSnapshot.val();
         setOrderData(data);
+        const orderNum = data.orderNumber ? `#${data.orderNumber}` : `#${orderId.slice(-5)}`;
+        document.title = `Pedido ${orderNum}`;
 
         if (data.hasLocationPhoto) {
           const locationSnapshot = await get(child(ref(db), `orderAssets/locationPhoto/${orderId}`));

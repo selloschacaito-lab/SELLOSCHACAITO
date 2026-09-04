@@ -1,76 +1,109 @@
+/* ==========================================================================
+   PÁGINA DE COSTOS Y PRECIOS - TEMA WHITESTAMP
+   ========================================================================== */
+@import '../styles/whitestamp.css';
+
 .costos-wrapper {
   width: 100%;
   min-height: 100%;
-  color: var(--text-main);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-  padding: 0 0 40px;
+  color: var(--ws-text-primary);
+  font-family: var(--ws-font-family);
+  background-color: var(--ws-bg-canvas);
+  padding: 32px 24px 80px;
+  box-sizing: border-box;
 }
 
 .costos-container {
-  width: min(1280px, 100%);
+  width: 100%;
+  max-width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
 }
 
-/* Header Banner */
+/* --- HEADER PRINCIPAL --- */
 .costos-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-xl, 1rem);
-  padding: 18px 24px;
-  box-shadow: var(--shadow-sm);
+  gap: 20px;
+  background: var(--ws-card-bg);
+  border: 1px solid var(--ws-border-subtle);
+  border-radius: var(--ws-radius-xl);
+  padding: 24px 28px;
+  box-shadow: var(--ws-shadow-sm);
   flex-wrap: wrap;
 }
 
 .costos-title-box {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
+}
+
+.costos-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.costos-sidebar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--ws-radius-sm);
+  background: var(--ws-card-bg);
+  border: 1px solid var(--ws-border-subtle);
+  color: var(--ws-text-secondary);
+  cursor: pointer;
+  box-shadow: var(--ws-shadow-sm);
+  transition: all 0.15s ease;
+}
+
+.costos-sidebar-btn:hover {
+  color: var(--ws-text-primary);
+  background: var(--ws-card-bg-subtle);
+  border-color: var(--ws-border-focus);
 }
 
 .costos-icon-badge {
-  width: 46px;
-  height: 46px;
-  border-radius: 12px;
-  background: rgba(71, 255, 0, 0.12);
-  color: var(--primary);
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--ws-accent-primary-light);
+  color: var(--ws-accent-primary);
+  border: 1px solid var(--ws-accent-primary-border);
   display: grid;
   place-items: center;
   flex-shrink: 0;
 }
 
 .costos-title-box h1 {
-  font-size: 1.35rem;
-  font-weight: 850;
-  margin: 0 0 2px;
-  color: var(--text-main);
-  line-height: 1.2;
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0 0 4px;
+  color: var(--ws-text-primary);
+  letter-spacing: -0.02em;
 }
 
 .costos-title-box p {
-  font-size: 0.85rem;
-  color: var(--text-muted);
+  font-size: 13px;
+  color: var(--ws-text-secondary);
   margin: 0;
 }
 
+/* Tarjeta Tasa BCV */
 .costos-rate-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: rgba(241, 245, 249, 0.6);
-  border: 1px solid var(--border-strong);
-  padding: 8px 14px;
-  border-radius: 12px;
-}
-
-.dark .costos-rate-card {
-  background: rgba(30, 41, 59, 0.5);
+  gap: 14px;
+  background: var(--ws-bg-canvas);
+  border: 1px solid var(--ws-border-subtle);
+  padding: 10px 16px;
+  border-radius: var(--ws-radius-md);
 }
 
 .costos-rate-info {
@@ -79,10 +112,12 @@
 }
 
 .costos-rate-label {
-  font-size: 0.7rem;
-  font-weight: 800;
+  font-size: 10px;
+  font-weight: 700;
   text-transform: uppercase;
-  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  color: var(--ws-text-secondary);
+  margin-bottom: 2px;
 }
 
 .costos-rate-input-wrap {
@@ -92,66 +127,71 @@
 }
 
 .costos-rate-input {
-  width: 90px;
-  font-size: 1.1rem;
+  width: 95px;
+  font-size: 17px;
   font-weight: 800;
-  color: var(--primary);
+  color: var(--ws-accent-primary-text);
   background: transparent;
   border: 0;
-  border-bottom: 2px dashed var(--primary);
+  border-bottom: 2px solid var(--ws-accent-primary);
   outline: none;
   text-align: right;
   padding: 0 2px;
+  font-family: var(--ws-font-family);
 }
 
 .costos-btn-icon {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
+  background: var(--ws-card-bg);
+  border: 1px solid var(--ws-border-subtle);
+  color: var(--ws-text-secondary);
   cursor: pointer;
-  padding: 4px;
-  border-radius: 6px;
+  padding: 8px;
+  border-radius: var(--ws-radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
+  box-shadow: var(--ws-shadow-sm);
 }
 
 .costos-btn-icon:hover {
-  color: var(--primary);
-  background: rgba(0, 0, 0, 0.05);
+  color: var(--ws-text-primary);
+  border-color: var(--ws-border-focus);
+  background: var(--ws-card-bg-subtle);
 }
 
-/* Grid layout */
+/* --- GRID PRINCIPAL --- */
 .costos-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: 24px;
   align-items: start;
 }
 
-/* Glass Card */
+/* Tarjeta Whitestamp */
 .costos-card {
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-xl, 1rem);
-  padding: 22px;
-  box-shadow: var(--shadow-sm);
+  background: var(--ws-card-bg);
+  border: 1px solid var(--ws-border-subtle);
+  border-radius: var(--ws-radius-xl);
+  padding: 24px;
+  box-shadow: var(--ws-shadow-md);
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 20px;
+  box-sizing: border-box;
 }
 
 .costos-card-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: var(--text-main);
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border-strong);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ws-text-primary);
   margin: 0;
+  border-bottom: 1px solid var(--ws-border-subtle);
+  padding-bottom: 14px;
+  gap: 8px;
 }
 
 .costos-card-title span {
@@ -160,19 +200,18 @@
   gap: 8px;
 }
 
-/* Form Fields */
+/* Campos e Inputs */
 .costos-field-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  flex: 1;
 }
 
 .costos-label {
-  font-size: 0.75rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ws-text-secondary);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -181,254 +220,257 @@
 .costos-input-shell {
   display: flex;
   align-items: center;
-  background: rgba(248, 250, 252, 0.8);
-  border: 1.5px solid var(--border-strong);
-  border-radius: 12px;
-  padding: 0 12px;
-  height: 48px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.dark .costos-input-shell {
-  background: rgba(15, 23, 42, 0.6);
+  height: 44px;
+  padding: 0 14px;
+  gap: 8px;
+  border: 1.5px solid var(--ws-border-subtle);
+  border-radius: var(--ws-radius-md);
+  background: var(--ws-bg-canvas);
+  transition: all 0.15s ease;
+  box-sizing: border-box;
 }
 
 .costos-input-shell:focus-within {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(71, 255, 0, 0.15);
+  background: var(--ws-card-bg);
+  border-color: var(--ws-accent-primary);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
 }
 
 .costos-input {
-  flex: 1;
+  width: 100%;
   border: none;
   background: transparent;
   outline: none;
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: var(--text-main);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ws-text-primary);
+  font-family: var(--ws-font-family);
 }
 
 .costos-input-suffix {
-  font-size: 0.85rem;
-  font-weight: 800;
-  color: var(--text-muted);
-  margin-left: 6px;
+  color: var(--ws-text-muted);
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
 .costos-toggle-btn {
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  color: var(--text-main);
-  font-weight: 800;
-  font-size: 0.75rem;
-  padding: 4px 10px;
-  border-radius: 8px;
+  background: var(--ws-card-bg);
+  border: 1px solid var(--ws-border-subtle);
+  color: var(--ws-text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
 }
 
 .costos-toggle-btn.active {
-  background: var(--primary);
-  color: #000;
-  border-color: var(--primary);
+  background: var(--ws-accent-primary);
+  color: #ffffff;
+  border-color: var(--ws-accent-primary);
 }
 
-/* Double column row */
 .costos-row-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
 }
 
-/* Metric Display Strips */
+/* Resumen Costo Base */
 .costos-cost-summary {
-  background: rgba(71, 255, 0, 0.06);
-  border: 1.5px solid rgba(71, 255, 0, 0.3);
-  border-radius: 14px;
-  padding: 14px 16px;
+  background: var(--ws-bg-canvas);
+  border: 1px solid var(--ws-border-subtle);
+  border-radius: var(--ws-radius-md);
+  padding: 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.costos-cost-val {
-  font-size: 1.4rem;
-  font-weight: 900;
-  color: var(--primary);
-}
-
 .costos-cost-sub {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--text-muted);
+  font-size: 12px;
+  color: var(--ws-text-secondary);
+  font-weight: 600;
+  margin-top: 4px;
 }
 
-/* Price Box Highlight */
+.costos-cost-val {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--ws-text-primary);
+}
+
+/* Cajas de Precios (Detal y Mayor) */
 .costos-price-box {
-  border-radius: 14px;
   padding: 16px;
+  border-radius: var(--ws-radius-md);
+  border: 1.5px solid var(--ws-border-subtle);
+  background: var(--ws-bg-canvas);
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
 .costos-price-box.detal {
-  background: rgba(71, 255, 0, 0.08);
-  border: 1.5px solid var(--primary);
+  background: var(--ws-accent-primary-light);
+  border-color: var(--ws-accent-primary-border);
 }
 
 .costos-price-box.mayor {
-  background: rgba(59, 130, 246, 0.08);
-  border: 1.5px solid #3b82f6;
+  background: #eff6ff;
+  border-color: #bfdbfe;
 }
 
 .costos-price-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .costos-price-title {
-  font-size: 0.85rem;
-  font-weight: 850;
+  font-size: 13px;
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
-.costos-price-box.detal .costos-price-title { color: var(--primary); }
-.costos-price-box.mayor .costos-price-title { color: #3b82f6; }
+.costos-price-box.detal .costos-price-title { color: var(--ws-accent-primary-text); }
+.costos-price-box.mayor .costos-price-title { color: #1e40af; }
+
+.costos-profit-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 3px 8px;
+  border-radius: var(--ws-radius-pill);
+  color: var(--ws-accent-primary-text);
+  border: 1px solid var(--ws-accent-primary-border);
+}
 
 .costos-big-price {
-  font-size: 2rem;
-  font-weight: 950;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   line-height: 1;
 }
 
-.costos-price-box.detal .costos-big-price { color: var(--primary); }
-.costos-price-box.mayor .costos-big-price { color: #3b82f6; }
+.costos-price-box.detal .costos-big-price { color: var(--ws-accent-primary-hover); }
+.costos-price-box.mayor .costos-big-price { color: #2563eb; }
 
-.costos-profit-badge {
-  font-size: 0.8rem;
-  font-weight: 800;
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  color: var(--text-main);
-}
-
-/* Catalog Table Section */
+/* Tabla Catálogo Guardado (Ocupa ancho completo) */
 .costos-table-card {
   grid-column: 1 / -1;
 }
 
 .costos-save-bar {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .costos-btn-add {
-  background: var(--primary);
-  color: #000;
+  background: var(--ws-accent-primary);
+  color: #ffffff;
   border: none;
-  font-weight: 800;
-  font-size: 0.85rem;
-  padding: 0 18px;
-  height: 48px;
-  border-radius: 12px;
-  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 0 20px;
+  height: 44px;
+  border-radius: var(--ws-radius-md);
   display: flex;
   align-items: center;
   gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+  transition: all 0.15s ease;
   white-space: nowrap;
-  transition: all 0.2s;
 }
 
 .costos-btn-add:hover {
-  background: var(--primary-hover);
-  transform: translateY(-1px);
+  background: var(--ws-accent-primary-hover);
 }
 
 .costos-table-wrapper {
   overflow-x: auto;
-  margin-top: 10px;
+  border: 1px solid var(--ws-border-subtle);
+  border-radius: var(--ws-radius-md);
 }
 
 .costos-table {
   width: 100%;
   border-collapse: collapse;
+  font-size: 13px;
   text-align: left;
-  font-size: 0.85rem;
 }
 
 .costos-table th {
-  padding: 10px 14px;
-  background: rgba(0, 0, 0, 0.03);
-  color: var(--text-muted);
-  font-weight: 800;
-  text-transform: uppercase;
-  font-size: 0.7rem;
-  border-bottom: 1.5px solid var(--border-strong);
-}
-
-.dark .costos-table th {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--ws-bg-canvas);
+  color: var(--ws-text-secondary);
+  font-weight: 700;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--ws-border-subtle);
 }
 
 .costos-table td {
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--border-strong);
-  font-weight: 600;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--ws-border-subtle);
+  color: var(--ws-text-primary);
+  background: var(--ws-card-bg);
 }
 
-.costos-table tr:hover td {
-  background: rgba(0, 0, 0, 0.015);
+.costos-table tr:last-child td {
+  border-bottom: none;
 }
 
 /* Toast */
 .costos-toast {
   position: fixed;
   bottom: 24px;
-  right: 24px;
-  background: #0f172a;
-  color: #fff;
-  padding: 12px 18px;
-  border-radius: 12px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-  z-index: 999;
-  animation: fadeIn 0.2s ease-out;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ws-text-primary);
+  color: #ffffff;
+  padding: 12px 20px;
+  border-radius: var(--ws-radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: var(--ws-shadow-lg);
+  z-index: 100;
+  animation: fadeIn 0.2s ease;
 }
 
-/* Responsive */
-@media (max-width: 850px) {
+/* Responsive Mobile */
+@media (max-width: 840px) {
+  .costos-wrapper {
+    padding: 20px 16px 60px;
+  }
+  
+  .costos-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
   .costos-grid {
     grid-template-columns: 1fr;
   }
-}
-
-@media (max-width: 600px) {
-  .costos-header {
-    padding: 14px;
-  }
-  .costos-title-box h1 {
-    font-size: 1.15rem;
-  }
-  .costos-card {
-    padding: 16px;
-  }
-  .costos-row-2 {
-    grid-template-columns: 1fr;
-  }
-  .costos-big-price {
-    font-size: 1.6rem;
-  }
+  
   .costos-save-bar {
     flex-direction: column;
     align-items: stretch;
   }
+  
   .costos-btn-add {
+    width: 100%;
     justify-content: center;
+  }
+  
+  .costos-row-2 {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

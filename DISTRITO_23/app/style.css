@@ -1,0 +1,71 @@
+/* Cyberpunk Scanlines and custom stylings */
+.scanlines {
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.25) 50%
+  ), linear-gradient(
+    90deg,
+    rgba(255, 0, 0, 0.03),
+    rgba(0, 255, 0, 0.01),
+    rgba(0, 0, 255, 0.03)
+  );
+  background-size: 100% 3px, 3px 100%;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #08080c;
+}
+::-webkit-scrollbar-thumb {
+  background: #232738;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00f3ff;
+}
+
+/* Tabs */
+.tab-btn {
+  color: #9ca3af;
+  border-left: 3px solid transparent;
+}
+.tab-btn:hover {
+  color: #ffffff;
+  background-color: rgba(35, 39, 56, 0.4);
+}
+.tab-btn.active-tab {
+  color: #00f3ff;
+  background-color: rgba(0, 243, 255, 0.08);
+  border-left-color: #00f3ff;
+}
+
+/* Custom Checkbox */
+.cyber-checkbox {
+  appearance: none;
+  background-color: #08080c;
+  border: 1px solid #232738;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 2px;
+  cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+  transition: all 0.2s;
+}
+.cyber-checkbox:checked {
+  background-color: #00f3ff;
+  border-color: #00f3ff;
+  box-shadow: 0 0 8px rgba(0, 243, 255, 0.6);
+}
+.cyber-checkbox:checked::before {
+  content: "";
+  width: 0.65rem;
+  height: 0.65rem;
+  transform: scale(1);
+  background-color: #08080c;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+}

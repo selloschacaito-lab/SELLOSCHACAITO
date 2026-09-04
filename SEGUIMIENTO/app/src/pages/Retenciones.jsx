@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator as CalcIcon, DollarSign, Percent, ArrowRightLeft } from 'lucide-react';
+import { useOutletContext } from 'react-router-dom';
+import { Calculator as CalcIcon, DollarSign, Percent, ArrowRightLeft, PanelLeft } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import '../styles/whitestamp.css';
 
 // Función robusta para parsear números donde la coma o el punto pueden ser decimales
 function parseFlexNum(v) {
@@ -26,7 +28,9 @@ function parseFlexNum(v) {
   return Number.isFinite(n) ? n : 0;
 }
 
-export default function Retenciones() {
+export default function Retenciones({ isEmbedded = false }) {
+  const outletCtx = useOutletContext() || {};
+  const toggleSidebar = isEmbedded ? null : outletCtx.toggleSidebar;
   const [bcvRate, setBcvRate] = useState('');
   const [inputAmount, setInputAmount] = useState('');
   const [inputType, setInputType] = useState('gross'); // 'gross', 'net', 'audit'
@@ -206,16 +210,55 @@ export default function Retenciones() {
   };
 
   return (
-    <div className="animate-fade-in" style={{ padding: '2rem', maxWidth: '1050px', width: '100%', margin: '0 auto' }}>
-      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Calculadora de Retenciones</h2>
-          <p style={{ color: 'var(--text-muted)' }}>Calcula facturas, retenciones y descifra pagos de clientes.</p>
+    <div className="animate-fade-in" style={{ padding: '24px', maxWidth: '1050px', width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+      
+      {/* Header Whitestamp */}
+      <div style={{
+        marginBottom: '1.5rem',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '1rem',
+        background: '#ffffff',
+        border: '1px solid #e2e8f0',
+        borderRadius: '20px',
+        padding: '20px 24px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {toggleSidebar && (
+            <button 
+              onClick={toggleSidebar} 
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '36px',
+                height: '36px',
+                borderRadius: '8px',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                color: '#64748b',
+                cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                flexShrink: 0
+              }}
+              title="Abrir menú"
+              type="button"
+            >
+              <PanelLeft size={18} />
+            </button>
+          )}
+          <div>
+            <h2 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0, color: '#0f172a', letterSpacing: '-0.01em' }}>Calculadora de Retenciones</h2>
+            <p style={{ color: '#64748b', margin: '3px 0 0 0', fontSize: '0.85rem' }}>Calcula facturas, retenciones y descifra pagos de clientes.</p>
+          </div>
         </div>
         
-        <div style={{ background: '#f0fdf4', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <DollarSign size={16} color="#16a34a" />
-          <span style={{ fontSize: '0.875rem', color: '#166534', fontWeight: 600 }}>Tasa BCV:</span>
+        <div style={{ background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <DollarSign size={16} color="#10b981" />
+          <span style={{ fontSize: '0.875rem', color: '#64748b', fontWeight: 700 }}>Tasa BCV:</span>
           <input 
             type="text" 
             inputMode="decimal"
@@ -224,29 +267,29 @@ export default function Retenciones() {
             onBlur={handleBcvBlur}
             onFocus={(e) => e.target.select()}
             placeholder="0,0000"
-            style={{ background: 'transparent', border: 'none', width: '85px', fontWeight: 'bold', color: '#166534', outline: 'none' }}
+            style={{ background: 'transparent', border: 'none', width: '85px', fontWeight: 800, color: '#065f46', outline: 'none' }}
           />
-          <span style={{ fontSize: '0.875rem', color: '#166534' }}>Bs/$</span>
+          <span style={{ fontSize: '0.875rem', color: '#64748b', fontWeight: 600 }}>Bs/$</span>
         </div>
       </div>
 
       {/* Selector de Modos */}
-      <div style={{ display: 'flex', gap: '0.5rem', backgroundColor: '#e2e8f0', padding: '0.35rem', borderRadius: '0.75rem', marginBottom: '1.5rem', maxWidth: '580px' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', backgroundColor: '#f1f5f9', padding: '0.35rem', borderRadius: '12px', marginBottom: '1.5rem', maxWidth: '580px', border: '1px solid #e2e8f0' }}>
         <button 
           onClick={() => setInputType('gross')}
-          style={{ flex: 1, padding: '0.6rem 0.75rem', borderRadius: '0.5rem', fontWeight: 700, fontSize: '0.85rem', backgroundColor: inputType === 'gross' ? '#fff' : 'transparent', boxShadow: inputType === 'gross' ? 'var(--shadow-sm)' : 'none', color: inputType === 'gross' ? '#0f172a' : '#64748b', transition: 'all 0.2s' }}
+          style={{ flex: 1, padding: '0.6rem 0.75rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.85rem', backgroundColor: inputType === 'gross' ? '#ffffff' : 'transparent', boxShadow: inputType === 'gross' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none', color: inputType === 'gross' ? '#0f172a' : '#64748b', transition: 'all 0.15s ease', border: 'none', cursor: 'pointer' }}
         >
           Monto Factura
         </button>
         <button 
           onClick={() => setInputType('net')}
-          style={{ flex: 1, padding: '0.6rem 0.75rem', borderRadius: '0.5rem', fontWeight: 700, fontSize: '0.85rem', backgroundColor: inputType === 'net' ? '#fff' : 'transparent', boxShadow: inputType === 'net' ? 'var(--shadow-sm)' : 'none', color: inputType === 'net' ? '#0f172a' : '#64748b', transition: 'all 0.2s' }}
+          style={{ flex: 1, padding: '0.6rem 0.75rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.85rem', backgroundColor: inputType === 'net' ? '#ffffff' : 'transparent', boxShadow: inputType === 'net' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none', color: inputType === 'net' ? '#0f172a' : '#64748b', transition: 'all 0.15s ease', border: 'none', cursor: 'pointer' }}
         >
           Monto Pagado
         </button>
         <button 
           onClick={() => setInputType('audit')}
-          style={{ flex: 1.2, padding: '0.6rem 0.75rem', borderRadius: '0.5rem', fontWeight: 700, fontSize: '0.85rem', backgroundColor: inputType === 'audit' ? 'var(--primary)' : 'transparent', boxShadow: inputType === 'audit' ? 'var(--shadow-sm)' : 'none', color: inputType === 'audit' ? '#1F2329' : '#64748b', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
+          style={{ flex: 1.2, padding: '0.6rem 0.75rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.85rem', backgroundColor: inputType === 'audit' ? '#10b981' : 'transparent', boxShadow: inputType === 'audit' ? '0 2px 4px rgba(16,185,129,0.25)' : 'none', color: inputType === 'audit' ? '#ffffff' : '#64748b', transition: 'all 0.15s ease', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', border: 'none', cursor: 'pointer' }}
         >
           <ArrowRightLeft size={16} /> Descifrar Pago
         </button>
@@ -254,67 +297,62 @@ export default function Retenciones() {
 
       {inputType === 'audit' ? (
         /* VISTA MODO AUDITORÍA / DESCIFRAR PAGO */
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '1.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
           
-          {/* Lado Izquierdo: Formulario de Auditoría */}
-          <div className="glass-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#1e293b' }}>Datos de la Operación</h3>
-            
+          {/* Lado Izquierdo: Formulario Auditor */}
+          <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '1.25rem', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '20px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
             <div>
-              <label className="input-label">1. Monto transferido por el cliente (Bs)</label>
-              <input 
-                type="text"
-                inputMode="decimal"
-                className="input-field"
-                value={auditBsPaid}
-                onChange={(e) => setAuditBsPaid(e.target.value.replace(/[^\d.,]/g, ''))}
-                placeholder="Ej. 10221.55"
-                style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#0f172a' }}
-              />
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Puedes usar punto o coma para decimales (ej. 10221.55)</span>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 0.25rem 0', color: '#0f172a' }}>Descifrar Pago Incompleto</h3>
+              <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>
+                El cliente pagó en Bolívares pero no sabes qué retenciones aplicó ni qué tasa usó.
+              </p>
             </div>
 
             <div>
-              <label className="input-label">2. Monto acordado en Dólares ($)</label>
-              <input 
-                type="text"
-                inputMode="decimal"
-                className="input-field"
-                value={auditUsdTarget}
-                onChange={(e) => setAuditUsdTarget(e.target.value.replace(/[^\d.,]/g, ''))}
-                placeholder="Ej. 168.01"
-                style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#0f172a' }}
-              />
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Precio o presupuesto del trabajo (ej. 168.01)</span>
+              <label className="input-label" style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', display: 'block', marginBottom: '4px' }}>Bolívares Transferidos por el Cliente</label>
+              <div style={{ position: 'relative' }}>
+                <input 
+                  type="text" 
+                  inputMode="decimal"
+                  placeholder="Ej: 3.958,33" 
+                  className="input-field" 
+                  value={auditBsPaid}
+                  onChange={(e) => setAuditBsPaid(e.target.value.replace(/[^\d.,]/g, ''))}
+                  style={{ fontSize: '1.2rem', fontWeight: 800, paddingRight: '2.5rem', width: '100%', height: '44px', padding: '0 14px', border: '1.5px solid #e2e8f0', borderRadius: '12px', background: '#f8fafc', outline: 'none', boxSizing: 'border-box' }}
+                />
+                <span style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', fontWeight: 800, color: '#64748b' }}>Bs</span>
+              </div>
             </div>
 
-            <button
+            <div>
+              <label className="input-label" style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', display: 'block', marginBottom: '4px' }}>Total de la Venta Esperada ($ Dólares)</label>
+              <div style={{ position: 'relative' }}>
+                <input 
+                  type="text" 
+                  inputMode="decimal"
+                  placeholder="Ej: 5,80" 
+                  className="input-field" 
+                  value={auditUsdTarget}
+                  onChange={(e) => setAuditUsdTarget(e.target.value.replace(/[^\d.,]/g, ''))}
+                  style={{ fontSize: '1.2rem', fontWeight: 800, paddingRight: '2.5rem', width: '100%', height: '44px', padding: '0 14px', border: '1.5px solid #e2e8f0', borderRadius: '12px', background: '#f8fafc', outline: 'none', boxSizing: 'border-box' }}
+                />
+                <span style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', fontWeight: 800, color: '#64748b' }}>$</span>
+              </div>
+            </div>
+
+            <button 
               onClick={runAuditCalculation}
-              style={{
-                background: 'var(--primary)',
-                color: '#1F2329',
-                fontWeight: 800,
-                fontSize: '1rem',
-                padding: '0.85rem',
-                borderRadius: '0.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-                boxShadow: 'var(--shadow-md)',
-                marginTop: '0.5rem',
-                cursor: 'pointer'
-              }}
+              className="btn-primary"
+              style={{ padding: '0.85rem', width: '100%', borderRadius: '12px', fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '0.5rem', background: '#10b981', color: '#ffffff', border: 'none', fontWeight: 800, cursor: 'pointer', boxShadow: '0 2px 4px rgba(16,185,129,0.25)' }}
             >
-              <CalcIcon size={20} />
-              CALCULAR DIAGNÓSTICO
+              <CalcIcon size={18} /> CALCULAR DIAGNÓSTICO
             </button>
           </div>
 
-          {/* Lado Derecho: Resultados del Análisis */}
-          <div className="glass-card" style={{ padding: '1.5rem', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <CalcIcon size={20} /> Diagnóstico del Pago
+          {/* Lado Derecho: Resultados Auditoría */}
+          <div style={{ padding: '24px', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '20px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 1.25rem 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <ArrowRightLeft size={18} color="#10b981" /> Diagnóstico de Pago
             </h3>
 
             {calculatedAudit ? (
@@ -424,17 +462,17 @@ export default function Retenciones() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
           
           {/* Lado Izquierdo: Controles */}
-          <div className="glass-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '1.5rem', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '20px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
             <div>
-              <label className="input-label" style={{ marginBottom: '0.5rem' }}>Tipo de cálculo</label>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              <label className="input-label" style={{ marginBottom: '0.5rem', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: '#64748b' }}>Tipo de cálculo</label>
+              <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>
                 {inputType === 'gross' ? "Ingresa el total de la factura para saber cuánto debe pagarte el cliente tras retenciones." : "Ingresa lo que te pagó el cliente para saber por cuánto hacer la factura."}
               </p>
             </div>
 
             <div style={{ display: 'flex', gap: '1rem' }}>
               <div style={{ flex: 2 }}>
-                <label className="input-label">Monto</label>
+                <label className="input-label" style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', display: 'block', marginBottom: '4px' }}>Monto</label>
                 <input 
                   type="text"
                   inputMode="decimal"
@@ -442,12 +480,12 @@ export default function Retenciones() {
                   value={inputAmount}
                   onChange={(e) => setInputAmount(e.target.value.replace(/[^\d.,]/g, ''))}
                   placeholder="Ej. 100"
-                  style={{ fontSize: '1.25rem', fontWeight: 'bold' }}
+                  style={{ fontSize: '1.2rem', fontWeight: '800', width: '100%', height: '44px', padding: '0 14px', border: '1.5px solid #e2e8f0', borderRadius: '12px', background: '#f8fafc', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
               <div style={{ flex: 1 }}>
-                <label className="input-label">Moneda</label>
-                <select className="input-field" value={currency} onChange={(e) => setCurrency(e.target.value)} style={{ fontSize: '1.25rem', fontWeight: 'bold', padding: '0.65rem' }}>
+                <label className="input-label" style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', display: 'block', marginBottom: '4px' }}>Moneda</label>
+                <select className="input-field" value={currency} onChange={(e) => setCurrency(e.target.value)} style={{ fontSize: '1.1rem', fontWeight: '800', height: '44px', width: '100%', border: '1.5px solid #e2e8f0', borderRadius: '12px', background: '#f8fafc', outline: 'none', padding: '0 10px', boxSizing: 'border-box' }}>
                   <option value="Bs">Bs</option>
                   <option value="USD">$</option>
                 </select>
@@ -456,16 +494,16 @@ export default function Retenciones() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
-                <label className="input-label">% Retención IVA</label>
-                <select className="input-field" value={ivaRetPercent} onChange={(e) => setIvaRetPercent(Number(e.target.value))}>
+                <label className="input-label" style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', display: 'block', marginBottom: '4px' }}>% Retención IVA</label>
+                <select className="input-field" value={ivaRetPercent} onChange={(e) => setIvaRetPercent(Number(e.target.value))} style={{ height: '42px', width: '100%', border: '1.5px solid #e2e8f0', borderRadius: '12px', background: '#f8fafc', outline: 'none', padding: '0 10px', fontWeight: 700, boxSizing: 'border-box' }}>
                   <option value={75}>75%</option>
                   <option value={100}>100%</option>
                   <option value={0}>0% (Sin Retención)</option>
                 </select>
               </div>
               <div>
-                <label className="input-label">% Retención ISLR</label>
-                <select className="input-field" value={islrRetPercent} onChange={(e) => setIslrRetPercent(Number(e.target.value))}>
+                <label className="input-label" style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', display: 'block', marginBottom: '4px' }}>% Retención ISLR</label>
+                <select className="input-field" value={islrRetPercent} onChange={(e) => setIslrRetPercent(Number(e.target.value))} style={{ height: '42px', width: '100%', border: '1.5px solid #e2e8f0', borderRadius: '12px', background: '#f8fafc', outline: 'none', padding: '0 10px', fontWeight: 700, boxSizing: 'border-box' }}>
                   <option value={2}>2%</option>
                   <option value={1}>1%</option>
                   <option value={3}>3%</option>
@@ -478,50 +516,50 @@ export default function Retenciones() {
           </div>
 
           {/* Lado Derecho: Resultados */}
-          <div className="glass-card" style={{ padding: '1.5rem', backgroundColor: '#f8fafc' }}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <CalcIcon size={20} /> Desglose
+          <div style={{ padding: '24px', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '20px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 1.25rem 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <CalcIcon size={18} color="#10b981" /> Desglose de Factura
             </h3>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid #e2e8f0' }}>
-                <span style={{ color: '#475569', fontWeight: 600 }}>Base Imponible:</span>
-                <span style={{ fontWeight: 'bold' }}>{formatMoney(baseImponible)} {currency}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                <span style={{ color: '#64748b', fontWeight: 600 }}>Base Imponible:</span>
+                <span style={{ fontWeight: '800', color: '#0f172a' }}>{formatMoney(baseImponible)} {currency}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid #e2e8f0' }}>
-                <span style={{ color: '#475569', fontWeight: 600 }}>IVA (16%):</span>
-                <span style={{ fontWeight: 'bold' }}>{formatMoney(iva)} {currency}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                <span style={{ color: '#64748b', fontWeight: 600 }}>IVA (16%):</span>
+                <span style={{ fontWeight: '800', color: '#0f172a' }}>{formatMoney(iva)} {currency}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '2px solid #cbd5e1', fontSize: '1.125rem' }}>
-                <span style={{ color: '#0f172a', fontWeight: 'bold' }}>TOTAL FACTURA:</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.6rem', borderBottom: '2px solid #e2e8f0', fontSize: '1.05rem' }}>
+                <span style={{ color: '#0f172a', fontWeight: 800 }}>TOTAL FACTURA:</span>
                 <span style={{ fontWeight: '900', color: '#0f172a' }}>{formatMoney(totalFactura)} {currency}</span>
               </div>
               
-              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid #e2e8f0', marginTop: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid #f1f5f9', marginTop: '0.25rem' }}>
                 <span style={{ color: '#ef4444', fontWeight: 600 }}>(-) Retención IVA ({ivaRetPercent}%):</span>
-                <span style={{ fontWeight: 'bold', color: '#ef4444' }}>- {formatMoney(retIva)} {currency}</span>
+                <span style={{ fontWeight: '800', color: '#ef4444' }}>- {formatMoney(retIva)} {currency}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '2px solid #cbd5e1' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '2px solid #e2e8f0' }}>
                 <span style={{ color: '#ef4444', fontWeight: 600 }}>(-) Retención ISLR ({islrRetPercent}%):</span>
-                <span style={{ fontWeight: 'bold', color: '#ef4444' }}>- {formatMoney(retIslr)} {currency}</span>
+                <span style={{ fontWeight: '800', color: '#ef4444' }}>- {formatMoney(retIslr)} {currency}</span>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.5rem', fontSize: '1.25rem' }}>
-                <span style={{ color: '#16a34a', fontWeight: 'bold' }}>MONTO A PAGAR:</span>
-                <span style={{ fontWeight: '900', color: '#16a34a' }}>{formatMoney(montoNeto)} {currency}</span>
+                <span style={{ color: '#059669', fontWeight: 800 }}>MONTO A PAGAR:</span>
+                <span style={{ fontWeight: '900', color: '#059669' }}>{formatMoney(montoNeto)} {currency}</span>
               </div>
 
               {/* Equivalente en la otra moneda */}
               {amountNum > 0 && (
-                <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#e0f2fe', borderRadius: '0.5rem', border: '1px solid #bae6fd' }}>
-                  <p style={{ fontSize: '0.875rem', color: '#0369a1', fontWeight: 600, marginBottom: '0.5rem' }}>Equivalente en {otherCurrency}</p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
-                    <span style={{ color: '#0c4a6e' }}>Total Factura:</span>
-                    <span style={{ fontWeight: 'bold', color: '#0c4a6e' }}>{formatMoney(totalFactura * multiplier)} {otherCurrency}</span>
+                <div style={{ marginTop: '0.75rem', padding: '14px', backgroundColor: '#ecfdf5', borderRadius: '12px', border: '1px solid #a7f3d0' }}>
+                  <p style={{ fontSize: '0.8rem', color: '#065f46', fontWeight: 700, margin: '0 0 0.5rem 0', textTransform: 'uppercase' }}>Equivalente en {otherCurrency}</p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                    <span style={{ color: '#065f46' }}>Total Factura:</span>
+                    <span style={{ fontWeight: '800', color: '#065f46' }}>{formatMoney(totalFactura * multiplier)} {otherCurrency}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
-                    <span style={{ color: '#0c4a6e' }}>Monto a Pagar:</span>
-                    <span style={{ fontWeight: 'bold', color: '#0c4a6e' }}>{formatMoney(montoNeto * multiplier)} {otherCurrency}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                    <span style={{ color: '#065f46' }}>Monto a Pagar:</span>
+                    <span style={{ fontWeight: '800', color: '#065f46' }}>{formatMoney(montoNeto * multiplier)} {otherCurrency}</span>
                   </div>
                 </div>
               )}

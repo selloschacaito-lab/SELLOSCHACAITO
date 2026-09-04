@@ -5,6 +5,7 @@ import L from 'leaflet';
 import { db } from '../firebase/config';
 import { ref, onValue, push, remove, update } from 'firebase/database';
 import { Trash2, MapPin, DollarSign, Save, X, Search, Navigation } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 // Fix for default marker icons in Leaflet with React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -76,7 +77,7 @@ function DeliveryMapModal({ onClose }) {
 
   const handleSaveNewZone = async () => {
     if (!newZone.name || !newZone.price) {
-      alert("Por favor ingresa nombre y precio.");
+      toast.error("Por favor ingresa nombre y precio.");
       return;
     }
     
@@ -90,9 +91,21 @@ function DeliveryMapModal({ onClose }) {
         createdAt: new Date().toISOString()
       });
       setNewZone(null);
+      toast.success("Zona guardada correctamente");
     } catch (error) {
       console.error("Error saving zone:", error);
-      alert("Error al guardar la zona.");
+      toast.error("Error al guardar la zona.");
+    }
+  };
+
+  const handleDeleteZone = async (zoneId) => {
+    if (!window.confirm("¿Seguro que deseas eliminar esta zona de delivery?")) return;
+    try {
+      await remove(ref(db, `deliveryZones/${zoneId}`));
+      toast.success("Zona eliminada correctamente");
+    } catch (error) {
+      console.error("Error deleting zone:", error);
+      toast.error("Error al eliminar la zona.");
     }
   };
 
@@ -105,11 +118,11 @@ function DeliveryMapModal({ onClose }) {
       if (data && data.length > 0) {
         setMapCenter([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
       } else {
-        alert("Lugar no encontrado. Intenta con un nombre más general.");
+        toast.error("Lugar no encontrado. Intenta con un nombre más general.");
       }
     } catch (err) {
       console.error(err);
-      alert("Error al buscar el lugar.");
+      toast.error("Error al buscar el lugar.");
     }
   };
 

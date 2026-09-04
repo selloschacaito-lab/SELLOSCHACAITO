@@ -1,4 +1,4 @@
-﻿export type StampShape = 'circle' | 'rectangle' | 'square';
+export type StampShape = 'circle' | 'rectangle' | 'square';
 
 export type FrameStyle = 'solid' | 'double' | 'dashed' | 'dotted' | 'scalloped' | 'gear';
 
@@ -48,6 +48,8 @@ export interface CenterTextLayer extends BaseLayer {
   offsetY: number;         // Desplazamiento vertical (-150 a 150)
   letterSpacing: number;
   lineHeight: number;
+  scaleX?: number;         // Deformación / estiramiento horizontal (ej. 1.2)
+  scaleY?: number;         // Deformación / estiramiento vertical (ej. 0.9)
 }
 
 export interface IconLayer extends BaseLayer {

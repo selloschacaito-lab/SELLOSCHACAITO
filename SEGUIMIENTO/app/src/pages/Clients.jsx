@@ -1,15 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { firestoreDB } from '../firebase/config';
+import { firestoreDB, db } from '../firebase/config';
 import { collection, doc, addDoc, updateDoc, deleteDoc, query, orderBy, limit, getDocs, where, onSnapshot } from 'firebase/firestore';
-import { Users, Search, Plus, Edit2, Trash2, Phone, Star } from 'lucide-react';
+import { ref, onValue } from 'firebase/database';
+import { Users, Search, Plus, Edit2, Trash2, Phone, Star, Eye } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { createPortal } from 'react-dom';
 import { normalizeWhatsApp } from '../utils/formatters';
+import ClientDrawer from '../components/ClientDrawer';
 
-function Clients() {
+function Clients({ isModal = false }) {
   const [clients, setClients] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedClientForDrawer, setSelectedClientForDrawer] = useState(null);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   // Modal states
   const [showModal, setShowModal] = useState(false);
@@ -25,61 +36,46 @@ function Clients() {
   });
 
   useEffect(() => {
-    let timeoutId;
-    let unsub;
+    setLoading(true);
+    const q = query(collection(firestoreDB, 'clients'), orderBy('nombre'));
+    const unsub = onSnapshot(q, (snap) => {
+      const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setClients(data);
+      setLoading(false);
+    }, (err) => {
+      console.error("Error fetching clients:", err);
+      toast.error("Error cargando directorio");
+      setLoading(false);
+    });
 
-    if (!searchTerm.trim()) {
-      setLoading(true);
-      const q = query(collection(firestoreDB, 'clients'), orderBy('nombre'), limit(50));
-      unsub = onSnapshot(q, (snap) => {
-        const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setClients(data);
-        setLoading(false);
-      });
-    } else {
-      timeoutId = setTimeout(async () => {
-        setLoading(true);
-        try {
-          const searchUpper = searchTerm.trim().toUpperCase();
-          const searchExact = searchTerm.trim();
-          
-          const qName = query(
-            collection(firestoreDB, 'clients'), 
-            where('nombre', '>=', searchUpper),
-            where('nombre', '<=', searchUpper + '\uf8ff'),
-            limit(20)
-          );
-          
-          const qPhone = query(
-            collection(firestoreDB, 'clients'),
-            where('whatsapp', '>=', searchExact),
-            where('whatsapp', '<=', searchExact + '\uf8ff'),
-            limit(20)
-          );
-
-          const [snapName, snapPhone] = await Promise.all([getDocs(qName), getDocs(qPhone)]);
-          
-          const combined = new Map();
-          snapName.docs.forEach(d => combined.set(d.id, { id: d.id, ...d.data() }));
-          snapPhone.docs.forEach(d => combined.set(d.id, { id: d.id, ...d.data() }));
-          
-          const result = Array.from(combined.values());
-          result.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
-          setClients(result);
-        } catch (e) {
-          console.error("Error buscando clientes:", e);
-          toast.error('Error al buscar');
-        } finally {
-          setLoading(false);
-        }
-      }, 400);
-    }
+    // Listen to orders for live CRM calculations
+    const ordersRef = ref(db, 'orders');
+    const unsubOrders = onValue(ordersRef, (snap) => {
+      if (snap.exists()) {
+        setOrders(Object.values(snap.val()));
+      } else {
+        setOrders([]);
+      }
+    });
 
     return () => {
-      clearTimeout(timeoutId);
-      if (unsub) unsub();
+      unsub();
+      unsubOrders();
     };
-  }, [searchTerm]);
+  }, []);
+
+  // Filtrado manejado en el cliente para permitir busqueda parcial (substring)
+  const filteredClients = React.useMemo(() => {
+    if (!searchTerm.trim()) {
+      return clients.slice(0, 100); // Mostrar maximo 100 por defecto para rendimiento
+    }
+    const q = searchTerm.trim().toLowerCase();
+    return clients.filter(c => 
+      (c.nombre || '').toLowerCase().includes(q) ||
+      (c.rif || '').toLowerCase().includes(q) ||
+      (c.whatsapp || '').includes(q)
+    ).slice(0, 100);
+  }, [clients, searchTerm]);
 
   function handleOpenModal(client = null) {
     if (client) {
@@ -175,61 +171,258 @@ function Clients() {
     }
   }
 
-  // Filtrado manejado por base de datos, mostramos los que trajimos
-  const filteredClients = clients;
-
-  // Remove blocking loading screen
 
   return (
-    <div className="animate-fade-in" style={{ padding: '2rem', maxWidth: '1000px', width: '100%', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Directorio de Clientes</h2>
-          <p style={{ color: 'var(--text-muted)' }}>Administra tus clientes y mayoristas.</p>
+    <div className="animate-fade-in" style={{ width: '100%', maxWidth: '1050px', margin: '0 auto', padding: isModal ? '0' : '24px 20px 80px', boxSizing: 'border-box' }}>
+      {!isModal ? (
+        <div style={{
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '20px',
+          padding: '22px 28px',
+          marginBottom: '20px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '14px',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+        }}>
+          <div>
+            <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
+              Clientes
+            </h1>
+            <p style={{ color: '#64748b', margin: '3px 0 0', fontSize: '13px', fontWeight: 500 }}>
+              Directorio de clientes frecuentes, mayoristas y fichas CRM
+            </p>
+          </div>
+          <button 
+            onClick={() => handleOpenModal()} 
+            style={{
+              padding: '10px 18px',
+              borderRadius: '10px',
+              border: 'none',
+              background: '#10b981',
+              color: '#ffffff',
+              fontSize: '13px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <Plus size={16} /> Nuevo Cliente
+          </button>
         </div>
-        <button onClick={() => handleOpenModal()} className="btn-primary" style={{ marginTop: 0, width: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem' }}>
-          <Plus size={16} /> Nuevo Cliente
-        </button>
+      ) : (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.75rem' }}>
+          <button 
+            onClick={() => handleOpenModal()} 
+            style={{
+              padding: '8px 14px',
+              borderRadius: '8px',
+              border: 'none',
+              background: '#10b981',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <Plus size={14} /> Nuevo Cliente
+          </button>
+        </div>
+      )}
+
+      {/* Search box */}
+      <div style={{
+        background: '#ffffff',
+        borderRadius: '12px',
+        border: '1px solid #e2e8f0',
+        padding: '10px 16px',
+        marginBottom: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+      }}>
+        <Search size={18} color="#64748b" style={{ flexShrink: 0 }} />
+        <input 
+          type="search" 
+          placeholder={`Buscar en ${clients.length} clientes por nombre, RIF o WhatsApp...`}
+          className="search-input"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{
+            border: 'none',
+            outline: 'none',
+            width: '100%',
+            fontSize: '14px',
+            fontWeight: 600,
+            color: '#0f172a',
+            background: 'transparent'
+          }}
+        />
+        {searchTerm && (
+          <button 
+            type="button" 
+            onClick={() => setSearchTerm('')}
+            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 800 }}
+          >
+            ✕
+          </button>
+        )}
       </div>
 
-      <div className="glass-card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-        <div className="search-box" style={{ flex: 1, margin: 0 }}>
-          <Search className="search-icon" size={16} />
-          <input 
-            type="search" 
-            placeholder="Buscar por nombre o número de WhatsApp..." 
-            className="search-input"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className="glass-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      <div style={{
+        background: '#ffffff',
+        borderRadius: '1rem',
+        border: '1px solid #e2e8f0',
+        padding: isMobile ? '0.5rem' : '1rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+      }}>
         {loading ? (
-          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-            <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⏳</span> Cargando clientes...
+          <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
+            <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite', fontSize: '1.5rem' }}>⏳</span>
+            <p style={{ marginTop: '8px', fontWeight: 700 }}>Cargando clientes...</p>
           </div>
         ) : filteredClients.length === 0 ? (
-          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-            No se encontraron clientes.
+          <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
+            <p style={{ fontWeight: 700, margin: 0 }}>No se encontraron clientes con "{searchTerm}"</p>
+          </div>
+        ) : isMobile ? (
+          /* Mobile Card List */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {filteredClients.map(client => (
+              <div 
+                key={client.id}
+                onClick={() => setSelectedClientForDrawer(client)}
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '0.75rem',
+                  border: '1px solid #f1f5f9',
+                  padding: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#0f172a' }}>
+                      {client.nombre || client.name || 'Sin nombre'}
+                    </div>
+                    {client.rif && (
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '1px' }}>RIF: {client.rif}</div>
+                    )}
+                  </div>
+                  {client.tipo === 'mayorista' && (
+                    <span style={{ background: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '999px', fontSize: '0.68rem', fontWeight: 850, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <Star size={10} /> Mayorista
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '6px', borderTop: '1px solid #f1f5f9' }}>
+                  {client.whatsapp ? (
+                    <a 
+                      href={`https://wa.me/${normalizeWhatsApp(client.whatsapp)}`} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      style={{ color: '#16a34a', fontWeight: 750, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
+                    >
+                      <Phone size={13} /> {client.whatsapp}
+                    </a>
+                  ) : (
+                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Sin teléfono</span>
+                  )}
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedClientForDrawer(client);
+                      }}
+                      style={{ background: '#f1f5f9', border: 'none', borderRadius: '6px', padding: '6px', cursor: 'pointer', color: '#16a34a' }}
+                      title="Ver Ficha CRM"
+                    >
+                      <Eye size={15} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenModal(client);
+                      }}
+                      style={{ background: '#f1f5f9', border: 'none', borderRadius: '6px', padding: '6px', cursor: 'pointer', color: '#475569' }}
+                      title="Editar"
+                    >
+                      <Edit2 size={15} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(client.id);
+                      }}
+                      style={{ background: '#fee2e2', border: 'none', borderRadius: '6px', padding: '6px', cursor: 'pointer', color: '#dc2626' }}
+                      title="Eliminar"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          /* Desktop Table */
+          <div style={{ overflowX: 'auto', width: '100%' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '950px' }}>
               <thead>
-                <tr style={{ borderBottom: '2px solid var(--border-strong)', color: 'var(--text-muted)' }}>
-                  <th style={{ padding: '0.75rem', fontWeight: '600' }}>Nombre del Cliente</th>
-                  <th style={{ padding: '0.75rem', fontWeight: '600' }}>Contacto</th>
-                  <th style={{ padding: '0.75rem', fontWeight: '600' }}>Categoría</th>
-                  <th style={{ padding: '0.75rem', fontWeight: '600', textAlign: 'right' }}>Acciones</th>
+                <tr style={{ borderBottom: '2px solid var(--border-strong)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                  <th style={{ padding: '0.75rem 0.85rem', fontWeight: '700', width: '50px' }}>N°</th>
+                  <th style={{ padding: '0.75rem 0.85rem', fontWeight: '700' }}>Nombre del Cliente</th>
+                  <th style={{ padding: '0.75rem 0.85rem', fontWeight: '700' }}>Contacto</th>
+                  <th style={{ padding: '0.75rem 0.85rem', fontWeight: '700' }}>Categoría</th>
+                  <th style={{ padding: '0.75rem 0.85rem', fontWeight: '700', textAlign: 'center' }}>Pedidos</th>
+                  <th style={{ padding: '0.75rem 0.85rem', fontWeight: '700', textAlign: 'right' }}>Total $</th>
+                  <th style={{ padding: '0.75rem 0.85rem', fontWeight: '700' }}>Última Orden</th>
+                  <th style={{ padding: '0.75rem 0.85rem', fontWeight: '700' }}>Prod. Favorito</th>
+                  <th style={{ padding: '0.75rem 0.85rem', fontWeight: '700', textAlign: 'center', minWidth: '130px', width: '130px' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredClients.map(client => (
-                  <tr key={client.id} style={{ borderBottom: '1px solid var(--border-strong)' }}>
+                  <tr 
+                    key={client.id} 
+                    onClick={() => setSelectedClientForDrawer(client)}
+                    style={{ 
+                      borderBottom: '1px solid var(--border-strong)', 
+                      cursor: 'pointer',
+                      transition: 'background-color 0.15s ease'
+                    }}
+                    className="hover:bg-slate-100 dark:hover:bg-slate-800"
+                  >
+                    <td style={{ padding: '0.75rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                      {client.numeroCliente || '-'}
+                    </td>
                     <td style={{ padding: '0.75rem', fontWeight: '600' }}>
-                      {client.nombre || client.name || 'Sin nombre'}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>{client.nombre || client.name || 'Sin nombre'}</span>
+                        {client.notas && (
+                          <span title="Tiene notas de seguimiento" style={{ fontSize: '0.7rem' }}>📝</span>
+                        )}
+                      </div>
                     </td>
                     <td style={{ padding: '0.75rem' }}>
                       {client.whatsapp ? (
@@ -253,12 +446,48 @@ function Clients() {
                         <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Normal</span>
                       )}
                     </td>
-                    <td style={{ padding: '0.75rem', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                        <button onClick={() => handleOpenModal(client)} style={{ padding: '0.5rem', borderRadius: '0.5rem', border: '1px solid var(--border-strong)', background: 'rgba(255,255,255,0.5)', cursor: 'pointer' }} title="Editar">
+                    <td style={{ padding: '0.75rem', fontSize: '0.875rem', fontWeight: 600 }}>
+                      {client.ordenesTotales > 0 ? client.ordenesTotales : '-'}
+                    </td>
+                    <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#16a34a', fontWeight: 600 }}>
+                      {client.totalGastado > 0 ? `$${client.totalGastado}` : '-'}
+                    </td>
+                    <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                      {client.ultimaOrden || '-'}
+                    </td>
+                    <td style={{ padding: '0.75rem', fontSize: '0.85rem', color: 'var(--text-muted)', maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {client.productoMasComprado || '-'}
+                    </td>
+                    <td style={{ padding: '0.75rem 0.85rem', textAlign: 'center', minWidth: '130px', width: '130px', whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center', alignItems: 'center' }}>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedClientForDrawer(client);
+                          }} 
+                          style={{ padding: '0.45rem', borderRadius: '0.5rem', border: '1px solid var(--border-strong)', background: 'rgba(255,255,255,0.7)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                          title="Ver Ficha CRM 360°"
+                        >
+                          <Eye size={16} color="var(--primary, #16a34a)" />
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenModal(client);
+                          }} 
+                          style={{ padding: '0.45rem', borderRadius: '0.5rem', border: '1px solid var(--border-strong)', background: 'rgba(255,255,255,0.5)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                          title="Editar"
+                        >
                           <Edit2 size={16} color="var(--text-main)" />
                         </button>
-                        <button onClick={() => handleDelete(client.id)} style={{ padding: '0.5rem', borderRadius: '0.5rem', border: '1px solid #fee2e2', background: '#fef2f2', cursor: 'pointer' }} title="Eliminar">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(client.id);
+                          }} 
+                          style={{ padding: '0.45rem', borderRadius: '0.5rem', border: '1px solid #fee2e2', background: '#fef2f2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                          title="Eliminar"
+                        >
                           <Trash2 size={16} color="#ef4444" />
                         </button>
                       </div>
@@ -365,6 +594,13 @@ function Clients() {
           </div>
         </div>,
         document.body
+      )}
+      {selectedClientForDrawer && (
+        <ClientDrawer 
+          client={selectedClientForDrawer}
+          allOrders={orders}
+          onClose={() => setSelectedClientForDrawer(null)}
+        />
       )}
     </div>
   );

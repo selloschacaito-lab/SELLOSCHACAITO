@@ -25,6 +25,9 @@ export const FrameControls: React.FC<FrameControlsProps> = ({ layer, shape = 'ci
         { id: 'scalloped', label: 'Ondulada / Festón' },
       ];
 
+  // Presets de grosores de trazo en puntos (pt) estándar de Illustrator
+  const strokePresets = [0.5, 0.75, 1, 1.5, 2, 3, 4, 6];
+
   return (
     <div className="space-y-4 text-sm">
       <div>
@@ -53,6 +56,46 @@ export const FrameControls: React.FC<FrameControlsProps> = ({ layer, shape = 'ci
               {s.label}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Grosor del Trazo en Puntos (pt) como en Adobe Illustrator */}
+      <div>
+        <div className="flex justify-between text-xs text-slate-300 mb-1">
+          <span className="font-semibold text-sky-400">Grosor de Línea (pt)</span>
+          <span className="text-sky-400 font-mono font-bold">{layer.strokeWidth} pt</span>
+        </div>
+        
+        {/* Presets rápidos de puntos pt */}
+        <div className="grid grid-cols-4 gap-1 mb-2">
+          {strokePresets.map((pt) => (
+            <button
+              key={pt}
+              onClick={() => onChange({ ...layer, strokeWidth: pt })}
+              className={`py-1 text-[11px] font-mono rounded transition ${
+                layer.strokeWidth === pt
+                  ? 'bg-sky-600 text-white font-bold'
+                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+              }`}
+            >
+              {pt} pt
+            </button>
+          ))}
+        </div>
+
+        <input
+          type="range"
+          min="0.25"
+          max="12"
+          step="0.25"
+          value={layer.strokeWidth}
+          onChange={(e) => onChange({ ...layer, strokeWidth: Number(e.target.value) })}
+          className="w-full accent-sky-500 cursor-pointer"
+        />
+        <div className="flex justify-between text-[10px] text-slate-500 mt-0.5">
+          <span>0.25 pt (Fino)</span>
+          <span>6 pt (Grueso)</span>
+          <span>12 pt (Extra)</span>
         </div>
       </div>
 
@@ -105,13 +148,13 @@ export const FrameControls: React.FC<FrameControlsProps> = ({ layer, shape = 'ci
 
           <div>
             <div className="flex justify-between text-xs text-slate-300 mb-1">
-              <span>Redondeo de Esquinas</span>
-              <span className="text-sky-400 font-mono">{layer.cornerRadius || 0} px</span>
+              <span>Redondeo de Esquinas (pt)</span>
+              <span className="text-sky-400 font-mono">{layer.cornerRadius || 0} pt</span>
             </div>
             <input
               type="range"
               min="0"
-              max="20"
+              max="24"
               value={layer.cornerRadius || 0}
               onChange={(e) => onChange({ ...layer, cornerRadius: Number(e.target.value) })}
               className="w-full accent-sky-500 cursor-pointer"
@@ -120,33 +163,18 @@ export const FrameControls: React.FC<FrameControlsProps> = ({ layer, shape = 'ci
         </>
       )}
 
-      <div>
-        <div className="flex justify-between text-xs text-slate-300 mb-1">
-          <span>Grosor del Trazo</span>
-          <span className="text-sky-400 font-mono">{layer.strokeWidth} px</span>
-        </div>
-        <input
-          type="range"
-          min="0.5"
-          max="10"
-          step="0.5"
-          value={layer.strokeWidth}
-          onChange={(e) => onChange({ ...layer, strokeWidth: Number(e.target.value) })}
-          className="w-full accent-sky-500 cursor-pointer"
-        />
-      </div>
-
       {layer.style === 'double' && (
         <div>
           <div className="flex justify-between text-xs text-slate-300 mb-1">
-            <span>Separación Doble Línea</span>
-            <span className="text-sky-400 font-mono">{layer.doubleGap || 4} px</span>
+            <span>Separación Doble Línea (pt)</span>
+            <span className="text-sky-400 font-mono">{layer.doubleGap || 3} pt</span>
           </div>
           <input
             type="range"
-            min="2"
+            min="1"
             max="12"
-            value={layer.doubleGap || 4}
+            step="0.5"
+            value={layer.doubleGap || 3}
             onChange={(e) => onChange({ ...layer, doubleGap: Number(e.target.value) })}
             className="w-full accent-sky-500 cursor-pointer"
           />

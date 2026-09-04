@@ -1,4 +1,4 @@
-﻿import json
+import json
 import os
 from datetime import datetime
 
@@ -31,6 +31,8 @@ class SaveManager:
             "owned_themes": ["cyberpunk_neon"],
             "owned_switches": ["blue"],
             "installed_chips": [],
+            "subsector_difficulty": {}, # {"1.1": 4, "1.2": 2, ...}
+            "unlocked_skills": [],      # ["emp_nova", "time_overclock", "nano_shield"]
             "campaign_progress": {
                 "sector_1": {"unlocked": True, "stars": {}, "boss_beaten": False},
                 "sector_2": {"unlocked": False, "stars": {}, "boss_beaten": False},
@@ -69,7 +71,12 @@ class SaveManager:
         if os.path.exists(self.filepath):
             try:
                 with open(self.filepath, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                    data = json.load(f)
+                    # Asegurar campos nuevos en perfiles existentes
+                    for p in data.get("profiles", {}).values():
+                        p.setdefault("subsector_difficulty", {})
+                        p.setdefault("unlocked_skills", [])
+                    return data
             except Exception:
                 pass
         prof = self._default_profile("Operator")

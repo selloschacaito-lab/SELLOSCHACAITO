@@ -1,0 +1,33 @@
+[gd_scene load_steps=5 format=3 uid="uid://cybereffects01"]
+
+[ext_resource type="Shader" path="res://shaders/chromatic_aberration.gdshader" id="1_chroma"]
+
+[sub_resource type="Environment" id="Environment_cyber"]
+background_mode = 3
+glow_enabled = true
+glow_intensity = 1.2
+glow_strength = 1.15
+glow_bloom = 0.25
+glow_blend_mode = 0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_chroma"]
+shader = ExtResource("1_chroma")
+shader_parameter/offset_amount = 2.0
+shader_parameter/vignette_intensity = 0.4
+
+[node name="CyberPostProcess" type="Node2D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_cyber")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+layer = 50
+
+[node name="PostProcessRect" type="ColorRect" parent="CanvasLayer"]
+material = SubResource("ShaderMaterial_chroma")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2

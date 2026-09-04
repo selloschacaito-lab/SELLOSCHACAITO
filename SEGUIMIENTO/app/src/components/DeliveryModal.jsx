@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, UserCheck, Users, Bike, Package } from 'lucide-react';
 import { ref, update } from 'firebase/database';
 import { db } from '../firebase/config';
+import { normalizeWhatsApp } from '../utils/formatters';
 
 function DeliveryModal({ order, onClose, onComplete }) {
   const [deliveryType, setDeliveryType] = useState(null); // 'client' | 'third_party' | 'delivery_man' | 'shipping'
@@ -28,6 +29,8 @@ function DeliveryModal({ order, onClose, onComplete }) {
       
       const updates = {
         status: 'delivered',
+        statusId: 'delivered',
+        deliveredAt: order?.deliveredAt || new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
 
@@ -45,7 +48,10 @@ C.I. ${formData.idNumber}.
 Teléfono de contacto: ${formData.phone}.
 
 ¡Gracias por preferirnos!`);
-          window.open(`https://wa.me/${order.whatsapp}?text=${message}`, '_blank');
+          const cleanPhone = normalizeWhatsApp(order.whatsapp);
+          if (cleanPhone) {
+            window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
+          }
         }
       } else if (activeType === 'delivery_man') {
         updates.deliveryInfo = {
@@ -60,7 +66,10 @@ Teléfono de contacto: ${formData.phone}.
 Se puede comunicar con el por WhatsApp para saber el estatus de su entrega.
 
 ¡Gracias por preferirnos!`);
-          window.open(`https://wa.me/${order.whatsapp}?text=${message}`, '_blank');
+          const cleanPhone = normalizeWhatsApp(order.whatsapp);
+          if (cleanPhone) {
+            window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
+          }
         }
       } else if (activeType === 'shipping') {
         updates.deliveryInfo = {
@@ -86,7 +95,10 @@ Puedes ver la foto de tu comprobante de envío haciendo clic en este enlace:
 ${publicLink}
 
 ¡Gracias por preferirnos!`);
-          window.open(`https://wa.me/${order.whatsapp}?text=${message}`, '_blank');
+          const cleanPhone = normalizeWhatsApp(order.whatsapp);
+          if (cleanPhone) {
+            window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
+          }
         }
       } else {
         updates.deliveryInfo = {

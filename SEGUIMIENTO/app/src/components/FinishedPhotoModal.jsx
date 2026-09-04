@@ -8,6 +8,7 @@ function FinishedPhotoModal({ order, onClose, onComplete }) {
   const [preview, setPreview] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const modalRef = useRef(null);
+  const saveBtnRef = useRef(null);
 
   useEffect(() => {
     const handlePaste = async (e) => {
@@ -29,6 +30,30 @@ function FinishedPhotoModal({ order, onClose, onComplete }) {
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
   }, []);
+
+  // Acceso directo con tecla ENTER al botón de Guardar y Avanzar
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (preview && !isUploading) {
+          saveImage();
+        } else if (!preview && !isUploading) {
+          onComplete({ skipped: true });
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [preview, isUploading]);
+
+  // Auto-focus en el botón cuando esté listo
+  useEffect(() => {
+    if (preview && saveBtnRef.current) {
+      saveBtnRef.current.focus();
+    }
+  }, [preview]);
 
   const processFile = async (file) => {
     if (!file) return;
@@ -163,6 +188,7 @@ function FinishedPhotoModal({ order, onClose, onComplete }) {
           </button>
           
           <button 
+            ref={saveBtnRef}
             className="btn-primary" 
             style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: preview ? 1 : 0.5 }} 
             onClick={saveImage}

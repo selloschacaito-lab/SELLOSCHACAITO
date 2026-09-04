@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useWholesale } from '../context/WholesaleContext';
+import { trackWholesaleLead } from '../services/analytics';
 
 const WholesaleRegistrationModal = ({ isOpen, onClose, onRegistered }) => {
   const { loginWithGoogle, loginWithEmail, registerWithEmail, registerWithGoogle } = useWholesale();
@@ -123,6 +124,7 @@ const WholesaleRegistrationModal = ({ isOpen, onClose, onRegistered }) => {
         discount: 20
       };
       await registerWithEmail(regEmail.trim(), regPassword, profileData);
+      trackWholesaleLead(profileData);
       setSuccessInfo({
         razonSocial: razonSocial.trim(),
         rif: rif.trim().toUpperCase(),
@@ -159,6 +161,7 @@ const WholesaleRegistrationModal = ({ isOpen, onClose, onRegistered }) => {
         discount: 20
       };
       const result = await registerWithGoogle(profileData);
+      trackWholesaleLead(profileData);
       setSuccessInfo({
         razonSocial: profileData.razonSocial,
         rif: profileData.rif,

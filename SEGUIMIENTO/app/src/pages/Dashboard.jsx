@@ -2,28 +2,42 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { db } from '../firebase/config';
 import { ref, onValue } from 'firebase/database';
-import { Package, Search, Bell, MapPin, PanelLeft, FolderArchive, Plus, Sparkles } from 'lucide-react';
+import { Package, Search, Bell, MapPin, PanelLeft, FolderArchive, Plus, Sparkles, ChevronDown, FileText, ShoppingCart, Users, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import KanbanBoard from '../components/KanbanBoard';
 import OrderModal from '../components/OrderModal';
 import PrintAlertsModal from '../components/PrintAlertsModal';
 import NewOrderModal from '../components/NewOrderModal';
 import DeliveryMapModal from '../components/DeliveryMapModal';
-import QuickPasteModal from '../components/QuickPasteModal';
+import POSModal from '../components/POSModal';
+import Clients from './Clients';
+import Inventory from './Inventory';
 
 function Dashboard() {
   const { toggleSidebar } = useOutletContext();
   const [orders, setOrders] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [highlightedOrderId, setHighlightedOrderId] = useState(null);
   const [printAlerts, setPrintAlerts] = useState({});
   const [showAlertsModal, setShowAlertsModal] = useState(false);
   const [showNewOrderModal, setShowNewOrderModal] = useState(false);
-  const [showQuickPasteModal, setShowQuickPasteModal] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [orderToEdit, setOrderToEdit] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showPosModal, setShowPosModal] = useState(false);
+  const [showClientsModal, setShowClientsModal] = useState(false);
+  const [showInventoryModal, setShowInventoryModal] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const initialLoadRef = useRef(true);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const playAlertSound = () => {
     try {
@@ -54,7 +68,18 @@ function Dashboard() {
   };
 
   useEffect(() => {
-    // Al igual que en la versin anterior, saltamos la autenticacin (REQUIRE_AUTH = false)
+    // Cerrar dropdown al hacer click afuera
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    // Al igual que en la versión anterior, saltamos la autenticación (REQUIRE_AUTH = false)
     const ordersRef = ref(db, 'orders');
     const unsubscribeOrders = onValue(ordersRef, (snapshot) => {
       const data = snapshot.val();
@@ -106,7 +131,7 @@ function Dashboard() {
     };
   }, []);
 
-  // Calcular estadsticas
+  // Calcular estadísticas
   const ordersList = Object.values(orders);
   const activeOrders = ordersList.filter(o => o.status !== 'delivered');
   
@@ -196,32 +221,133 @@ function Dashboard() {
               <FolderArchive size={14} /> <span className="hide-on-mobile">{showArchived ? 'Ocultar Arch.' : 'Archivados'}</span>
             </button>
 
-            <button 
-              className="btn-secondary" 
-              onClick={() => setShowQuickPasteModal(true)}
-              style={{ background: '#25D366', color: '#ffffff', border: 'none', padding: '0.25rem 0.65rem', fontSize: '0.8rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px', borderRadius: '0.5rem', minHeight: '32px' }}
-              title="Cargar pedido de WhatsApp en 1 segundo"
-            >
-              <Sparkles size={14} /> <span>⚡ WhatsApp</span>
-            </button>
+            {/* Selector de Nuevo Pedido / Nueva Venta */}
+            <div ref={dropdownRef} style={{ position: 'relative' }}>
+              <button 
+                onClick={() => setShowDropdown(!showDropdown)} 
+                title="Crear Nuevo Pedido o Venta"
+                style={{ 
+                  width: '36px',
+                  height: '36px',
+                  minHeight: '36px',
+                  padding: 0,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  background: '#10b981',
+                  color: '#ffffff',
+                  border: 'none',
+                  boxShadow: '0 2px 6px rgba(16, 185, 129, 0.3)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Plus size={18} strokeWidth={2.5} />
+              </button>
 
-            <button className="btn-new-order" onClick={() => setShowNewOrderModal(true)} style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem', minHeight: '32px' }}>
-              <span className="hide-on-mobile">+ Nuevo pedido</span>
-              <span className="show-on-mobile" style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>+</span>
-            </button>
+              {showDropdown && (
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  right: 0,
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
+                  width: '170px',
+                  zIndex: 100,
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  animation: 'scalePop 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) both'
+                }}>
+                  <button
+                    onClick={() => {
+                      setShowNewOrderModal(true);
+                      setShowDropdown(false);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '10px 14px',
+                      background: 'transparent',
+                      color: '#0f172a',
+                      fontSize: '0.84rem',
+                      fontWeight: 700,
+                      textAlign: 'left',
+                      border: 'none',
+                      borderBottom: '1px solid #f1f5f9',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#f0fdf4'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <FileText size={16} color="#10b981" />
+                    <span>Nuevo Pedido</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowPosModal(true);
+                      setShowDropdown(false);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '10px 14px',
+                      background: 'transparent',
+                      color: '#0f172a',
+                      fontSize: '0.84rem',
+                      fontWeight: 700,
+                      textAlign: 'left',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#f0fdf4'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <ShoppingCart size={16} color="#10b981" />
+                    <span>Nueva Venta</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
 
       <main className="glass-card workspace">
-        <div className="workspace-header">
+        <div className="workspace-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
           <h2 className="workspace-title">{showArchived ? 'Pedidos Archivados (Entregados)' : 'Panel de Pedidos Activos'}</h2>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button 
+              className="btn-secondary"
+              onClick={() => setShowClientsModal(true)}
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
+            >
+              <Users size={16} /> CLIENTES
+            </button>
+            <button 
+              className="btn-secondary"
+              onClick={() => setShowInventoryModal(true)}
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
+            >
+              <Package size={16} /> INVENTARIO
+            </button>
+          </div>
         </div>
         <KanbanBoard 
           orders={orders} 
           searchTerm={searchTerm} 
           showArchived={showArchived}
-          onOrderClick={setSelectedOrder} 
+          highlightedOrderId={highlightedOrderId}
+          onOrderClick={(order) => {
+            if (highlightedOrderId) setHighlightedOrderId(null);
+            setSelectedOrder(order);
+          }} 
         />
       </main>
 
@@ -244,22 +370,164 @@ function Dashboard() {
         />
       )}
 
-      {showQuickPasteModal && (
-        <QuickPasteModal onClose={() => setShowQuickPasteModal(false)} />
-      )}
-
       {showNewOrderModal && (
         <NewOrderModal 
+          orders={orders}
           onClose={() => {
             setShowNewOrderModal(false);
             setOrderToEdit(null);
           }} 
+          onHighlightOrder={(orderId) => {
+            setHighlightedOrderId(orderId);
+            setShowNewOrderModal(false);
+            setOrderToEdit(null);
+          }}
+          onSelectOrder={(order) => {
+            setSelectedOrder(order);
+            setShowNewOrderModal(false);
+            setOrderToEdit(null);
+          }}
           editOrder={orderToEdit}
         />
       )}
 
       {isMapOpen && (
         <DeliveryMapModal onClose={() => setIsMapOpen(false)} />
+      )}
+
+      {showPosModal && (
+        <POSModal 
+          isOpen={showPosModal} 
+          onClose={() => setShowPosModal(false)} 
+        />
+      )}
+
+      {showClientsModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: isMobile ? '#ffffff' : 'rgba(15, 23, 42, 0.45)',
+          backdropFilter: isMobile ? 'none' : 'blur(4px)',
+          zIndex: 99999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: isMobile ? 0 : '1rem'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            width: '100%',
+            maxWidth: '1200px',
+            height: isMobile ? '100dvh' : '92vh',
+            maxHeight: isMobile ? '100dvh' : '900px',
+            borderRadius: isMobile ? 0 : '1.5rem',
+            overflow: 'hidden',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: isMobile ? 'none' : '0 20px 50px rgba(0,0,0,0.15)'
+          }}>
+            <div style={{
+              padding: isMobile ? '0.75rem 1rem' : '1rem 1.5rem',
+              borderBottom: '1px solid #e2e8f0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: '#f8fafc'
+            }}>
+              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.15rem', fontWeight: 900, letterSpacing: '0.5px' }}>
+                <div style={{ background: 'var(--primary, #47FF00)', color: '#1F2329', borderRadius: '8px', padding: '6px', display: 'flex' }}>
+                  <Users size={18} />
+                </div>
+                CLIENTES
+              </h3>
+              <button 
+                onClick={() => setShowClientsModal(false)} 
+                style={{ 
+                  background: '#f1f5f9', 
+                  border: 'none', 
+                  borderRadius: '50%',
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  padding: 0
+                }}
+              >
+                <X size={20} color="#0f172a" />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '0.75rem' : '1.25rem' }}>
+              <Clients isModal={true} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showInventoryModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: isMobile ? '#ffffff' : 'rgba(15, 23, 42, 0.45)',
+          backdropFilter: isMobile ? 'none' : 'blur(4px)',
+          zIndex: 99999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: isMobile ? 0 : '1rem'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            width: '100%',
+            maxWidth: '1200px',
+            height: isMobile ? '100dvh' : '92vh',
+            maxHeight: isMobile ? '100dvh' : '900px',
+            borderRadius: isMobile ? 0 : '1.5rem',
+            overflow: 'hidden',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: isMobile ? 'none' : '0 20px 50px rgba(0,0,0,0.15)'
+          }}>
+            <div style={{
+              padding: isMobile ? '0.75rem 1rem' : '1rem 1.5rem',
+              borderBottom: '1px solid #e2e8f0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: '#f8fafc'
+            }}>
+              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.15rem', fontWeight: 900, letterSpacing: '0.5px' }}>
+                <div style={{ background: 'var(--primary, #47FF00)', color: '#1F2329', borderRadius: '8px', padding: '6px', display: 'flex' }}>
+                  <Package size={18} />
+                </div>
+                INVENTARIO
+              </h3>
+              <button 
+                onClick={() => setShowInventoryModal(false)} 
+                style={{ 
+                  background: '#f1f5f9', 
+                  border: 'none', 
+                  borderRadius: '50%',
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  padding: 0
+                }}
+              >
+                <X size={20} color="#0f172a" />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '0.75rem' : '1.25rem' }}>
+              <Inventory isModal={true} />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

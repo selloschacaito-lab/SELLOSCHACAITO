@@ -8,6 +8,8 @@ import type {
 } from '../types/stamp';
 import { generateScallopedCircle, polarToCartesian } from './svgCalculations';
 
+const PT_TO_MM = 25.4 / 72.0;
+
 function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -21,6 +23,7 @@ function triggerDownload(blob: Blob, filename: string) {
 
 /**
  * Genera un SVG 100% compatible con Adobe Illustrator, CorelDraw y Máquinas de Grabado Láser
+ * - Usa grosores de trazo en puntos (pt) y tamaños de fuente en puntos (pt) idénticos a Illustrator
  * - Convierte texto en arco a caracteres transformados individualmente (evita el fallo de <textPath> en Illustrator)
  * - Elimina cualquier elemento de interfaz, filtros no compatibles o colores rgba()
  * - Aplica medidas físicas exactas en milímetros y viewBox limpio
@@ -28,12 +31,8 @@ function triggerDownload(blob: Blob, filename: string) {
 export function buildIllustratorCompatibleSvg(project: StampProject): string {
   const widthMm = project.widthMm || project.sizeMm || 40;
   const heightMm = project.heightMm || project.sizeMm || 40;
-  const maxDim = Math.max(widthMm, heightMm);
-  const baseUnit = 300;
-  const viewWidth = Math.round((widthMm / maxDim) * baseUnit);
-  const viewHeight = Math.round((heightMm / maxDim) * baseUnit);
-  const halfW = viewWidth / 2;
-  const halfH = viewHeight / 2;
+  const halfW = widthMm / 2;
+  const halfH = heightMm / 2;
   const color = project.color || '#1e3a8a';
 
   let elementsSvg = '';
@@ -45,36 +44,38 @@ export function buildIllustratorCompatibleSvg(project: StampProject): string {
       case 'frame': {
         const f = layer as FrameLayer;
         const strokeDasharray =
-          f.style === 'dashed' ? '8,5' : f.style === 'dotted' ? '3,4' : '';
+          f.style === 'dashed' ? '2.5, 1.5' : f.style === 'dotted' ? '0.8, 1.2' : '';
         const dashAttr = strokeDasharray ? ` stroke-dasharray="${strokeDasharray}"` : '';
 
         if (project.shape === 'circle') {
-          const r = (f.radius / 100) * Math.min(halfW, halfH) * 0.94;
+          const r = (f.radius / 100) * halfW;
 
           if (f.style === 'scalloped') {
-            const scallopedD = generateScallopedCircle(0, 0, r, f.scallopCount || 36, 4);
-            elementsSvg += `  <path d="${scallopedD}" fill="none" stroke="${color}" stroke-width="${f.strokeWidth}" />\n`;
+            const scallopedD = generateScallopedCircle(0, 0, r, f.scallopCount || 36, 1.2);
+            elementsSvg += `  <path d="${scallopedD}" fill="none" stroke="${color}" stroke-width="${f.strokeWidth}pt" />\n`;
           } else if (f.style === 'double') {
-            const gap = f.doubleGap || 4;
-            elementsSvg += `  <circle cx="0" cy="0" r="${r}" fill="none" stroke="${color}" stroke-width="${f.strokeWidth}" />\n`;
-            elementsSvg += `  <circle cx="0" cy="0" r="${Math.max(5, r - gap - f.strokeWidth)}" fill="none" stroke="${color}" stroke-width="${f.strokeWidth * 0.75}" />\n`;
+            const gapMm = (f.doubleGap || 3) * PT_TO_MM;
+            const strokeWidthMm = (f.strokeWidth || 1.5) * PT_TO_MM;
+            elementsSvg += `  <circle cx="0" cy="0" r="${r.toFixed(3)}" fill="none" stroke="${color}" stroke-width="${f.strokeWidth}pt" />\n`;
+            elementsSvg += `  <circle cx="0" cy="0" r="${Math.max(1, r - gapMm - strokeWidthMm).toFixed(3)}" fill="none" stroke="${color}" stroke-width="${(f.strokeWidth * 0.75).toFixed(2)}pt" />\n`;
           } else {
-            elementsSvg += `  <circle cx="0" cy="0" r="${r}" fill="none" stroke="${color}" stroke-width="${f.strokeWidth}"${dashAttr} />\n`;
+            elementsSvg += `  <circle cx="0" cy="0" r="${r.toFixed(3)}" fill="none" stroke="${color}" stroke-width="${f.strokeWidth}pt"${dashAttr} />\n`;
           }
         } else {
           // Rectangular / Cuadrado
           const wPct = f.widthPercent || f.radius || 92;
           const hPct = f.heightPercent || f.radius || 90;
-          const frameW = (wPct / 100) * halfW * 2 * 0.94;
-          const frameH = (hPct / 100) * halfH * 2 * 0.94;
-          const rx = f.cornerRadius !== undefined ? f.cornerRadius : 4;
+          const frameW = (wPct / 100) * widthMm;
+          const frameH = (hPct / 100) * heightMm;
+          const rx = (f.cornerRadius !== undefined ? f.cornerRadius : 2) * PT_TO_MM;
 
           if (f.style === 'double') {
-            const gap = f.doubleGap || 3;
-            elementsSvg += `  <rect x="${-frameW / 2}" y="${-frameH / 2}" width="${frameW}" height="${frameH}" rx="${rx}" fill="none" stroke="${color}" stroke-width="${f.strokeWidth}" />\n`;
-            elementsSvg += `  <rect x="${-frameW / 2 + gap + f.strokeWidth / 2}" y="${-frameH / 2 + gap + f.strokeWidth / 2}" width="${Math.max(10, frameW - (gap + f.strokeWidth / 2) * 2)}" height="${Math.max(10, frameH - (gap + f.strokeWidth / 2) * 2)}" rx="${Math.max(0, rx - 2)}" fill="none" stroke="${color}" stroke-width="${f.strokeWidth * 0.75}" />\n`;
+            const gapMm = (f.doubleGap || 3) * PT_TO_MM;
+            const strokeWidthMm = (f.strokeWidth || 1.5) * PT_TO_MM;
+            elementsSvg += `  <rect x="${(-frameW / 2).toFixed(3)}" y="${(-frameH / 2).toFixed(3)}" width="${frameW.toFixed(3)}" height="${frameH.toFixed(3)}" rx="${rx.toFixed(3)}" fill="none" stroke="${color}" stroke-width="${f.strokeWidth}pt" />\n`;
+            elementsSvg += `  <rect x="${(-frameW / 2 + gapMm + strokeWidthMm / 2).toFixed(3)}" y="${(-frameH / 2 + gapMm + strokeWidthMm / 2).toFixed(3)}" width="${Math.max(2, frameW - (gapMm + strokeWidthMm / 2) * 2).toFixed(3)}" height="${Math.max(2, frameH - (gapMm + strokeWidthMm / 2) * 2).toFixed(3)}" rx="${Math.max(0, rx - 0.5).toFixed(3)}" fill="none" stroke="${color}" stroke-width="${(f.strokeWidth * 0.75).toFixed(2)}pt" />\n`;
           } else {
-            elementsSvg += `  <rect x="${-frameW / 2}" y="${-frameH / 2}" width="${frameW}" height="${frameH}" rx="${rx}" fill="none" stroke="${color}" stroke-width="${f.strokeWidth}"${dashAttr} />\n`;
+            elementsSvg += `  <rect x="${(-frameW / 2).toFixed(3)}" y="${(-frameH / 2).toFixed(3)}" width="${frameW.toFixed(3)}" height="${frameH.toFixed(3)}" rx="${rx.toFixed(3)}" fill="none" stroke="${color}" stroke-width="${f.strokeWidth}pt"${dashAttr} />\n`;
           }
         }
         break;
@@ -82,7 +83,7 @@ export function buildIllustratorCompatibleSvg(project: StampProject): string {
 
       case 'circular-text': {
         const ct = layer as CircularTextLayer;
-        const r = (ct.radius / 100) * Math.min(halfW, halfH) * 0.94;
+        const r = (ct.radius / 100) * halfW;
         const text = ct.text || '';
         const isBottom = ct.isReversed ?? (ct.position === 'bottom');
         const fontStyle = ct.isItalic ? 'font-style="italic" ' : '';
@@ -93,9 +94,9 @@ export function buildIllustratorCompatibleSvg(project: StampProject): string {
         if (count === 0) break;
 
         // Distribución angular precisa de caracteres
-        // Se calcula el arco ocupado según la cantidad de caracteres y el tamaño de fuente
-        const letterSpacingFactor = (ct.letterSpacing || 0) * 0.6;
-        const charWidthEst = (ct.fontSize * 0.55 + letterSpacingFactor);
+        const fontSizeMm = (ct.fontSize || 12) * PT_TO_MM;
+        const letterSpacingFactor = (ct.letterSpacing || 0) * PT_TO_MM * 0.8;
+        const charWidthEst = fontSizeMm * 0.55 + letterSpacingFactor;
         const perimeter = 2 * Math.PI * r;
         const totalTextLength = charWidthEst * count;
         const autoSweep = Math.min(ct.sweepAngle, (totalTextLength / perimeter) * 360);
@@ -103,26 +104,24 @@ export function buildIllustratorCompatibleSvg(project: StampProject): string {
         const startAng = ct.startAngle - autoSweep / 2;
 
         elementsSvg += `  <!-- Texto Circular: ${ct.name} -->\n`;
-        elementsSvg += `  <g id="layer-${ct.id}" fill="${color}" font-family="${ct.fontFamily}, sans-serif" font-size="${ct.fontSize}px" ${fontWeight}${fontStyle}text-anchor="middle">\n`;
+        elementsSvg += `  <g id="layer-${ct.id}" fill="${color}" font-family="${ct.fontFamily}, sans-serif" font-size="${ct.fontSize}pt" ${fontWeight}${fontStyle}text-anchor="middle">\n`;
 
         for (let i = 0; i < count; i++) {
           const char = chars[i];
           if (char === ' ') continue;
 
-          let charAngle = count === 1 ? ct.startAngle : startAng + i * step;
-
           if (!isBottom) {
             // Superior: Letras con base hacia el centro
+            const charAngle = count === 1 ? ct.startAngle : startAng + i * step;
             const pos = polarToCartesian(0, 0, r, charAngle);
             const rot = charAngle;
-            elementsSvg += `    <text transform="translate(${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}) rotate(${rot.toFixed(2)})" dominant-baseline="central">${escapeXml(char)}</text>\n`;
+            elementsSvg += `    <text transform="translate(${pos.x.toFixed(3)}, ${pos.y.toFixed(3)}) rotate(${rot.toFixed(2)})" dominant-baseline="central">${escapeXml(char)}</text>\n`;
           } else {
-            // Inferior: Letras invertidas 180° para que queden derechas y legibles
-            // Para el arco inferior invertimos el orden de lectura (de izquierda a derecha)
+            // Inferior: Letras invertidas 180° para que queden derechas y legibles de izquierda a derecha
             const bottomAngle = ct.startAngle + autoSweep / 2 - i * step;
             const pos = polarToCartesian(0, 0, r, bottomAngle);
             const rot = bottomAngle + 180;
-            elementsSvg += `    <text transform="translate(${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}) rotate(${rot.toFixed(2)})" dominant-baseline="central">${escapeXml(char)}</text>\n`;
+            elementsSvg += `    <text transform="translate(${pos.x.toFixed(3)}, ${pos.y.toFixed(3)}) rotate(${rot.toFixed(2)})" dominant-baseline="central">${escapeXml(char)}</text>\n`;
           }
         }
         elementsSvg += `  </g>\n`;
@@ -134,33 +133,38 @@ export function buildIllustratorCompatibleSvg(project: StampProject): string {
         const lines = cnt.text.split('\n');
         const textAnchor =
           cnt.alignment === 'left' ? 'start' : cnt.alignment === 'right' ? 'end' : 'middle';
-        const posX = cnt.offsetX || 0;
-        const posY = cnt.offsetY || 0;
+        const posX = ((cnt.offsetX || 0) / 100) * halfW;
+        const posY = ((cnt.offsetY || 0) / 100) * halfH;
         const fontStyle = cnt.isItalic ? 'font-style="italic" ' : '';
         const fontWeight = cnt.isBold ? 'font-weight="bold" ' : '';
-        const letterSpacing = cnt.letterSpacing ? `letter-spacing="${cnt.letterSpacing}px" ` : '';
+        const letterSpacing = cnt.letterSpacing ? `letter-spacing="${cnt.letterSpacing}pt" ` : '';
+        const fontSizeMm = (cnt.fontSize || 12) * PT_TO_MM;
+        const scaleX = cnt.scaleX || 1;
+        const scaleY = cnt.scaleY || 1;
 
         elementsSvg += `  <!-- Texto Central: ${cnt.name} -->\n`;
-        elementsSvg += `  <text x="${posX}" y="${posY}" fill="${color}" text-anchor="${textAnchor}" font-family="${cnt.fontFamily}, sans-serif" font-size="${cnt.fontSize}px" ${fontWeight}${fontStyle}${letterSpacing}>\n`;
+        elementsSvg += `  <g transform="translate(${posX.toFixed(3)}, ${posY.toFixed(3)}) scale(${scaleX.toFixed(3)}, ${scaleY.toFixed(3)})">\n`;
+        elementsSvg += `    <text x="0" y="0" fill="${color}" text-anchor="${textAnchor}" font-family="${cnt.fontFamily}, sans-serif" font-size="${cnt.fontSize}pt" ${fontWeight}${fontStyle}${letterSpacing}>\n`;
 
         lines.forEach((line, idx) => {
-          const dy = idx === 0 ? 0 : cnt.fontSize * (cnt.lineHeight || 1.2);
-          elementsSvg += `    <tspan x="${posX}" dy="${dy.toFixed(2)}">${escapeXml(line)}</tspan>\n`;
+          const dy = idx === 0 ? 0 : fontSizeMm * (cnt.lineHeight || 1.2);
+          elementsSvg += `      <tspan x="0" dy="${dy.toFixed(3)}">${escapeXml(line)}</tspan>\n`;
         });
 
-        elementsSvg += `  </text>\n`;
+        elementsSvg += `    </text>\n`;
+        elementsSvg += `  </g>\n`;
         break;
       }
 
       case 'icon': {
         const ic = layer as IconLayer;
-        const posX = ic.offsetX || 0;
-        const posY = ic.offsetY || 0;
-        const scale = (ic.size / 36).toFixed(3);
+        const posX = ((ic.offsetX || 0) / 100) * halfW;
+        const posY = ((ic.offsetY || 0) / 100) * halfH;
+        const scale = (((ic.size || 36) / 36) * (widthMm / 40) * 0.28).toFixed(3);
         const iconSvg = getIconSvgString(ic.iconKey, color);
 
         elementsSvg += `  <!-- Icono: ${ic.name} -->\n`;
-        elementsSvg += `  <g transform="translate(${posX}, ${posY}) scale(${scale}) rotate(${ic.rotation})">\n`;
+        elementsSvg += `  <g transform="translate(${posX.toFixed(3)}, ${posY.toFixed(3)}) scale(${scale}) rotate(${ic.rotation})">\n`;
         elementsSvg += `    ${iconSvg}\n`;
         elementsSvg += `  </g>\n`;
         break;
@@ -174,7 +178,7 @@ export function buildIllustratorCompatibleSvg(project: StampProject): string {
      version="1.1"
      width="${widthMm}mm"
      height="${heightMm}mm"
-     viewBox="${-halfW} ${-halfH} ${viewWidth} ${viewHeight}">
+     viewBox="${-halfW} ${-halfH} ${widthMm} ${heightMm}">
 <g id="Stamp-Vector-Design">
 ${elementsSvg}
 </g>
@@ -279,7 +283,7 @@ export async function exportToPng(
   });
 }
 
-// 3. Exportar como PDF a escala real 1:1 para impresión
+// 3. Exportar como PDF a escala real 1:1 para impresión (Hoja Carta / Letter)
 export async function exportToPdf(project: StampProject): Promise<void> {
   const widthMm = project.widthMm || project.sizeMm || 40;
   const heightMm = project.heightMm || project.sizeMm || 40;
@@ -310,12 +314,12 @@ export async function exportToPdf(project: StampProject): Promise<void> {
       const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: 'a4',
+        format: 'letter', // Formato Carta (215.9 x 279.4 mm)
       });
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(14);
-      doc.text('HOJA DE PRUEBA Y REVISIÓN DE SELLO', 20, 25);
+      doc.text('HOJA DE PRUEBA Y REVISIÓN DE SELLO (TAMAÑO CARTA)', 20, 25);
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
@@ -323,8 +327,9 @@ export async function exportToPdf(project: StampProject): Promise<void> {
       doc.text(`Medida Real de Fabricación: ${widthMm} x ${heightMm} mm (${project.shape})`, 20, 38);
       doc.text(`Fecha de creación: ${new Date().toLocaleDateString()}`, 20, 44);
 
-      const stampX = (210 - widthMm) / 2;
-      const stampY = 80;
+      // Centrado exacto en hoja carta (ancho 215.9 mm)
+      const stampX = (215.9 - widthMm) / 2;
+      const stampY = 85;
 
       doc.setDrawColor(200, 200, 200);
       doc.setLineDashPattern([2, 2], 0);
@@ -339,7 +344,7 @@ export async function exportToPdf(project: StampProject): Promise<void> {
       doc.text(
         'Nota: Al imprimir este documento, asegúrese de seleccionar "Tamaño real" o "Escala 100%" en su impresora.',
         20,
-        280
+        260
       );
 
       const filename = `${project.title.toLowerCase().replace(/\s+/g, '-')}-${widthMm}x${heightMm}mm-escala-real.pdf`;

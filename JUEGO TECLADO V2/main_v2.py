@@ -22,6 +22,15 @@ from game.boss_engine import MultiPhaseBoss
 from content.campaign_50_levels import CAMPAIGN_SECTORS
 from content.shop_catalog import BLACK_MARKET_CATALOG
 
+# 5 Dificultades Tácticas Cyberpunk con modificadores de combate y recompensas
+DIFFICULTY_MODS = {
+    1: {"name": "RECLUTA", "badge": "🥉 RECLUTA", "speed": 0.75, "dmg": 3, "pts_mult": 1.0, "wpm_add": -6, "acc_min": 90.0, "color": (0, 255, 140)},
+    2: {"name": "OPERADOR", "badge": "🥈 OPERADOR", "speed": 1.00, "dmg": 5, "pts_mult": 1.5, "wpm_add": 0, "acc_min": 94.0, "color": (0, 240, 255)},
+    3: {"name": "VETERANO", "badge": "🥇 VETERANO", "speed": 1.35, "dmg": 8, "pts_mult": 2.5, "wpm_add": 8, "acc_min": 95.0, "color": (255, 215, 0)},
+    4: {"name": "CYBER-ÉLITE", "badge": "💠 CYBER-ÉLITE", "speed": 1.75, "dmg": 12, "pts_mult": 4.0, "wpm_add": 18, "acc_min": 96.0, "color": (255, 0, 180)},
+    5: {"name": "PROTOCOLO GRAVY", "badge": "👑 PROTOCOLO GRAVY", "speed": 2.20, "dmg": 20, "pts_mult": 7.0, "wpm_add": 28, "acc_min": 97.0, "color": (255, 50, 70)}
+}
+
 class GravyRevolutionGame:
     """Motor principal de GRAVY PROTOCOL REVOLUTION 2.0 en Pygame-CE."""
 
@@ -55,6 +64,14 @@ class GravyRevolutionGame:
         self.victory_data = {}
         self.subsector_boxes = [] # [(rect, idx, is_unlocked, is_boss)]
         self.sector_boxes = []    # [(rect, sec_id, is_unlocked)]
+        self.difficulty_tabs = [] # [(rect, diff_level)]
+
+        # Sistema de 5 Dificultades Tácticas & Habilidades Activas
+        self.current_difficulty = 2 # 1: Recluta, 2: Operador, 3: Veterano, 4: Cyber-Élite, 5: Protocolo Gravy
+        self.mission_difficulty = 2
+        self.quantum_energy = 0.0
+        self.overclock_timer = 0
+        self.shield_invuln_timer = 0
 
         # Métricas de sesión en vivo
         self.session_keystrokes = 0
@@ -92,8 +109,14 @@ class GravyRevolutionGame:
     def start_mission(self, sector_id, subsector_idx):
         self.current_sector = sector_id
         self.current_subsector_idx = subsector_idx
+        self.mission_difficulty = self.current_difficulty
+        self.quantum_energy = 0.0
+        self.overclock_timer = 0
+        self.shield_invuln_timer = 0
+
         sec_data = CAMPAIGN_SECTORS[sector_id]
         subsec_data = sec_data["subsectors"][subsector_idx]
+        diff = DIFFICULTY_MODS.get(self.mission_difficulty, DIFFICULTY_MODS[2])
 
         # Configurar Cyber-Deck y escudos
         prof = self.save_mgr.get_profile()
@@ -121,10 +144,14 @@ class GravyRevolutionGame:
         self.session_start_time = time.time()
         self.state = "COMBAT"
 
-        self.hologram.say(f"¡Sector {sector_id}.{subsector_idx+1}: {subsec_data['name']}! ¡A escribir!")
+        self.hologram.say(f"¡Sector {sector_id}.{subsector_idx+1}: {subsec_data['name']}! [{diff['name']}]")
 
     def start_boss_battle(self, sector_id):
         self.current_sector = sector_id
+        self.mission_difficulty = self.current_difficulty
+        self.quantum_energy = 0.0
+        self.overclock_timer = 0
+        self.shield_invuln_timer = 0
         sec_data = CAMPAIGN_SECTORS[sector_id]
 
         prof = self.save_mgr.get_profile()
@@ -272,9 +299,17 @@ class GravyRevolutionGame:
 
     def _buy_or_equip_item(self, cat_key, item):
         prof = self.save_mgr.get_profile()
-        bosses_beaten = sum(1 for s in prof.get("campaign_progress", {}).values() if s.get("boss_beaten"))
         req_sec = item.get("req_sector", 0)
+        req_diff = item.get("req_difficulty", 0)
+        max_d_beaten = max(prof.get("subsector_difficulty", {}).values(), default=0)
+        diff_names = {3: "VETERANO", 4: "CYBER-ÉLITE", 5: "PROTOCOLO GRAVY"}
 
+        if max_d_beaten < req_diff:
+            self.sound.play_error()
+            self.hologram.say(f"¡Requiere superar niveles en {diff_names.get(req_diff, 'Dificultad Alta')}!")
+            return
+
+        bosses_beaten = sum(1 for s in prof.get("campaign_progress", {}).values() if s.get("boss_beaten"))
         if bosses_beaten < req_sec:
             self.sound.play_error()
             self.hologram.say(f"¡Requiere derrotar al Jefe del Sector {req_sec} primero!")
@@ -425,7 +460,18 @@ class GravyRevolutionGame:
             pygame.K_9: 8, pygame.K_KP9: 8,
             pygame.K_0: 9, pygame.K_KP0: 9
         }
-        if event.key in kp_sub_map:
+        if event.key in (pygame.K_F1, pygame.K_F2, pygame.K_F3, pygame.K_F4, pygame.K_F5):
+            f_map = {pygame.K_F1: 1, pygame.K_F2: 2, pygame.K_F3: 3, pygame.K_F4: 4, pygame.K_F5: 5}
+            self.current_difficulty = f_map[event.key]
+            self.sound.play_switch_click()
+            diff = DIFFICULTY_MODS[self.current_difficulty]
+            self.hologram.say(f"Dificultad: {diff['badge']} (Recompensas x{diff['pts_mult']})")
+        elif event.key == pygame.K_TAB:
+            self.current_difficulty = (self.current_difficulty % 5) + 1
+            self.sound.play_switch_click()
+            diff = DIFFICULTY_MODS[self.current_difficulty]
+            self.hologram.say(f"Dificultad: {diff['badge']} (Recompensas x{diff['pts_mult']})")
+        elif event.key in kp_sub_map:
             idx = kp_sub_map[event.key]
             self._try_start_subsector(idx)
         elif event.key == pygame.K_b:
@@ -434,6 +480,15 @@ class GravyRevolutionGame:
             self.state = "SECTOR_SELECT"
 
     def _handle_subsector_mouse(self, pos):
+        # Selector de pestañas de dificultad
+        for d_rect, d_lvl in self.difficulty_tabs:
+            if d_rect.collidepoint(pos):
+                self.current_difficulty = d_lvl
+                self.sound.play_switch_click()
+                diff = DIFFICULTY_MODS[self.current_difficulty]
+                self.hologram.say(f"Dificultad: {diff['badge']} (Recompensas x{diff['pts_mult']})")
+                return
+
         for box_rect, idx, is_unlocked, is_boss in self.subsector_boxes:
             if box_rect.collidepoint(pos):
                 if is_boss:
@@ -497,6 +552,42 @@ class GravyRevolutionGame:
             self.blindfold_active = not self.blindfold_active
             return
 
+        prof = self.save_mgr.get_profile()
+        unlocked_skills = prof.get("unlocked_skills", [])
+
+        # HABILIDAD 1: [ESPACIO] EMP Nova (Destruye todos los drones en pantalla)
+        if event.key == pygame.K_SPACE and "emp_nova" in unlocked_skills and self.quantum_energy >= 50.0:
+            self.quantum_energy -= 50.0
+            num_drones = len(self.combat.drones)
+            for d in list(self.combat.drones):
+                self.particles.burst(d.x, d.y, (255, 220, 0), count=40, speed=10)
+            self.combat.drones.clear()
+            self.combat.active_target = None
+            self.session_hits += max(1, num_drones)
+            self.session_combo += max(1, num_drones)
+            self.sound.play_combo(40)
+            self.hologram.say("⚡ ¡PULSO EMP NOVA DISPARADO! ¡Drones erradicados!")
+            return
+
+        # HABILIDAD 2: [L-SHIFT / R-SHIFT] Time Overclock (Ralentiza tiempo al 25%)
+        if event.key in (pygame.K_LSHIFT, pygame.K_RSHIFT) and "time_overclock" in unlocked_skills and self.quantum_energy >= 75.0:
+            self.quantum_energy -= 75.0
+            self.overclock_timer = 240 # 4 segundos a 60 FPS
+            self.particles.burst(self.width // 2, self.height // 2, (0, 240, 255), count=60, speed=9)
+            self.sound.play_switch_click()
+            self.hologram.say("⏱️ ¡OVERCLOCK CUÁNTICO! Tiempo ralentizado por 4s.")
+            return
+
+        # HABILIDAD 3: [ALT] Nano-Escudo (+40 HP escudos + 3s invulnerabilidad)
+        if event.key in (pygame.K_LALT, pygame.K_RALT) and "nano_shield" in unlocked_skills and self.quantum_energy >= 100.0:
+            self.quantum_energy = 0.0
+            self.player_shields = min(self.player_max_shields, self.player_shields + 40)
+            self.shield_invuln_timer = 180 # 3 segundos invulnerabilidad
+            self.particles.burst(self.width // 2, 600, (0, 255, 140), count=50, speed=8)
+            self.sound.play_combo(50)
+            self.hologram.say("🛡️ ¡NANO-ESCUDO! +40 HP y 3s de invulnerabilidad.")
+            return
+
         # Mapa completo del teclado numérico derecho (Numpad)
         NUMPAD_MAP = {
             pygame.K_KP0: "0", pygame.K_KP1: "1", pygame.K_KP2: "2",
@@ -504,7 +595,6 @@ class GravyRevolutionGame:
             pygame.K_KP6: "6", pygame.K_KP7: "7", pygame.K_KP8: "8",
             pygame.K_KP9: "9", pygame.K_KP_PERIOD: ".", pygame.K_KP_DIVIDE: "/",
             pygame.K_KP_MULTIPLY: "*", pygame.K_KP_MINUS: "-", pygame.K_KP_PLUS: "+",
-            pygame.K_KP_ENTER: " "
         }
 
         char = event.unicode
@@ -530,6 +620,9 @@ class GravyRevolutionGame:
             if self.session_combo > self.session_max_combo:
                 self.session_max_combo = self.session_combo
 
+            # Cargar energía cuántica con cada golpe
+            self.quantum_energy = min(100.0, self.quantum_energy + (4.0 if not self.blindfold_active else 6.0))
+
             self.save_mgr.record_key(char, is_error=False)
 
             if self.session_combo % 15 == 0:
@@ -546,24 +639,37 @@ class GravyRevolutionGame:
         else:
             self.session_errors += 1
             self.session_combo = 0
-            self.player_shields = max(0, self.player_shields - 5)
+            diff = DIFFICULTY_MODS.get(self.mission_difficulty, DIFFICULTY_MODS[2])
+            if self.shield_invuln_timer <= 0:
+                self.player_shields = max(0, self.player_shields - diff["dmg"])
             self.save_mgr.record_key(char, is_error=True)
             self.hologram.set_expression("alarmed")
 
     def _update_combat_logic(self):
+        if self.overclock_timer > 0:
+            self.overclock_timer -= 1
+        if self.shield_invuln_timer > 0:
+            self.shield_invuln_timer -= 1
+
+        diff = DIFFICULTY_MODS.get(self.mission_difficulty, DIFFICULTY_MODS[2])
+
         # Generar nuevos drones si la cola tiene palabras
         self.spawn_cooldown -= 1
         if self.spawn_cooldown <= 0 and self.word_spawn_queue and len(self.combat.drones) < 5:
             next_word = self.word_spawn_queue.pop(0)
             spawn_x = random.randint(260, 950)
-            spd = 0.8 + (self.current_sector * 0.15)
+            spd = (0.8 + (self.current_sector * 0.15)) * diff["speed"]
+            if self.overclock_timer > 0:
+                spd *= 0.25 # Ralentización Matrix
             self.combat.spawn_drone(next_word, spawn_x, y=80, speed=spd)
-            self.spawn_cooldown = random.randint(35, 75)
+            self.spawn_cooldown = random.randint(30, 70)
 
         # Actualizar drones y detectar impactos a la base
         breaches = self.combat.update(breach_limit_y=460)
         if breaches > 0:
-            self.player_shields = max(0, self.player_shields - (breaches * 15))
+            dmg = breaches * (diff["dmg"] * 2)
+            if self.shield_invuln_timer <= 0:
+                self.player_shields = max(0, self.player_shields - dmg)
             self.session_combo = 0
             self.hologram.say("¡Drones atravesaron el cortafuegos!")
 
@@ -585,8 +691,11 @@ class GravyRevolutionGame:
         wpm = (self.session_hits / 5.0) / (elapsed / 60.0)
         acc = (self.session_hits / max(1, self.session_keystrokes)) * 100.0
 
-        # Puntos ganados
-        pts_earned = int(self.session_hits * 15 + wpm * 25 + self.session_max_combo * 10)
+        diff = DIFFICULTY_MODS.get(self.mission_difficulty, DIFFICULTY_MODS[2])
+
+        # Puntos ganados con multiplicador de dificultad
+        base_pts = int(self.session_hits * 15 + wpm * 25 + self.session_max_combo * 10)
+        pts_earned = int(base_pts * diff["pts_mult"])
         if self.blindfold_active:
             pts_earned = int(pts_earned * 1.5)
 
@@ -596,12 +705,6 @@ class GravyRevolutionGame:
         sec_prog = prof["campaign_progress"].setdefault(sec_key, {"unlocked": True, "stars": {}, "boss_beaten": False})
 
         # Estándares Progresivos de 5 Estrellas por Sector
-        # Para 4★ (Mínimo aprobatorio):
-        # Sector 1: 94% acc, 22 WPM
-        # Sector 2: 95% acc, 28 WPM
-        # Sector 3: 95% acc, 32 WPM
-        # Sector 4: 96% acc, 38 WPM
-        # Sector 5: 97% acc, 50 WPM
         benchmarks = {
             1: {"5": (98.0, 30.0), "4": (94.0, 22.0), "3": (88.0, 16.0), "2": (80.0, 12.0)},
             2: {"5": (98.0, 38.0), "4": (95.0, 28.0), "3": (89.0, 20.0), "2": (82.0, 14.0)},
@@ -611,17 +714,40 @@ class GravyRevolutionGame:
         }
         b = benchmarks.get(self.current_sector, benchmarks[1])
 
+        # Calibración de estrellas según la dificultad seleccionada
+        wpm_mod = diff["wpm_add"]
+        acc_req = max(diff["acc_min"], b["4"][0])
+        wpm_req = max(16.0, b["4"][1] + wpm_mod)
+
         stars = 1
-        if acc >= b["2"][0] and wpm >= b["2"][1]: stars = 2
-        if acc >= b["3"][0] and wpm >= b["3"][1]: stars = 3
-        if acc >= b["4"][0] and wpm >= b["4"][1]: stars = 4
-        if acc >= b["5"][0] and wpm >= b["5"][1]: stars = 5
+        if acc >= (b["2"][0] - 5) and wpm >= max(8.0, b["2"][1] + wpm_mod * 0.4): stars = 2
+        if acc >= (b["3"][0] - 2) and wpm >= max(12.0, b["3"][1] + wpm_mod * 0.7): stars = 3
+        if acc >= acc_req and wpm >= wpm_req: stars = 4
+        if acc >= 98.0 and wpm >= max(20.0, b["5"][1] + wpm_mod): stars = 5
 
         sub_id = f"{self.current_sector}.{self.current_subsector_idx+1}"
         prev_best = sec_prog["stars"].get(sub_id, 0)
         sec_prog["stars"][sub_id] = max(prev_best, stars)
 
         passed = (stars >= 4)
+        new_skill_unlocked = None
+
+        if passed:
+            # Guardar dificultad máxima superada en este subsector
+            sub_diffs = prof.setdefault("subsector_difficulty", {})
+            sub_diffs[sub_id] = max(sub_diffs.get(sub_id, 0), self.mission_difficulty)
+
+            # Desbloquear habilidades tácticas al triunfar en dificultades elevadas
+            unlocked_skills = prof.setdefault("unlocked_skills", [])
+            if self.mission_difficulty >= 3 and "emp_nova" not in unlocked_skills:
+                unlocked_skills.append("emp_nova")
+                new_skill_unlocked = "⚡ [ESPACIO] EMP NOVA (Destruye drones)"
+            if self.mission_difficulty >= 4 and "time_overclock" not in unlocked_skills:
+                unlocked_skills.append("time_overclock")
+                new_skill_unlocked = "⏱️ [L-SHIFT] TIME OVERCLOCK (Ralentiza el tiempo)"
+            if self.mission_difficulty >= 5 and "nano_shield" not in unlocked_skills:
+                unlocked_skills.append("nano_shield")
+                new_skill_unlocked = "🛡️ [ALT] NANO-ESCUDO (+40 HP e invulnerabilidad)"
 
         # Desbloquear el siguiente sector si los 10 subsectores se aprueban con al menos 4 estrellas
         qualifying = sum(1 for i in range(1, 11) if sec_prog["stars"].get(f"{self.current_sector}.{i}", 0) >= 4)
@@ -636,43 +762,51 @@ class GravyRevolutionGame:
         sec_data = CAMPAIGN_SECTORS[self.current_sector]
         sub_name = sec_data["subsectors"][self.current_subsector_idx]["name"]
 
-        target_acc, target_wpm = b["4"]
         miss_reasons = []
-        if acc < target_acc:
-            miss_reasons.append(f"Precisión {acc:.1f}% (Mínimo: {target_acc:.0f}%)")
-        if wpm < target_wpm:
-            miss_reasons.append(f"Velocidad {wpm:.1f} WPM (Mínimo: {target_wpm:.0f} WPM)")
+        if acc < acc_req:
+            miss_reasons.append(f"Precisión {acc:.1f}% (Mínimo en {diff['name']}: {acc_req:.0f}%)")
+        if wpm < wpm_req:
+            miss_reasons.append(f"Velocidad {wpm:.1f} WPM (Mínimo en {diff['name']}: {wpm_req:.0f} WPM)")
 
         if passed:
             self.sound.play_combo(40)
             self.victory_data = {
                 "title": f"¡SUBSECTOR {sub_id} APROBADO CON ÉXITO!",
-                "subtitle": f"{sub_name} │ RANGO: {stars}/5 ESTRELLAS",
+                "subtitle": f"{sub_name} │ DIFICULTAD: {diff['name']} (x{diff['pts_mult']})",
                 "wpm": wpm,
                 "acc": acc,
                 "combo": self.session_max_combo,
                 "stars": stars,
                 "pts_earned": pts_earned,
+                "diff_badge": diff["badge"],
+                "pts_mult": diff["pts_mult"],
+                "new_skill": new_skill_unlocked,
                 "passed": True,
                 "missing": "",
                 "is_boss": False
             }
-            self.hologram.say(f"¡Excelente maestría! {stars}/5 estrellas. Siguiente misión desbloqueada.")
+            if new_skill_unlocked:
+                self.hologram.say(f"¡INCREÍBLE! Has desbloqueado una nueva habilidad activa: {new_skill_unlocked}!")
+            else:
+                self.hologram.say(f"¡Excelente maestría! {stars}/5 estrellas en {diff['name']}. Siguiente misión desbloqueada.")
         else:
             self.sound.play_error()
             self.victory_data = {
                 "title": "⚠️ CALIFICACIÓN INSUFICIENTE ⚠️",
-                "subtitle": f"OBTUVISTE {stars}/5 ESTRELLAS (SE REQUIEREN MÍNIMO 4★ PARA AVANZAR)",
+                "subtitle": f"OBTUVISTE {stars}/5 ESTRELLAS EN {diff['name']} (REQUIERE 4★ PARA AVANZAR)",
                 "wpm": wpm,
                 "acc": acc,
                 "combo": self.session_max_combo,
                 "stars": stars,
                 "pts_earned": pts_earned,
+                "diff_badge": diff["badge"],
+                "pts_mult": diff["pts_mult"],
+                "new_skill": None,
                 "passed": False,
                 "missing": " y ".join(miss_reasons),
                 "is_boss": False
             }
-            self.hologram.say(f"Calificación insuficiente ({stars}/5 ★). Necesitas al menos 4★ para pasar. ¡Reintenta!")
+            self.hologram.say(f"Calificación insuficiente ({stars}/5 ★) en {diff['name']}. ¡Reintenta para superar la exigencia!")
 
         self.state = "VICTORY_SCREEN"
 
@@ -682,12 +816,18 @@ class GravyRevolutionGame:
         sec_prog = prof["campaign_progress"].setdefault(sec_key, {"unlocked": True, "stars": {}, "boss_beaten": False})
         sec_prog["boss_beaten"] = True
 
+        diff = DIFFICULTY_MODS.get(self.mission_difficulty, DIFFICULTY_MODS[2])
+
+        # Registrar dificultad de jefe vencido
+        sub_diffs = prof.setdefault("subsector_difficulty", {})
+        sub_diffs[f"{self.current_sector}.B"] = max(sub_diffs.get(f"{self.current_sector}.B", 0), self.mission_difficulty)
+
         # Desbloquear siguiente sector
         nxt_sec = f"sector_{self.current_sector + 1}"
         if nxt_sec in prof["campaign_progress"]:
             prof["campaign_progress"][nxt_sec]["unlocked"] = True
 
-        bonus_pts = 15000 * self.current_sector
+        bonus_pts = int(15000 * self.current_sector * diff["pts_mult"])
         self.save_mgr.add_points(bonus_pts)
         prof["stats"]["bosses_defeated"] += 1
         self.save_mgr.save()
@@ -825,13 +965,39 @@ class GravyRevolutionGame:
         qualifying = sum(1 for i in range(1, 11) if stars_dict.get(f"{self.current_sector}.{i}", 0) >= 4)
 
         # Encabezado
-        title = self.font_title.render(f"📍 {s_data['title']} // 10 SUBSECTORES (ESTÁNDAR: 4★ MÍNIMO)", True, c_pri)
-        self.screen.blit(title, (60, 30))
+        title = self.font_title.render(f"📍 {s_data['title']} // 10 SUBSECTORES (4★ MÍNIMO PARA AVANZAR)", True, c_pri)
+        self.screen.blit(title, (60, 24))
 
         sub_info = self.font_small.render(f"{s_data['lore']}  │  APROBADOS: {qualifying}/10 (4★+)  │  ESTRELLAS TOTALES: {total_stars}/50", True, (180, 190, 210))
-        self.screen.blit(sub_info, (60, 68))
+        self.screen.blit(sub_info, (60, 60))
+
+        # PESTAÑAS DEL SELECTOR DE 5 DIFICULTADES (Click con ratón o teclas [F1 - F5] / [TAB])
+        self.difficulty_tabs = []
+        tab_x = 60
+        tab_w = 224
+        tab_h = 32
+
+        for d_id in range(1, 6):
+            d_info = DIFFICULTY_MODS[d_id]
+            is_active = (d_id == self.current_difficulty)
+            d_box = pygame.Rect(tab_x, 90, tab_w, tab_h)
+            self.difficulty_tabs.append((d_box, d_id))
+
+            tab_bg = (32, 42, 60) if is_active else (14, 18, 26)
+            tab_border = d_info["color"] if is_active else (50, 60, 75)
+            pygame.draw.rect(self.screen, tab_bg, d_box, border_radius=6)
+            pygame.draw.rect(self.screen, tab_border, d_box, 2 if is_active else 1, border_radius=6)
+
+            indicator = "► " if is_active else ""
+            tab_text = f"{indicator}[F{d_id}] {d_info['badge']} (x{d_info['pts_mult']})"
+            t_col = d_info["color"] if is_active else (160, 170, 190)
+            t_rnd = self.font_small.render(tab_text, True, t_col)
+            self.screen.blit(t_rnd, (d_box.centerx - t_rnd.get_width() // 2, d_box.centery - t_rnd.get_height() // 2))
+
+            tab_x += tab_w + 10
 
         self.subsector_boxes = []
+        sub_diffs = prof.get("subsector_difficulty", {})
 
         # 10 Subsectores organizados en 2 columnas (5 a la izquierda, 5 a la derecha)
         # Columna 1 (1.1 a 1.5)
@@ -845,7 +1011,7 @@ class GravyRevolutionGame:
             stars = stars_dict.get(sub_id, 0)
             is_passed = (stars >= 4)
 
-            box = pygame.Rect(60, 100 + row * 72, 560, 62)
+            box = pygame.Rect(60, 132 + row * 66, 560, 58)
             self.subsector_boxes.append((box, idx, is_unlocked, False))
 
             bg_c = (20, 25, 38) if is_unlocked else (12, 14, 18)
@@ -855,23 +1021,28 @@ class GravyRevolutionGame:
 
             name_col = (255, 255, 255) if is_unlocked else (90, 100, 115)
             t_name = self.font_menu.render(f"[{hotkey}] {subsec['name']}", True, name_col)
-            self.screen.blit(t_name, (box.x + 16, box.y + 10))
+            self.screen.blit(t_name, (box.x + 16, box.y + 8))
 
             if is_unlocked:
                 for s_i in range(5):
                     ms_x = box.x + 22 + s_i * 15
-                    ms_y = box.y + 45
+                    ms_y = box.y + 40
                     self._draw_vector_star(self.screen, ms_x, ms_y, radius=5, is_filled=(s_i < stars))
 
+                # Medalla de dificultad máxima superada
+                max_d = sub_diffs.get(sub_id, 0)
+                diff_badge = f" │ {DIFFICULTY_MODS[max_d]['badge']}" if max_d in DIFFICULTY_MODS else ""
+
                 if is_passed:
-                    tag_t = self.font_small.render("               ✔ APROBADO (4★+)", True, (0, 255, 160))
+                    tag_t = self.font_small.render(f"               ✔ APROBADO (4★+){diff_badge}", True, (0, 255, 160))
                 elif stars > 0:
                     tag_t = self.font_small.render(f"               ⚠️ REINTENTO ({stars}/5 ★ - REQUIERE 4★)", True, (255, 200, 40))
                 else:
-                    tag_t = self.font_small.render("               ⚡ LISTO - META: 4★", True, c_acc)
+                    cur_d_name = DIFFICULTY_MODS[self.current_difficulty]["name"]
+                    tag_t = self.font_small.render(f"               ⚡ LISTO │ Modo: {cur_d_name}", True, c_acc)
             else:
                 tag_t = self.font_small.render(f"🔒 BLOQUEADO (Requiere 4★ en {self.current_sector}.{idx})", True, (130, 70, 70))
-            self.screen.blit(tag_t, (box.x + 16, box.y + 35))
+            self.screen.blit(tag_t, (box.x + 16, box.y + 32))
 
         # Columna 2 (1.6 a 1.10)
         for row in range(5):
@@ -884,7 +1055,7 @@ class GravyRevolutionGame:
             stars = stars_dict.get(sub_id, 0)
             is_passed = (stars >= 4)
 
-            box = pygame.Rect(660, 100 + row * 72, 560, 62)
+            box = pygame.Rect(660, 132 + row * 66, 560, 58)
             self.subsector_boxes.append((box, idx, is_unlocked, False))
 
             bg_c = (20, 25, 38) if is_unlocked else (12, 14, 18)
@@ -894,40 +1065,47 @@ class GravyRevolutionGame:
 
             name_col = (255, 255, 255) if is_unlocked else (90, 100, 115)
             t_name = self.font_menu.render(f"[{hotkey}] {subsec['name']}", True, name_col)
-            self.screen.blit(t_name, (box.x + 16, box.y + 10))
+            self.screen.blit(t_name, (box.x + 16, box.y + 8))
 
             if is_unlocked:
                 for s_i in range(5):
                     ms_x = box.x + 22 + s_i * 15
-                    ms_y = box.y + 45
+                    ms_y = box.y + 40
                     self._draw_vector_star(self.screen, ms_x, ms_y, radius=5, is_filled=(s_i < stars))
 
+                # Medalla de dificultad máxima superada
+                max_d = sub_diffs.get(sub_id, 0)
+                diff_badge = f" │ {DIFFICULTY_MODS[max_d]['badge']}" if max_d in DIFFICULTY_MODS else ""
+
                 if is_passed:
-                    tag_t = self.font_small.render("               ✔ APROBADO (4★+)", True, (0, 255, 160))
+                    tag_t = self.font_small.render(f"               ✔ APROBADO (4★+){diff_badge}", True, (0, 255, 160))
                 elif stars > 0:
                     tag_t = self.font_small.render(f"               ⚠️ REINTENTO ({stars}/5 ★ - REQUIERE 4★)", True, (255, 200, 40))
                 else:
-                    tag_t = self.font_small.render("               ⚡ LISTO - META: 4★", True, c_acc)
+                    cur_d_name = DIFFICULTY_MODS[self.current_difficulty]["name"]
+                    tag_t = self.font_small.render(f"               ⚡ LISTO │ Modo: {cur_d_name}", True, c_acc)
             else:
                 tag_t = self.font_small.render(f"🔒 BLOQUEADO (Requiere 4★ en {self.current_sector}.{idx})", True, (130, 70, 70))
-            self.screen.blit(tag_t, (box.x + 16, box.y + 35))
+            self.screen.blit(tag_t, (box.x + 16, box.y + 32))
 
         # Tarjeta del Jefe de Sector al fondo
-        boss_box = pygame.Rect(60, 480, 1160, 80)
+        boss_box = pygame.Rect(60, 470, 1160, 76)
         self.subsector_boxes.append((boss_box, None, True, True))
 
         pygame.draw.rect(self.screen, (28, 14, 22), boss_box, border_radius=8)
         pygame.draw.rect(self.screen, (255, 50, 70), boss_box, 2, border_radius=8)
 
         boss_title_t = self.font_menu.render(f"⚠️ [B] DESAFÍO CONTRA EL JEFE DEL SECTOR: {s_data['boss_name']} ({s_data['boss_title']})", True, (255, 220, 0))
-        self.screen.blit(boss_title_t, (boss_box.x + 20, boss_box.y + 16))
+        self.screen.blit(boss_title_t, (boss_box.x + 20, boss_box.y + 14))
 
-        b_sub = f"HP DEL JEFE: {s_data['boss_hp']}  │  ESTADO: {'[DERROTADO]' if boss_beaten else '¡VENCE AL JEFE PARA DESBLOQUEAR EL SIGUIENTE SECTOR!'}  │  Pulsa [B] o Haz Click"
+        boss_d = sub_diffs.get(f"{self.current_sector}.B", 0)
+        boss_badge = f" │ RÉCORD: {DIFFICULTY_MODS[boss_d]['badge']}" if boss_d in DIFFICULTY_MODS else ""
+        b_sub = f"HP DEL JEFE: {s_data['boss_hp']}  │  ESTADO: {'[DERROTADO' + boss_badge + ']' if boss_beaten else '¡VENCE AL JEFE PARA DESBLOQUEAR EL SIGUIENTE SECTOR!'}  │  Pulsa [B] o Haz Click"
         boss_sub_t = self.font_small.render(b_sub, True, (0, 255, 160) if boss_beaten else (255, 180, 190))
-        self.screen.blit(boss_sub_t, (boss_box.x + 20, boss_box.y + 44))
+        self.screen.blit(boss_sub_t, (boss_box.x + 20, boss_box.y + 42))
 
         # Pie de controles
-        foot_t = self.font_menu.render("[1-9 / 0]: Iniciar Subsector │ [B]: Enfrentar Jefe │ [ESC]: Volver al Mapa de Sectores", True, c_acc)
+        foot_t = self.font_menu.render("[1-9 / 0]: Iniciar Subsector │ [TAB / F1-F5]: Cambiar Dificultad │ [B]: Enfrentar Jefe │ [ESC]: Volver", True, c_acc)
         self.screen.blit(foot_t, (60, 665))
 
     def _draw_victory_screen(self, theme):
@@ -939,22 +1117,22 @@ class GravyRevolutionGame:
         passed = vd.get("passed", True)
 
         # Panel central translúcido de victoria
-        panel = pygame.Rect(self.width // 2 - 330, 90, 660, 520)
+        panel = pygame.Rect(self.width // 2 - 340, 70, 680, 550)
         border_col = c_pri if passed else (255, 60, 60)
         pygame.draw.rect(self.screen, (16, 20, 30), panel, border_radius=10)
         pygame.draw.rect(self.screen, border_col, panel, 2, border_radius=10)
 
         title_col = c_acc if passed else (255, 60, 60)
         t_main = self.font_title.render(vd.get("title", "¡MISIÓN PURGADA!"), True, title_col)
-        self.screen.blit(t_main, (panel.centerx - t_main.get_width() // 2, panel.y + 30))
+        self.screen.blit(t_main, (panel.centerx - t_main.get_width() // 2, panel.y + 24))
 
         t_sub = self.font_menu.render(vd.get("subtitle", ""), True, (220, 230, 245))
-        self.screen.blit(t_sub, (panel.centerx - t_sub.get_width() // 2, panel.y + 70))
+        self.screen.blit(t_sub, (panel.centerx - t_sub.get_width() // 2, panel.y + 60))
 
         # Estrellas doradas vectoriales nativas (escala de 5 estrellas)
         stars = vd.get("stars", 1)
         star_start_x = panel.centerx - 90
-        star_y = panel.y + 120
+        star_y = panel.y + 105
         for s_idx in range(5):
             sx = star_start_x + s_idx * 45
             is_earned = (s_idx < stars)
@@ -962,11 +1140,21 @@ class GravyRevolutionGame:
 
         # Texto recordatorio de mínimo
         req_hint = self.font_small.render("(Estándar de Aprobación: Mínimo 4 de 5 Estrellas)", True, (160, 170, 190))
-        self.screen.blit(req_hint, (panel.centerx - req_hint.get_width() // 2, panel.y + 148))
+        self.screen.blit(req_hint, (panel.centerx - req_hint.get_width() // 2, panel.y + 132))
+
+        # Banner de Habilidad Nueva Desbloqueada si aplica
+        stat_y = panel.y + 155
+        if vd.get("new_skill"):
+            sk_box = pygame.Rect(panel.x + 35, stat_y, panel.width - 70, 34)
+            pygame.draw.rect(self.screen, (40, 20, 60), sk_box, border_radius=6)
+            pygame.draw.rect(self.screen, (255, 215, 0), sk_box, 2, border_radius=6)
+            t_sk = self.font_mid.render(f"🔥 ¡NUEVA HABILIDAD DESBLOQUEADA: {vd['new_skill']}! 🔥", True, (255, 220, 0))
+            self.screen.blit(t_sk, (sk_box.centerx - t_sk.get_width() // 2, sk_box.centery - t_sk.get_height() // 2))
+            stat_y += 42
 
         # Cuadrícula de estadísticas
-        stat_y = panel.y + 175
         stats = [
+            ("DIFICULTAD & MULTIPLICADOR:", f"{vd.get('diff_badge', 'OPERADOR')}  (x{vd.get('pts_mult', 1.0)} PTS)", (255, 220, 0)),
             ("VELOCIDAD ALCANZADA:", f"{vd.get('wpm', 0.0):4.1f} WPM", c_pri),
             ("PRECISIÓN DE ESCRITURA:", f"{vd.get('acc', 0.0):5.1f} %", (0, 255, 160)),
             ("RACHA MÁXIMA DE COMBO:", f"{vd.get('combo', 0)}x ACIERTOS", c_sec),
@@ -974,26 +1162,26 @@ class GravyRevolutionGame:
         ]
 
         for lbl, val, col in stats:
-            s_box = pygame.Rect(panel.x + 40, stat_y, panel.width - 80, 38)
+            s_box = pygame.Rect(panel.x + 35, stat_y, panel.width - 70, 34)
             pygame.draw.rect(self.screen, (22, 26, 38), s_box, border_radius=4)
             pygame.draw.rect(self.screen, (50, 60, 80), s_box, 1, border_radius=4)
 
-            t_l = self.font_mid.render(lbl, True, (170, 180, 200))
+            t_l = self.font_small.render(lbl, True, (170, 180, 200))
             t_v = self.font_mid.render(val, True, col)
             self.screen.blit(t_l, (s_box.x + 16, s_box.centery - t_l.get_height() // 2))
             self.screen.blit(t_v, (s_box.right - t_v.get_width() - 16, s_box.centery - t_v.get_height() // 2))
-            stat_y += 44
+            stat_y += 38
 
         # Caja de motivo si no aprobó
         if not passed and vd.get("missing"):
-            m_box = pygame.Rect(panel.x + 40, stat_y, panel.width - 80, 36)
+            m_box = pygame.Rect(panel.x + 35, stat_y, panel.width - 70, 32)
             pygame.draw.rect(self.screen, (35, 15, 20), m_box, border_radius=4)
             pygame.draw.rect(self.screen, (255, 60, 70), m_box, 1, border_radius=4)
             t_miss = self.font_small.render(f"⚠️ DEBES MEJORAR: {vd.get('missing')}", True, (255, 140, 140))
             self.screen.blit(t_miss, (m_box.centerx - t_miss.get_width() // 2, m_box.centery - t_miss.get_height() // 2))
 
         # Botón de acción principal
-        btn_next = pygame.Rect(panel.x + 40, panel.bottom - 80, panel.width - 80, 42)
+        btn_next = pygame.Rect(panel.x + 35, panel.bottom - 74, panel.width - 70, 40)
         btn_col = c_acc if passed else (255, 60, 70)
         pygame.draw.rect(self.screen, btn_col, btn_next, border_radius=6)
 
@@ -1004,7 +1192,7 @@ class GravyRevolutionGame:
         self.screen.blit(btn_txt, (btn_next.centerx - btn_txt.get_width() // 2, btn_next.centery - btn_txt.get_height() // 2))
 
         foot = self.font_small.render("[R]: Reintentar Nivel  │  [ESC]: Volver al Mapa de Misiones", True, (150, 160, 180))
-        self.screen.blit(foot, (panel.centerx - foot.get_width() // 2, panel.bottom - 24))
+        self.screen.blit(foot, (panel.centerx - foot.get_width() // 2, panel.bottom - 22))
 
     def _draw_combat(self, theme):
         # Barra superior y telemetría
@@ -1018,7 +1206,18 @@ class GravyRevolutionGame:
         cpm = int((self.session_hits / elapsed) * 60)
         pct = 100.0 if not self.word_spawn_queue else max(0, 100 - (len(self.word_spawn_queue) * 10))
 
-        self.hud.draw_combat_hud(self.screen, theme, wpm, acc, self.session_combo, cpm, self.player_shields, self.player_max_shields, pct)
+        unlocked_sk = prof.get("unlocked_skills", [])
+        is_overclock = (self.overclock_timer > 0)
+        self.hud.draw_combat_hud(self.screen, theme, wpm, acc, self.session_combo, cpm,
+                                 self.player_shields, self.player_max_shields, pct,
+                                 energy_pct=self.quantum_energy, unlocked_skills=unlocked_sk,
+                                 active_overclock=is_overclock)
+
+        # Aura visual en pantalla completa para efectos de habilidades activas
+        if self.shield_invuln_timer > 0:
+            pygame.draw.rect(self.screen, (0, 255, 140), (0, 0, self.width, self.height), 4)
+        if is_overclock:
+            pygame.draw.rect(self.screen, (0, 240, 255), (0, 0, self.width, self.height), 3)
 
         # Jefe en pantalla si es estado BOSS
         if self.state == "BOSS" and self.current_boss:

@@ -1,0 +1,56 @@
+[gd_scene load_steps=6 format=3 uid="uid://distrito23player01"]
+
+[ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
+[ext_resource type="Script" path="res://scripts/smooth_camera.gd" id="2_camera"]
+[ext_resource type="Script" path="res://scripts/pistol.gd" id="3_pistol"]
+[ext_resource type="Texture2D" path="res://assets/player_topdown.png" id="4_ptex"]
+[ext_resource type="Texture2D" path="res://assets/light_radial.png" id="5_ltex"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_player"]
+radius = 20.0
+
+[node name="Player" type="CharacterBody2D" groups=["player"]]
+collision_mask = 3
+script = ExtResource("1_player")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_player")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position_smoothing_enabled = true
+position_smoothing_speed = 7.0
+script = ExtResource("2_camera")
+
+[node name="Visual" type="Node2D" parent="."]
+
+[node name="Sprite2D" type="Sprite2D" parent="Visual"]
+texture = ExtResource("4_ptex")
+
+[node name="VisorGlow" type="PointLight2D" parent="Visual"]
+position = Vector2(8, 0)
+color = Color(0, 0.952941, 1, 1)
+energy = 0.6
+texture = ExtResource("5_ltex")
+texture_scale = 0.35
+
+[node name="WeaponHolder" type="Node2D" parent="Visual"]
+position = Vector2(24, -2)
+
+[node name="Pistol" type="Node2D" parent="Visual/WeaponHolder"]
+script = ExtResource("3_pistol")
+
+[node name="Muzzle" type="Marker2D" parent="Visual/WeaponHolder/Pistol"]
+position = Vector2(4, 0)
+
+[node name="Flash" type="Polygon2D" parent="Visual/WeaponHolder/Pistol/Muzzle"]
+visible = false
+color = Color(1, 0.9, 0.2, 1)
+polygon = PackedVector2Array(0, -6, 14, 0, 0, 6)
+
+[node name="FlashLight" type="PointLight2D" parent="Visual/WeaponHolder/Pistol/Muzzle/Flash"]
+color = Color(1, 0.9, 0.3, 1)
+energy = 1.8
+texture = ExtResource("5_ltex")
+texture_scale = 0.6
+
+[node name="CooldownTimer" type="Timer" parent="Visual/WeaponHolder/Pistol"]

@@ -450,3 +450,97 @@ export const deleteWholesaleUser = async (uid) => {
     throw error;
   }
 };
+
+/**
+ * Obtener configuración de Analítica y Píxels
+ */
+export const getAnalyticsSettings = async () => {
+  try {
+    const docRef = doc(db, 'settings', 'analytics');
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data();
+    }
+    return {
+      metaPixelId: '',
+      metaPixelEnabled: false,
+      googleAnalyticsId: '',
+      googleAnalyticsEnabled: false,
+      lookerStudioUrl: ''
+    };
+  } catch (error) {
+    console.error("Error al obtener configuración de analítica:", error);
+    return {
+      metaPixelId: '',
+      metaPixelEnabled: false,
+      googleAnalyticsId: '',
+      googleAnalyticsEnabled: false,
+      lookerStudioUrl: ''
+    };
+  }
+};
+
+/**
+ * Guardar configuración de Analítica y Píxels
+ */
+export const saveAnalyticsSettings = async (settings) => {
+  try {
+    const docRef = doc(db, 'settings', 'analytics');
+    const payload = {
+      ...settings,
+      updatedAt: new Date().toISOString()
+    };
+    await setDoc(docRef, payload, { merge: true });
+    return payload;
+  } catch (error) {
+    console.error("Error al guardar configuración de analítica:", error);
+    throw error;
+  }
+};
+
+/**
+ * Obtener configuración del Asistente Virtual (Bot Gravy)
+ */
+export const getBotSettings = async () => {
+  try {
+    const docRef = doc(db, 'settings', 'bot');
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data();
+    }
+    return {
+      enabled: true,
+      botName: 'Gravy',
+      botTitle: 'Asesor Virtual de Sellos Chacaíto',
+      welcomeMessage: '¡Hola! 👋 Soy Gravy, tu asesor de sellos personalizados. ¿En qué te puedo ayudar hoy?',
+      geminiApiKey: ''
+    };
+  } catch (error) {
+    console.error("Error al obtener configuración del bot:", error);
+    return {
+      enabled: true,
+      botName: 'Gravy',
+      botTitle: 'Asesor Virtual de Sellos Chacaíto',
+      welcomeMessage: '¡Hola! 👋 Soy Gravy, tu asesor de sellos personalizados. ¿En qué te puedo ayudar hoy?',
+      geminiApiKey: ''
+    };
+  }
+};
+
+/**
+ * Guardar configuración del Asistente Virtual (Bot Gravy)
+ */
+export const saveBotSettings = async (settings) => {
+  try {
+    const docRef = doc(db, 'settings', 'bot');
+    const payload = {
+      ...settings,
+      updatedAt: new Date().toISOString()
+    };
+    await setDoc(docRef, payload, { merge: true });
+    return payload;
+  } catch (error) {
+    console.error("Error al guardar configuración del bot:", error);
+    throw error;
+  }
+};

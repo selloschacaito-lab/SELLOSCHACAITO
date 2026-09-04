@@ -204,6 +204,48 @@ const AdminLayout = () => {
           >
             <span>👑</span> Mayoristas
           </Link>
+
+          <Link 
+            to="/admin/analitica" 
+            style={{
+              padding: '0.75rem 1rem', borderRadius: '10px', textDecoration: 'none',
+              color: location.pathname.includes('/admin/analitica') ? 'var(--color-text-main)' : 'var(--color-text-secondary)',
+              fontWeight: '700', fontSize: '0.9rem',
+              backgroundColor: location.pathname.includes('/admin/analitica') ? 'rgba(71, 255, 0, 0.12)' : 'transparent',
+              border: location.pathname.includes('/admin/analitica') ? '1px solid var(--color-primary)' : '1px solid transparent',
+              display: 'flex', alignItems: 'center', gap: '0.6rem', transition: 'all 0.2s ease'
+            }}
+          >
+            <span>⚙️</span> Píxels & Analítica
+          </Link>
+
+          <Link 
+            to="/admin/tablero-analitica" 
+            style={{
+              padding: '0.75rem 1rem', borderRadius: '10px', textDecoration: 'none',
+              color: location.pathname.includes('/admin/tablero-analitica') ? 'var(--color-text-main)' : 'var(--color-text-secondary)',
+              fontWeight: '700', fontSize: '0.9rem',
+              backgroundColor: location.pathname.includes('/admin/tablero-analitica') ? 'rgba(71, 255, 0, 0.12)' : 'transparent',
+              border: location.pathname.includes('/admin/tablero-analitica') ? '1px solid var(--color-primary)' : '1px solid transparent',
+              display: 'flex', alignItems: 'center', gap: '0.6rem', transition: 'all 0.2s ease'
+            }}
+          >
+            <span>📈</span> Tablero Estadístico
+          </Link>
+
+          <Link 
+            to="/admin/bot" 
+            style={{
+              padding: '0.75rem 1rem', borderRadius: '10px', textDecoration: 'none',
+              color: location.pathname.includes('/admin/bot') ? 'var(--color-text-main)' : 'var(--color-text-secondary)',
+              fontWeight: '700', fontSize: '0.9rem',
+              backgroundColor: location.pathname.includes('/admin/bot') ? 'rgba(71, 255, 0, 0.12)' : 'transparent',
+              border: location.pathname.includes('/admin/bot') ? '1px solid var(--color-primary)' : '1px solid transparent',
+              display: 'flex', alignItems: 'center', gap: '0.6rem', transition: 'all 0.2s ease'
+            }}
+          >
+            <span>🤖</span> Asistente Gravy
+          </Link>
         </nav>
       </aside>
 

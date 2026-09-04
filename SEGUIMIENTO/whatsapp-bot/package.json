@@ -1,0 +1,16 @@
+{
+  "name": "sellos-chacaito-whatsapp-bot",
+  "version": "1.0.0",
+  "description": "Bot local para automatizar notificaciones de WhatsApp para Sellos Chacaíto",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.6.0",
+    "firebase": "^10.8.0",
+    "pino": "^8.19.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

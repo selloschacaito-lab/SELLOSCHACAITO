@@ -4,6 +4,7 @@ import { getProductById, getProducts } from '../services/db';
 import { useSelection } from '../context/SelectionContext';
 import LikeButton from '../components/LikeButton';
 import ProductDetailSkeleton from '../components/ProductDetailSkeleton';
+import { trackViewContent, trackContact } from '../services/analytics';
 
 const formatDimensions = (dim) => {
   if (!dim) return '';
@@ -50,6 +51,7 @@ const ProductDetail = () => {
       if (data) {
         setProduct(data);
         document.title = `${data.name} | Sellos Chacaíto`;
+        trackViewContent(data);
         if (data.variants && data.variants.length > 0) {
           setSelectedVariantIndex(getFirstAvailableVariantIndex(data.variants));
         }
@@ -163,6 +165,10 @@ const ProductDetail = () => {
 
   const handleWhatsApp = () => {
     if (!currentVariant) return;
+    
+    // Rastrear evento de contacto / pedido WhatsApp en Meta y Google
+    trackContact(product, isResellerMode);
+
     let text = isResellerMode ? `*--- PEDIDO MAYORISTA ---*\n\n` : '';
     text += `Hola, estoy interesado en:\n\n${product.name}\n`;
     if (product.dimensions) text += `Medida: ${formatDimensions(product.dimensions)}\n`;

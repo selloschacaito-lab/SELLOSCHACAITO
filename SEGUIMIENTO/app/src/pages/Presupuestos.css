@@ -1,35 +1,87 @@
+/* =====================================================
+   PRESUPUESTOS — TEMA WHITESTAMP
+   ===================================================== */
+@import '../styles/whitestamp.css';
+
 .pres-container {
   display: flex;
-  gap: 2rem;
-  padding: 2rem;
-  max-width: 1400px;
+  gap: 20px;
+  padding: 24px;
   width: 100%;
-  margin: 0 auto;
-  align-items: flex-start;
+  height: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  align-items: stretch;
+  background-color: var(--ws-bg-canvas);
+  font-family: var(--ws-font-family);
 }
 
+/* Panel Izquierdo: Controles / Formulario */
 .pres-controls {
-  flex: 1;
-  max-width: 500px;
+  width: 440px;
+  max-width: 440px;
+  min-width: 360px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding: 1.5rem;
+  gap: 18px;
+  padding: 24px;
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+  background: var(--ws-card-bg);
+  border: 1px solid var(--ws-border-subtle);
+  border-radius: var(--ws-radius-xl);
+  box-shadow: var(--ws-shadow-md);
+}
+
+.pres-header-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.pres-sidebar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--ws-radius-sm);
+  background: var(--ws-card-bg);
+  border: 1px solid var(--ws-border-subtle);
+  color: var(--ws-text-secondary);
+  cursor: pointer;
+  box-shadow: var(--ws-shadow-sm);
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.pres-sidebar-btn:hover {
+  color: var(--ws-text-primary);
+  background: var(--ws-card-bg-subtle);
+  border-color: var(--ws-border-focus);
 }
 
 .controls-title {
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin-bottom: 0.5rem;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ws-text-primary);
+  margin: 0;
+  letter-spacing: -0.02em;
 }
 
 .section-title {
-  font-size: 1rem;
-  font-weight: bold;
-  color: var(--text-main);
-  margin-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border-strong);
-  padding-bottom: 0.25rem;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ws-text-secondary);
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--ws-border-subtle);
+  padding-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .pres-section {
@@ -37,31 +89,136 @@
   flex-direction: column;
 }
 
-/* --------------------------
-   PREVIEW DOCUMENT STYLES
-   (This must look like the user's image)
--------------------------- */
-.pres-preview-wrapper {
-  flex: 2;
-  display: flex;
-  justify-content: center;
-  background-color: #f1f5f9;
-  padding: 2rem;
-  border-radius: 1rem;
-  overflow: auto;
-  min-height: 800px;
+/* Inputs de Presupuestos */
+.pres-controls .input-field {
+  width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  border: 1.5px solid var(--ws-border-subtle);
+  border-radius: var(--ws-radius-md);
+  background: var(--ws-bg-canvas);
+  color: var(--ws-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+  font-family: var(--ws-font-family);
 }
 
+.pres-controls .input-field:focus {
+  background: var(--ws-card-bg);
+  border-color: var(--ws-accent-primary);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.pres-controls .input-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ws-text-secondary);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  display: block;
+}
+
+/* Botones */
+.pres-controls .btn-primary {
+  background: var(--ws-accent-primary);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--ws-radius-md);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 10px 16px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.pres-controls .btn-primary:hover {
+  background: var(--ws-accent-primary-hover);
+}
+
+.pres-controls .btn-secondary {
+  background: var(--ws-card-bg);
+  color: var(--ws-text-primary);
+  border: 1px solid var(--ws-border-subtle);
+  border-radius: var(--ws-radius-md);
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 14px;
+  cursor: pointer;
+  box-shadow: var(--ws-shadow-sm);
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.pres-controls .btn-secondary:hover {
+  background: var(--ws-card-bg-subtle);
+  border-color: var(--ws-border-focus);
+}
+
+/* Panel Derecho: Vista Previa Adaptable */
+.pres-preview-wrapper {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--ws-card-bg);
+  border-radius: var(--ws-radius-xl);
+  border: 1px solid var(--ws-border-subtle);
+  box-shadow: var(--ws-shadow-md);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Barra de Herramientas de Zoom / Escala */
+.pres-preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  background: var(--ws-card-bg);
+  border-bottom: 1px solid var(--ws-border-subtle);
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.pres-preview-viewport {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  box-sizing: border-box;
+  background: #f1f5f9;
+}
+
+/* --------------------------
+   DOCUMENTO A4 (Original de Pauta Publicitaria)
+   -------------------------- */
 .pres-document {
-  background-color: white;
-  width: 210mm; /* A4 width */
-  min-height: 297mm; /* A4 height */
+  background-color: #ffffff;
+  width: 210mm;
+  min-height: 297mm;
   padding: 15mm;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
   border: 1px solid #cbd5e1;
   font-family: Arial, Helvetica, sans-serif;
   color: #000;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .pres-header {
@@ -232,26 +389,19 @@
   margin-top: 40px;
 }
 
-/* Responsive adjustments */
-@media (max-width: 1024px) {
+/* Mobile & Small Screens */
+@media (max-width: 860px) {
   .pres-container {
     flex-direction: column;
+    padding: 16px 12px 60px;
+    height: auto;
+    overflow-y: auto;
   }
   
   .pres-controls, .pres-preview-wrapper {
     width: 100%;
     max-width: 100%;
-  }
-  
-  .pres-document {
-    transform-origin: top center;
-    transform: scale(0.8);
-    margin-bottom: -150px; /* offset the scale */
-  }
-}
-@media (max-width: 768px) {
-  .pres-document {
-    transform: scale(0.5);
-    margin-bottom: -400px;
+    min-width: 0;
+    height: auto;
   }
 }
