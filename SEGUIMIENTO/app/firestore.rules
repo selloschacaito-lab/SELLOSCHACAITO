@@ -1,8 +1,21 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Catálogo público: cualquiera puede VER productos y la config general,
+    // pero solo usuarios logueados (staff) pueden modificarlos.
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /config/{configId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Todo lo demás (clientes, movimientos de inventario, etc.)
+    // solo es accesible para usuarios logueados.
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if request.auth != null;
     }
   }
 }
