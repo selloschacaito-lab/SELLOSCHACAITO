@@ -142,5 +142,5 @@ offset_top = 25.0
 offset_right = 250.0
 offset_bottom = 55.0
 grow_horizontal = 2
-text = "[ WASD ] Moverse | [ Click Izquierdo ] Apuntar/Disparar | [ ESC ] Salir"
+text = "[ WASD ] Moverse  |  [ Ratón + Click ] Apuntar/Disparar  |  [ Gamepad ] Stick Izq mueve · Stick Der + RT apunta/dispara  |  [ ESC ] Salir"
 horizontal_alignment = 1

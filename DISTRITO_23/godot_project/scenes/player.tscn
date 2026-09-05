@@ -17,8 +17,7 @@ script = ExtResource("1_player")
 shape = SubResource("CircleShape2D_player")
 
 [node name="Camera2D" type="Camera2D" parent="."]
-position_smoothing_enabled = true
-position_smoothing_speed = 7.0
+position_smoothing_enabled = false
 script = ExtResource("2_camera")
 
 [node name="Visual" type="Node2D" parent="."]

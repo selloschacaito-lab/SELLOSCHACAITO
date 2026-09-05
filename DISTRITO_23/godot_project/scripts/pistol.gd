@@ -21,16 +21,17 @@ func _ready() -> void:
 	if muzzle_flash:
 		muzzle_flash.visible = false
 
-func shoot(current_rotation: float) -> void:
+## Devuelve true solo si realmente se produjo un disparo (para feedback/recoil).
+func shoot(current_rotation: float) -> bool:
 	if not can_shoot:
-		return
-	
+		return false
+
 	can_shoot = false
 	cooldown_timer.start()
-	
+
 	# Efecto visual de disparo (muzzle flash)
 	show_flash()
-	
+
 	# Instanciar proyectil
 	if bullet_scene:
 		var bullet = bullet_scene.instantiate()
@@ -40,8 +41,9 @@ func shoot(current_rotation: float) -> void:
 		bullet.damage = bullet_damage
 		get_tree().current_scene.add_child(bullet)
 	else:
-		# Fallback si no hay bala instanciada: raycast directo
+		# Fallback si no hay bala instanciada
 		spawn_simple_bullet(current_rotation)
+	return true
 
 func spawn_simple_bullet(rot: float) -> void:
 	var b = preload("res://scenes/bullet.tscn").instantiate()
@@ -55,7 +57,8 @@ func show_flash() -> void:
 	if muzzle_flash:
 		muzzle_flash.visible = true
 		await get_tree().create_timer(0.04).timeout
-		muzzle_flash.visible = false
+		if is_instance_valid(muzzle_flash):
+			muzzle_flash.visible = false
 
 func _on_cooldown_timeout() -> void:
 	can_shoot = true
