@@ -8,6 +8,7 @@ import * as XLSX from 'xlsx';
 import { toast } from 'react-hot-toast';
 import { useProfile } from '../contexts/ProfileContext';
 import { useUpdate } from '../contexts/UpdateContext';
+import { buildInventorySheet } from '../utils/exportInventory';
 
 function Config() {
   const { toggleSidebar } = useOutletContext() || {};
@@ -171,20 +172,10 @@ function Config() {
 
       // 3. Obtener catálogo / inventario de Firestore
       const prodsSnap = await getDocs(collection(firestoreDB, 'products'));
-      const prodsData = prodsSnap.docs.map(d => {
-        const p = d.data();
-        return {
-          'Código': p.codigo || '',
-          'Producto': (p.nombre || p.name || '').toUpperCase(),
-          'Categoría': (p.categoria || 'GENERAL').toUpperCase(),
-          'Costo USD ($)': Number(p.costo || 0),
-          'Precio Detal USD ($)': Number(p.precio || p.price || 0),
-          'Precio Mayorista USD ($)': Number(p.precioMayorista || 0),
-          'Stock Actual': Number(p.cantidad || 0),
-          'Stock Mínimo': Number(p.minStock || 5),
-          'Activo en Mostrador': p.activo !== false ? 'SÍ' : 'NO'
-        };
-      });
+      const prodsData = buildInventorySheet(
+        prodsSnap.docs.map(d => d.data()),
+        { includeCountColumns: false }
+      );
 
       // 4. Crear Libro de Trabajo Excel Multi-Hojas
       const wb = XLSX.utils.book_new();

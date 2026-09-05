@@ -3,21 +3,30 @@ import { useOutletContext } from 'react-router-dom';
 import { firestoreDB, db } from '../firebase/config';
 import { collection, onSnapshot, doc, writeBatch, setDoc, deleteDoc } from 'firebase/firestore';
 import { ref, onValue } from 'firebase/database';
-import { 
-  Search, AlertTriangle, Plus, Edit2, Trash2, Tag, 
+import {
+  Search, AlertTriangle, Plus, Edit2, Trash2, Tag,
   DollarSign, Package, Check, X, TrendingUp, Sparkles,
-  Layers, RefreshCw, PanelLeft, ChevronLeft, ChevronRight
+  Layers, RefreshCw, PanelLeft, ChevronLeft, ChevronRight,
+  Download, ClipboardList, ClipboardCheck
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { createPortal } from 'react-dom';
+import { useProfile } from '../contexts/ProfileContext';
+import { downloadInventoryExcel } from '../utils/exportInventory';
 
 function Inventory({ isModal = false }) {
   const { toggleSidebar } = useOutletContext() || {};
+  const { activeProfile } = useProfile();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [bcvRate, setBcvRate] = useState(36.5);
+
+  // Conteo Físico de Inventario
+  const [countSession, setCountSession] = useState(null); // null = sin sesión, o { id, estado, iniciadoPor, fechaInicio, fechaFin }
+  const [countFilter, setCountFilter] = useState('ALL'); // 'ALL' | 'PENDIENTE' | 'CONTADO'
+  const countModeActive = countSession?.estado === 'activa';
 
   // Arrastrar y Desplazar Categorías
   const categoryScrollRef = useRef(null);
@@ -121,6 +130,18 @@ function Inventory({ isModal = false }) {
     return () => unsubProd();
   }, []);
 
+  // Sesión de conteo físico activa (un solo documento fijo: inventory_count_sessions/current).
+  // Se escucha en vivo para que, si el teléfono recarga a mitad del conteo, se re-entre
+  // automáticamente al modo conteo sin perder el progreso (que se recalcula desde `products`).
+  useEffect(() => {
+    const unsubSession = onSnapshot(doc(firestoreDB, 'inventory_count_sessions', 'current'), (snap) => {
+      setCountSession(snap.exists() ? snap.data() : null);
+    }, (error) => {
+      console.error('Error leyendo sesión de conteo:', error);
+    });
+    return () => unsubSession();
+  }, []);
+
   // Products matching current search term (regardless of category filter)
   const searchMatchedProducts = useMemo(() => {
     const q = searchTerm.toLowerCase().trim();
@@ -150,13 +171,27 @@ function Inventory({ isModal = false }) {
     }));
   }, [products, searchMatchedProducts]);
 
-  // Final Filtered Products (matching search AND selected category)
+  // Final Filtered Products (matching search AND selected category AND, en modo conteo, el filtro contado/pendiente)
   const filteredProducts = useMemo(() => {
     return searchMatchedProducts.filter(p => {
       const pCat = (p.categoria || 'SIN CATEGORÍA').trim().toUpperCase();
-      return selectedCategory === 'ALL' || pCat === selectedCategory;
+      if (selectedCategory !== 'ALL' && pCat !== selectedCategory) return false;
+
+      if (countModeActive && countFilter !== 'ALL') {
+        const yaContado = p.conteoSessionId === countSession.id && p.contadoEnConteoActual;
+        if (countFilter === 'CONTADO' && !yaContado) return false;
+        if (countFilter === 'PENDIENTE' && yaContado) return false;
+      }
+      return true;
     });
-  }, [searchMatchedProducts, selectedCategory]);
+  }, [searchMatchedProducts, selectedCategory, countModeActive, countFilter, countSession]);
+
+  // Progreso del conteo activo (calculado en vivo desde `products`, sin lecturas extra)
+  const countProgress = useMemo(() => {
+    if (!countModeActive) return { contados: 0, total: 0 };
+    const contados = products.filter(p => p.conteoSessionId === countSession.id && p.contadoEnConteoActual).length;
+    return { contados, total: products.length };
+  }, [products, countModeActive, countSession]);
 
   // Quick Direct Stock Update (+ / -)
   const handleDirectUpdate = async (product, newQty) => {
@@ -196,6 +231,112 @@ function Inventory({ isModal = false }) {
     } catch (error) {
       console.error(error);
       toast.error('Error actualizando stock');
+    }
+  };
+
+  // Iniciar un nuevo conteo físico de inventario
+  const handleStartCount = async () => {
+    try {
+      const newSessionId = doc(collection(firestoreDB, 'inventory_count_sessions')).id;
+      await setDoc(doc(firestoreDB, 'inventory_count_sessions', 'current'), {
+        id: newSessionId,
+        estado: 'activa',
+        iniciadoPor: activeProfile?.name || 'Desconocido',
+        fechaInicio: new Date().toISOString(),
+        fechaFin: null
+      });
+      toast.success('Conteo de inventario iniciado');
+    } catch (error) {
+      console.error(error);
+      toast.error('Error al iniciar el conteo');
+    }
+  };
+
+  // Finalizar el conteo activo (las marcas por producto quedan como historial)
+  const handleFinishCount = async () => {
+    if (!window.confirm('¿Finalizar el conteo de inventario? Podrás iniciar uno nuevo después.')) return;
+    try {
+      await setDoc(doc(firestoreDB, 'inventory_count_sessions', 'current'), {
+        estado: 'finalizada',
+        fechaFin: new Date().toISOString()
+      }, { merge: true });
+      toast.success('Conteo finalizado');
+    } catch (error) {
+      console.error(error);
+      toast.error('Error al finalizar el conteo');
+    }
+  };
+
+  // Marcar un producto como contado durante el conteo activo: actualiza el stock
+  // al valor contado de inmediato y deja registro en inventory_movements (tipo 'conteo'),
+  // siguiendo el mismo patrón que handleDirectUpdate.
+  const handleMarkCounted = async (product, countedQtyRaw) => {
+    const countedQty = parseInt(countedQtyRaw, 10);
+    if (isNaN(countedQty) || countedQty < 0) {
+      toast.error('Cantidad inválida');
+      return;
+    }
+    if (!countModeActive) {
+      toast.error('No hay un conteo activo');
+      return;
+    }
+
+    const currentQty = product.cantidad ?? 0;
+    const nowISO = new Date().toISOString();
+
+    // Optimistic UI update
+    setProducts(prev => prev.map(p => p.id === product.id ? {
+      ...p,
+      cantidad: countedQty,
+      contadoEnConteoActual: true,
+      cantidadContadaActual: countedQty,
+      conteoSessionId: countSession.id,
+      fechaUltimoConteo: nowISO
+    } : p));
+
+    try {
+      const batch = writeBatch(firestoreDB);
+      const prodRef = doc(firestoreDB, 'products', product.id);
+      batch.update(prodRef, {
+        cantidad: countedQty,
+        contadoEnConteoActual: true,
+        cantidadContadaActual: countedQty,
+        conteoSessionId: countSession.id,
+        fechaUltimoConteo: nowISO
+      });
+
+      // Solo se registra un movimiento si el conteo cambió el stock
+      if (countedQty !== currentQty) {
+        const movRef = doc(collection(firestoreDB, 'inventory_movements'));
+        batch.set(movRef, {
+          producto_id: product.id,
+          producto_nombre: product.nombre,
+          tipo: 'conteo',
+          cantidad: Math.abs(countedQty - currentQty),
+          stock_anterior: currentQty,
+          stock_nuevo: countedQty,
+          motivo: 'Conteo físico de inventario',
+          fecha: nowISO
+        });
+      }
+
+      await batch.commit();
+      toast.success(`${product.nombre}: contado (${countedQty} unid.)`);
+    } catch (error) {
+      console.error(error);
+      toast.error('Error registrando el conteo');
+    }
+  };
+
+  // Exportar el inventario actual a Excel (incluye columnas de conteo si aplica)
+  const handleExportExcel = () => {
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      downloadInventoryExcel(products, `Inventario_Sellos_Chacaito_${todayStr}.xlsx`, { includeCountColumns: true });
+      toast.success('Inventario exportado a Excel');
+    } catch (error) {
+      console.error(error);
+      toast.error('Error al exportar el inventario');
     }
   };
 
@@ -277,11 +418,21 @@ function Inventory({ isModal = false }) {
         toast.success('Producto actualizado correctamente');
       } else {
         const newRef = doc(collection(firestoreDB, 'products'));
+        const nowISO = new Date().toISOString();
         await setDoc(newRef, {
           ...dataToSave,
-          createdAt: new Date().toISOString()
+          createdAt: nowISO,
+          // Si el producto se agrega mientras hay un conteo activo, queda marcado
+          // como "nuevo en conteo" (no estaba antes en el sistema) y ya contado.
+          ...(countModeActive ? {
+            esNuevoEnConteo: true,
+            contadoEnConteoActual: true,
+            cantidadContadaActual: dataToSave.cantidad,
+            conteoSessionId: countSession.id,
+            fechaUltimoConteo: nowISO
+          } : {})
         });
-        toast.success('Producto creado exitosamente');
+        toast.success(countModeActive ? 'Producto nuevo agregado y marcado como contado' : 'Producto creado exitosamente');
       }
       setIsProductModalOpen(false);
     } catch (err) {
@@ -361,27 +512,148 @@ function Inventory({ isModal = false }) {
             </div>
           </div>
 
-          <button 
-            type="button"
-            onClick={() => handleOpenProductModal(null)}
-            style={{
-              padding: '10px 18px',
-              borderRadius: '10px',
-              border: 'none',
-              background: '#10b981',
-              color: '#ffffff',
-              fontSize: '13px',
-              fontWeight: 800,
-              cursor: 'pointer',
-              boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <Plus size={16} /> Nuevo Producto
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={handleExportExcel}
+              title="Descargar el inventario actual en un archivo Excel"
+              style={{
+                padding: '10px 16px',
+                borderRadius: '10px',
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                color: '#334155',
+                fontSize: '13px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Download size={16} /> Exportar Excel
+            </button>
+
+            {!countModeActive ? (
+              <button
+                type="button"
+                onClick={handleStartCount}
+                title="Iniciar un conteo físico de inventario"
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: '#0ea5e9',
+                  color: '#ffffff',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 6px rgba(14, 165, 233, 0.25)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <ClipboardList size={16} /> Iniciar Conteo de Inventario
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleFinishCount}
+                title="Finalizar el conteo actual"
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: '#0ea5e9',
+                  color: '#ffffff',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 6px rgba(14, 165, 233, 0.25)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <ClipboardCheck size={16} /> Finalizar Conteo ({countProgress.contados}/{countProgress.total})
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => handleOpenProductModal(null)}
+              style={{
+                padding: '10px 18px',
+                borderRadius: '10px',
+                border: 'none',
+                background: '#10b981',
+                color: '#ffffff',
+                fontSize: '13px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Plus size={16} /> Nuevo Producto
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Barra de progreso del conteo activo */}
+      {!isModal && countModeActive && (
+        <div style={{
+          background: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          borderRadius: '14px',
+          padding: '14px 18px',
+          marginBottom: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <ClipboardList size={18} color="#1d4ed8" />
+            <span style={{ fontWeight: 800, color: '#1e3a8a', fontSize: '14px' }}>
+              Conteo en progreso: {countProgress.contados} de {countProgress.total} contados
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', gap: '6px' }}>
+            {[
+              { key: 'ALL', label: 'Todas' },
+              { key: 'PENDIENTE', label: 'Sin contar' },
+              { key: 'CONTADO', label: 'Contados' }
+            ].map(opt => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setCountFilter(opt.key)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '999px',
+                  border: countFilter === opt.key ? '1.5px solid #1d4ed8' : '1px solid #bfdbfe',
+                  background: countFilter === opt.key ? '#dbeafe' : '#ffffff',
+                  color: countFilter === opt.key ? '#1e3a8a' : '#3b82f6',
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -652,6 +924,18 @@ function Inventory({ isModal = false }) {
                         Inactivo
                       </span>
                     )}
+
+                    {item.esNuevoEnConteo && (
+                      <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 800 }}>
+                        Nuevo en conteo
+                      </span>
+                    )}
+
+                    {countModeActive && item.conteoSessionId === countSession.id && item.contadoEnConteoActual && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: '#dcfce7', color: '#166534', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 800 }}>
+                        <Check size={11} /> Contado
+                      </span>
+                    )}
                   </div>
 
                   {/* Pricing & Stock Status Badges Row */}
@@ -710,82 +994,120 @@ function Inventory({ isModal = false }) {
 
                 {/* Right: Quantity Adjuster + Edit Button */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                  {/* Stock Counter */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                    <button
-                      type="button"
-                      onClick={() => handleDirectUpdate(item, Math.max(0, qty - 1))}
-                      title="Restar 1"
-                      style={{
-                        width: '30px',
-                        height: '34px',
-                        background: '#f8fafc',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '6px',
-                        fontSize: '1.1rem',
-                        fontWeight: 900,
-                        color: '#334155',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      -
-                    </button>
+                  {countModeActive ? (
+                    /* Control de Conteo: input con la cantidad contada + botón para confirmar */
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        defaultValue={qty}
+                        key={item.id + '_conteo_' + qty}
+                        onFocus={(e) => e.target.select()}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') e.target.blur();
+                        }}
+                        onBlur={(e) => handleMarkCounted(item, e.target.value)}
+                        title="Escribe la cantidad contada físicamente"
+                        style={{
+                          width: '64px',
+                          height: '38px',
+                          textAlign: 'center',
+                          fontSize: '1rem',
+                          fontWeight: 900,
+                          color: '#0f172a',
+                          borderRadius: '8px',
+                          border: (item.conteoSessionId === countSession.id && item.contadoEnConteoActual)
+                            ? '2px solid #22c55e'
+                            : '1.5px solid #93c5fd',
+                          background: (item.conteoSessionId === countSession.id && item.contadoEnConteoActual)
+                            ? '#f0fdf4'
+                            : '#eff6ff',
+                          outline: 'none'
+                        }}
+                      />
+                      <ClipboardCheck
+                        size={18}
+                        color={(item.conteoSessionId === countSession.id && item.contadoEnConteoActual) ? '#16a34a' : '#93c5fd'}
+                      />
+                    </div>
+                  ) : (
+                    /* Stock Counter */
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleDirectUpdate(item, Math.max(0, qty - 1))}
+                        title="Restar 1"
+                        style={{
+                          width: '30px',
+                          height: '34px',
+                          background: '#f8fafc',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '6px',
+                          fontSize: '1.1rem',
+                          fontWeight: 900,
+                          color: '#334155',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        -
+                      </button>
 
-                    <input 
-                      type="number"
-                      inputMode="numeric"
-                      defaultValue={qty}
-                      key={item.id + '_' + qty}
-                      onFocus={(e) => e.target.select()}
-                      onBlur={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        if (!isNaN(val) && val !== qty) {
-                          handleDirectUpdate(item, val);
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') e.target.blur();
-                      }}
-                      title="Escribe la cantidad para actualizar"
-                      style={{
-                        width: '54px',
-                        height: '34px',
-                        textAlign: 'center',
-                        fontSize: '1rem',
-                        fontWeight: 900,
-                        color: isCritical ? '#dc2626' : isWarning ? '#b45309' : '#0f172a',
-                        borderRadius: '6px',
-                        border: isCritical ? '2px solid #fca5a5' : isWarning ? '2px solid #fde68a' : '1.5px solid #cbd5e1',
-                        background: '#ffffff',
-                        outline: 'none'
-                      }}
-                    />
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        defaultValue={qty}
+                        key={item.id + '_' + qty}
+                        onFocus={(e) => e.target.select()}
+                        onBlur={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          if (!isNaN(val) && val !== qty) {
+                            handleDirectUpdate(item, val);
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') e.target.blur();
+                        }}
+                        title="Escribe la cantidad para actualizar"
+                        style={{
+                          width: '54px',
+                          height: '34px',
+                          textAlign: 'center',
+                          fontSize: '1rem',
+                          fontWeight: 900,
+                          color: isCritical ? '#dc2626' : isWarning ? '#b45309' : '#0f172a',
+                          borderRadius: '6px',
+                          border: isCritical ? '2px solid #fca5a5' : isWarning ? '2px solid #fde68a' : '1.5px solid #cbd5e1',
+                          background: '#ffffff',
+                          outline: 'none'
+                        }}
+                      />
 
-                    <button
-                      type="button"
-                      onClick={() => handleDirectUpdate(item, qty + 1)}
-                      title="Sumar 1"
-                      style={{
-                        width: '30px',
-                        height: '34px',
-                        background: '#f8fafc',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '6px',
-                        fontSize: '1.1rem',
-                        fontWeight: 900,
-                        color: '#334155',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      +
-                    </button>
-                  </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDirectUpdate(item, qty + 1)}
+                        title="Sumar 1"
+                        style={{
+                          width: '30px',
+                          height: '34px',
+                          background: '#f8fafc',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '6px',
+                          fontSize: '1.1rem',
+                          fontWeight: 900,
+                          color: '#334155',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        +
+                      </button>
+                    </div>
+                  )}
 
                   {/* ✏️ Direct Edit Button (Instant 0ms) */}
                   <button
