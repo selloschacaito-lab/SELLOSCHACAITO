@@ -7,7 +7,7 @@ import {
   Search, AlertTriangle, Plus, Edit2, Trash2, Tag,
   DollarSign, Package, Check, X, TrendingUp, Sparkles,
   Layers, RefreshCw, PanelLeft, ChevronLeft, ChevronRight,
-  Download, ClipboardList, ClipboardCheck
+  Download, ClipboardList, ClipboardCheck, Wrench
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { createPortal } from 'react-dom';
@@ -27,6 +27,12 @@ function Inventory({ isModal = false }) {
   const [countSession, setCountSession] = useState(null); // null = sin sesión, o { id, estado, iniciadoPor, fechaInicio, fechaFin }
   const [countFilter, setCountFilter] = useState('ALL'); // 'ALL' | 'PENDIENTE' | 'CONTADO'
   const countModeActive = countSession?.estado === 'activa';
+
+  // Salida de Inventario para Taller (reparaciones)
+  const [workshopExitProduct, setWorkshopExitProduct] = useState(null);
+  const [workshopExitQty, setWorkshopExitQty] = useState('');
+  const [workshopExitNote, setWorkshopExitNote] = useState('');
+  const [isSavingWorkshopExit, setIsSavingWorkshopExit] = useState(false);
 
   // Arrastrar y Desplazar Categorías
   const categoryScrollRef = useRef(null);
@@ -337,6 +343,68 @@ function Inventory({ isModal = false }) {
     } catch (error) {
       console.error(error);
       toast.error('Error al exportar el inventario');
+    }
+  };
+
+  // Abrir el modal de "Salida a Taller" para un producto
+  const handleOpenWorkshopExit = (product) => {
+    setWorkshopExitProduct(product);
+    setWorkshopExitQty('');
+    setWorkshopExitNote('');
+  };
+
+  // Registrar una salida de inventario para el taller de reparaciones:
+  // resta del stock de inmediato y deja registro en inventory_movements (tipo 'salida_taller').
+  const handleConfirmWorkshopExit = async (e) => {
+    e.preventDefault();
+    const product = workshopExitProduct;
+    if (!product) return;
+
+    const qty = parseInt(workshopExitQty, 10);
+    const currentQty = product.cantidad ?? 0;
+
+    if (isNaN(qty) || qty <= 0) {
+      toast.error('Ingresa una cantidad válida');
+      return;
+    }
+    if (qty > currentQty) {
+      toast.error(`Solo hay ${currentQty} unidades en stock`);
+      return;
+    }
+
+    const newQty = currentQty - qty;
+    const nowISO = new Date().toISOString();
+
+    setIsSavingWorkshopExit(true);
+    try {
+      const batch = writeBatch(firestoreDB);
+      const prodRef = doc(firestoreDB, 'products', product.id);
+      batch.update(prodRef, { cantidad: newQty });
+
+      const movRef = doc(collection(firestoreDB, 'inventory_movements'));
+      batch.set(movRef, {
+        producto_id: product.id,
+        producto_nombre: product.nombre,
+        tipo: 'salida_taller',
+        cantidad: qty,
+        stock_anterior: currentQty,
+        stock_nuevo: newQty,
+        motivo: workshopExitNote.trim() || 'Salida para Taller (reparaciones)',
+        fecha: nowISO
+      });
+
+      await batch.commit();
+
+      // Optimistic UI update
+      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, cantidad: newQty } : p));
+
+      toast.success(`${product.nombre}: ${qty} unid. enviadas a taller`);
+      setWorkshopExitProduct(null);
+    } catch (error) {
+      console.error(error);
+      toast.error('Error registrando la salida a taller');
+    } finally {
+      setIsSavingWorkshopExit(false);
     }
   };
 
@@ -1109,6 +1177,28 @@ function Inventory({ isModal = false }) {
                     </div>
                   )}
 
+                  {/* 🔧 Salida a Taller (reparaciones) */}
+                  <button
+                    type="button"
+                    onClick={() => handleOpenWorkshopExit(item)}
+                    title="Registrar salida de stock para el taller"
+                    style={{
+                      width: '36px',
+                      height: '34px',
+                      background: '#fff7ed',
+                      border: '1px solid #fed7aa',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#c2410c',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <Wrench size={16} />
+                  </button>
+
                   {/* ✏️ Direct Edit Button (Instant 0ms) */}
                   <button
                     type="button"
@@ -1546,6 +1636,157 @@ function Inventory({ isModal = false }) {
                 </div>
               </div>
 
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ===================== MODAL: SALIDA A TALLER ===================== */}
+      {workshopExitProduct && createPortal(
+        <div
+          className="modal-overlay"
+          onClick={() => !isSavingWorkshopExit && setWorkshopExitProduct(null)}
+          style={{ background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', zIndex: 1000 }}
+        >
+          <div
+            className="modal-content"
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#ffffff',
+              borderRadius: '20px',
+              border: '1px solid #e2e8f0',
+              maxWidth: '420px',
+              width: '95%',
+              padding: '0',
+              overflow: 'hidden',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)'
+            }}
+          >
+            <div style={{
+              background: '#fff7ed',
+              padding: '16px 22px',
+              borderBottom: '1px solid #fed7aa',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ background: '#c2410c', color: '#fff', borderRadius: '8px', padding: '6px', display: 'grid', placeItems: 'center' }}>
+                  <Wrench size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>
+                    Salida a Taller
+                  </h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>
+                    {workshopExitProduct.nombre}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => !isSavingWorkshopExit && setWorkshopExitProduct(null)}
+                style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmWorkshopExit} style={{ padding: '22px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+                Stock actual: <strong>{workshopExitProduct.cantidad ?? 0}</strong> unidades
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>
+                  Cantidad que sale para taller *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  autoFocus
+                  value={workshopExitQty}
+                  onChange={e => setWorkshopExitQty(e.target.value)}
+                  onFocus={(e) => e.target.select()}
+                  placeholder="0"
+                  style={{
+                    height: '42px',
+                    padding: '0 12px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #e2e8f0',
+                    background: '#f8fafc',
+                    fontSize: '14px',
+                    fontWeight: 800,
+                    color: '#0f172a',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>
+                  Nota (opcional)
+                </label>
+                <input
+                  type="text"
+                  value={workshopExitNote}
+                  onChange={e => setWorkshopExitNote(e.target.value)}
+                  placeholder="Ej. Reparación sello de Fulano"
+                  style={{
+                    height: '42px',
+                    padding: '0 12px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #e2e8f0',
+                    background: '#f8fafc',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: '#0f172a',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setWorkshopExitProduct(null)}
+                  disabled={isSavingWorkshopExit}
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    color: '#64748b',
+                    borderRadius: '10px',
+                    padding: '10px 16px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: isSavingWorkshopExit ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSavingWorkshopExit}
+                  style={{
+                    background: isSavingWorkshopExit ? '#94a3b8' : '#c2410c',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '10px 22px',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    cursor: isSavingWorkshopExit ? 'not-allowed' : 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Wrench size={16} /> {isSavingWorkshopExit ? 'Registrando...' : 'Registrar Salida'}
+                </button>
+              </div>
             </form>
           </div>
         </div>,

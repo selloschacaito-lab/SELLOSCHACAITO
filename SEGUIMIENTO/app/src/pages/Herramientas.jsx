@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useOutletContext } from 'react-router-dom';
-import { 
-  Wrench, 
-  BadgeDollarSign, 
-  Percent, 
+import {
+  Wrench,
+  BadgeDollarSign,
+  Percent,
   PanelLeft,
   Boxes
 } from 'lucide-react';
 import Costos from './Costos';
 import Retenciones from './Retenciones';
 import Madera from './Madera';
+import SalidasTaller from './SalidasTaller';
 import '../styles/whitestamp.css';
 
 const TABS = [
@@ -33,6 +34,13 @@ const TABS = [
     desc: 'Cálculo fiscal (IVA 75%/100% e ISLR)',
     icon: Percent,
     color: '#3b82f6'
+  },
+  {
+    id: 'taller',
+    label: 'Salidas a Taller',
+    desc: 'Historial de insumos usados en reparaciones',
+    icon: Wrench,
+    color: '#dc2626'
   }
 ];
 
@@ -221,6 +229,7 @@ export default function Herramientas() {
         {activeTab === 'madera' && <Madera isEmbedded={true} />}
         {activeTab === 'costos' && <Costos isEmbedded={true} />}
         {activeTab === 'retenciones' && <Retenciones isEmbedded={true} />}
+        {activeTab === 'taller' && <SalidasTaller isEmbedded={true} />}
       </div>
 
     </div>
