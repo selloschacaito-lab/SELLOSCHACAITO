@@ -49,6 +49,7 @@ export default function Ventas() {
   const { toggleSidebar } = useOutletContext() || {};
   const { activeProfile } = useProfile();
   const [orders, setOrders] = useState({});
+  const [loadingOrders, setLoadingOrders] = useState(true);
   const [activityLogs, setActivityLogs] = useState([]);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showPrefsModal, setShowPrefsModal] = useState(false);
@@ -81,6 +82,7 @@ export default function Ventas() {
   useEffect(() => {
     const unsub = onValue(ref(db, 'orders'), (snapshot) => {
       setOrders(snapshot.val() || {});
+      setLoadingOrders(false);
     });
     return () => unsub();
   }, []);
@@ -304,7 +306,26 @@ export default function Ventas() {
 
   return (
     <div style={{ padding: '1.25rem 16px', width: '100%', boxSizing: 'border-box' }}>
-      
+
+      {loadingOrders && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          background: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          borderRadius: '12px',
+          padding: '12px 16px',
+          marginBottom: '1rem',
+          color: '#1e3a8a',
+          fontWeight: 700,
+          fontSize: '0.85rem'
+        }}>
+          <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⏳</span>
+          Cargando datos de ventas...
+        </div>
+      )}
+
       {/* Header Limpio y Responsivo para Móvil y Desktop */}
       <div style={{
         display: 'flex',

@@ -16,6 +16,7 @@ import Inventory from './Inventory';
 function Dashboard() {
   const { toggleSidebar } = useOutletContext();
   const [orders, setOrders] = useState({});
+  const [loadingOrders, setLoadingOrders] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [highlightedOrderId, setHighlightedOrderId] = useState(null);
@@ -84,6 +85,7 @@ function Dashboard() {
     const unsubscribeOrders = onValue(ordersRef, (snapshot) => {
       const data = snapshot.val();
       setOrders(data || {});
+      setLoadingOrders(false);
     });
 
     const printAlertsRef = ref(db, 'print_alerts');
@@ -339,16 +341,23 @@ function Dashboard() {
             </button>
           </div>
         </div>
-        <KanbanBoard 
-          orders={orders} 
-          searchTerm={searchTerm} 
-          showArchived={showArchived}
-          highlightedOrderId={highlightedOrderId}
-          onOrderClick={(order) => {
-            if (highlightedOrderId) setHighlightedOrderId(null);
-            setSelectedOrder(order);
-          }} 
-        />
+        {loadingOrders ? (
+          <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
+            <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite', fontSize: '1.5rem' }}>⏳</span>
+            <p style={{ marginTop: '8px', fontWeight: 700 }}>Cargando pedidos...</p>
+          </div>
+        ) : (
+          <KanbanBoard
+            orders={orders}
+            searchTerm={searchTerm}
+            showArchived={showArchived}
+            highlightedOrderId={highlightedOrderId}
+            onOrderClick={(order) => {
+              if (highlightedOrderId) setHighlightedOrderId(null);
+              setSelectedOrder(order);
+            }}
+          />
+        )}
       </main>
 
       {selectedOrder && (

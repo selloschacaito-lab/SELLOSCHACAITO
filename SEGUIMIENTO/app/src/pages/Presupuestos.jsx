@@ -12,6 +12,7 @@ export default function Presupuestos() {
   const [bcvRate, setBcvRate] = useState('');
   const [dateStr, setDateStr] = useState('');
   const [quoteNumber, setQuoteNumber] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
   
   const [client, setClient] = useState({
     name: '',
@@ -219,7 +220,8 @@ export default function Presupuestos() {
   const totalUSD = total / bcvNum;
 
   const exportJPG = async () => {
-    if (!previewRef.current) return;
+    if (!previewRef.current || isExporting) return;
+    setIsExporting(true);
     const el = previewRef.current;
     const prevTransform = el.style.transform;
     const prevMargin = el.style.marginBottom;
@@ -239,11 +241,13 @@ export default function Presupuestos() {
     } finally {
       el.style.transform = prevTransform;
       el.style.marginBottom = prevMargin;
+      setIsExporting(false);
     }
   };
 
   const exportPDF = async () => {
-    if (!previewRef.current) return;
+    if (!previewRef.current || isExporting) return;
+    setIsExporting(true);
     const el = previewRef.current;
     const prevTransform = el.style.transform;
     const prevMargin = el.style.marginBottom;
@@ -252,11 +256,11 @@ export default function Presupuestos() {
     try {
       const canvas = await html2canvas(el, { scale: 2, useCORS: true, logging: false });
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      
+
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      
+
       pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`Presupuesto-${quoteNumber}.pdf`);
       toast.success("PDF descargado con éxito");
@@ -266,6 +270,7 @@ export default function Presupuestos() {
     } finally {
       el.style.transform = prevTransform;
       el.style.marginBottom = prevMargin;
+      setIsExporting(false);
     }
   };
 
@@ -450,11 +455,11 @@ export default function Presupuestos() {
 
         {/* Botones de Descarga */}
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button onClick={exportJPG} className="btn-secondary" style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: '0.4rem', padding: '0.6rem' }}>
-            <Download size={16} /> Descargar JPG
+          <button onClick={exportJPG} disabled={isExporting} className="btn-secondary" style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: '0.4rem', padding: '0.6rem', opacity: isExporting ? 0.6 : 1, cursor: isExporting ? 'not-allowed' : 'pointer' }}>
+            <Download size={16} /> {isExporting ? 'Generando...' : 'Descargar JPG'}
           </button>
-          <button onClick={exportPDF} className="btn-primary" style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: '0.4rem', padding: '0.6rem', marginTop: 0 }}>
-            <FileText size={16} /> Descargar PDF
+          <button onClick={exportPDF} disabled={isExporting} className="btn-primary" style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: '0.4rem', padding: '0.6rem', marginTop: 0, opacity: isExporting ? 0.6 : 1, cursor: isExporting ? 'not-allowed' : 'pointer' }}>
+            <FileText size={16} /> {isExporting ? 'Generando...' : 'Descargar PDF'}
           </button>
         </div>
 

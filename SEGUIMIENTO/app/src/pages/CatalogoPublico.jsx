@@ -86,6 +86,13 @@ export default function CatalogoPublico() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [currency, setCurrency] = useState('USD'); // 'USD' | 'VES'
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // 1. Cargar Tasa Oficial BCV y Productos en Vivo
   useEffect(() => {
@@ -626,14 +633,15 @@ export default function CatalogoPublico() {
         href={`https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent('Hola Sellos Chacaíto 👋 Tengo una duda sobre los modelos de sellos.')}`}
         target="_blank"
         rel="noreferrer"
+        title="¿Dudas? Chatea con nosotros"
         style={{
           position: 'fixed',
-          bottom: '24px',
-          right: '24px',
+          bottom: isMobile ? '16px' : '24px',
+          right: isMobile ? '16px' : '24px',
           background: '#25D366',
           color: '#ffffff',
           borderRadius: '50px',
-          padding: '12px 20px',
+          padding: isMobile ? '14px' : '12px 20px',
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
@@ -645,7 +653,7 @@ export default function CatalogoPublico() {
         }}
       >
         <MessageCircle size={20} />
-        <span>¿Dudas? Chatea con nosotros</span>
+        {!isMobile && <span>¿Dudas? Chatea con nosotros</span>}
       </a>
     </div>
   );

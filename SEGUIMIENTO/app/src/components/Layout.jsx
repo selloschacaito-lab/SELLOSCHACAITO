@@ -3,7 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
 import { useUpdate } from '../contexts/UpdateContext';
-import { Package, ListTodo, Users, Search, PackageSearch, Tag, PieChart, Settings, LogOut, Sun, Moon, Menu, ChevronLeft, FileText, Percent, ClipboardList, MapPin, PanelLeft, BadgeDollarSign, ShoppingBag, UserCircle, FileCheck, Sparkles, Layers, Wrench, ExternalLink, Share2, Copy, Check, Boxes, DollarSign } from 'lucide-react';
+import { Package, ListTodo, Users, Search, PackageSearch, Tag, PieChart, Settings, LogOut, Sun, Moon, Menu, ChevronLeft, FileText, Percent, ClipboardList, MapPin, PanelLeft, BadgeDollarSign, ShoppingBag, UserCircle, FileCheck, Sparkles, Layers, Wrench, ExternalLink, Share2, Copy, Check, Boxes, DollarSign, Type } from 'lucide-react';
 import { db } from '../firebase/config';
 import { ref, onValue } from 'firebase/database';
 import { toast } from 'react-hot-toast';
@@ -198,10 +198,15 @@ function Layout() {
     { name: 'Pedidos',              path: '/',              icon: <ListTodo size={18} /> },
     { name: 'Facturación',          path: '/facturacion',   icon: <FileCheck size={18} />, badge: pendingInvoiceCount > 0 ? pendingInvoiceCount : null },
     { name: 'Ventas',               path: '/ventas',        icon: <ShoppingBag size={18} /> },
+    { name: 'Clientes',             path: '/clientes',      icon: <Users size={18} /> },
+    { name: 'Recibos',              path: '/recibos',       icon: <FileText size={18} /> },
+    { name: 'Presupuestos',         path: '/presupuestos',  icon: <ClipboardList size={18} /> },
     { name: 'Cambio',               path: '/cambio',        icon: <DollarSign size={18} /> },
     { name: 'Herramientas',         path: '/herramientas',  icon: <Wrench size={18} /> },
     { name: 'Madera & Bolsas',      path: '/madera',        icon: <Boxes size={18} /> },
     { name: 'Inventario & Precios', path: '/inventario',    icon: <Package size={18} /> },
+    { name: 'Marketing',            path: '/marketing',     icon: <Sparkles size={18} /> },
+    { name: 'Texto',                path: '/texto',         icon: <Type size={18} /> },
     { name: 'Configuración',        path: '/configuracion', icon: <Settings size={18} /> },
     { name: 'Usuarios',             path: '/usuarios',      icon: <UserCircle size={18} /> },
   ];
