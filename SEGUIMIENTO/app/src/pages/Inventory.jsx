@@ -1406,12 +1406,13 @@ function Inventory({ isModal = false }) {
                   <label style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>
                     Stock / Cantidad *
                   </label>
-                  <input 
+                  <input
                     type="number"
                     min="0"
                     required
                     value={formData.cantidad}
                     onChange={e => setFormData(prev => ({ ...prev, cantidad: parseInt(e.target.value, 10) || 0 }))}
+                    onFocus={(e) => e.target.select()}
                     style={{
                       height: '42px',
                       padding: '0 12px',
@@ -1430,11 +1431,12 @@ function Inventory({ isModal = false }) {
                   <label style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>
                     Alerta Stock Mínimo
                   </label>
-                  <input 
+                  <input
                     type="number"
                     min="1"
                     value={formData.minStock}
                     onChange={e => setFormData(prev => ({ ...prev, minStock: parseInt(e.target.value, 10) || 1 }))}
+                    onFocus={(e) => e.target.select()}
                     placeholder="5"
                     style={{
                       height: '42px',
