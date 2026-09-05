@@ -62,12 +62,6 @@ Reglas:
 4. Si encuentras RIF o Cédulas, quítales los puntos y guiones.
 5. No me hables ni des explicaciones, devuelve únicamente el texto final listo para copiar y pegar.`;
 
-      if (!import.meta.env.VITE_GEMINI_API_KEY) {
-        toast.error("Falta la API Key de Gemini en el archivo .env");
-        setIsProcessing(false);
-        return;
-      }
-
       const result = await generateWithGemini({
         contents: [
           {

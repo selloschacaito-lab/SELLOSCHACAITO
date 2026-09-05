@@ -44,10 +44,6 @@ export default function ContentCreator({ isEmbedded = false }) {
   // Generate Captions via Google Gemini IA
   const handleGenerateContent = async (e) => {
     e?.preventDefault();
-    if (!import.meta.env.VITE_GEMINI_API_KEY) {
-      toast.error('Falta la API Key de Gemini en el archivo .env');
-      return;
-    }
 
     setIsGenerating(true);
     const toastId = toast.loading('Creando 3 opciones de contenido con IA...');
