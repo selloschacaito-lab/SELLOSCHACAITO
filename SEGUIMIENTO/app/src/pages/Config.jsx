@@ -785,6 +785,7 @@ function Config() {
             <span>{isExporting ? 'Generando archivo Excel...' : '📥 Descargar Respaldo Completo en Excel (.xlsx)'}</span>
           </button>
         </div>
+
       </div>
 
       {/* WhatsApp Web 1-Click Integration Panel */}
