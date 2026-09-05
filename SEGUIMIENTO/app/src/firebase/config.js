@@ -2,7 +2,6 @@ import { initializeApp } from "firebase/app";
 import { getDatabase } from "firebase/database";
 import { getAuth } from "firebase/auth";
 import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
-import { getFunctions } from "firebase/functions";
 const firebaseConfig = {
     apiKey: "AIzaSyD7YzgDdk38Ij3bNEKISra_UWDA8i7vQNQ",
     authDomain: "seguimiento-sellos-chacaito.firebaseapp.com",
@@ -18,10 +17,9 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
 const firestoreDB = getFirestore(app);
-const functions = getFunctions(app);
 
 enableIndexedDbPersistence(firestoreDB).catch((err) => {
   console.log("Persistence failed:", err.code);
 });
 
-export { app, db, auth, firestoreDB, functions };
+export { app, db, auth, firestoreDB };
