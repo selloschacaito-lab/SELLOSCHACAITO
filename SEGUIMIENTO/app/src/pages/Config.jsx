@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { db, firestoreDB } from '../firebase/config';
-import { doc, onSnapshot, setDoc, collection, getDocs, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, collection, getDocs } from 'firebase/firestore';
 import { ref as rtdbRef, get as rtdbGet } from 'firebase/database';
 import { Save, RefreshCw, PanelLeft, Sparkles, Download, Layers, ShieldCheck, Plus, Trash2, Send, CheckCircle2, AlertCircle, FileSpreadsheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -69,55 +69,6 @@ function Config() {
       toast.error('Error al guardar configuración');
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function handleMigrateSchema() {
-    if (!window.confirm("¿Seguro que quieres migrar el esquema? Esto unificará name->nombre y rif->cedula en todos los clientes y productos.")) return;
-    try {
-      toast.loading("Migrando clientes...", { id: "mig" });
-      const clientsSnap = await getDocs(collection(firestoreDB, 'clients'));
-      let cCount = 0;
-      for (const d of clientsSnap.docs) {
-        const data = d.data();
-        let needsUpdate = false;
-        let updateData = {};
-        
-        if (data.name && !data.nombre) {
-          updateData.nombre = data.name.toUpperCase();
-          needsUpdate = true;
-        }
-        if (data.rif && !data.cedula) {
-          updateData.cedula = data.rif.toUpperCase();
-          needsUpdate = true;
-        }
-        if (data.idDoc && !data.cedula && !data.rif) {
-          updateData.cedula = data.idDoc.toUpperCase();
-          needsUpdate = true;
-        }
-        if (needsUpdate) {
-          await updateDoc(doc(firestoreDB, 'clients', d.id), updateData);
-          cCount++;
-        }
-      }
-
-      toast.loading(`Migrando productos... (Clientes actualizados: ${cCount})`, { id: "mig" });
-      const prodSnap = await getDocs(collection(firestoreDB, 'products'));
-      let pCount = 0;
-      for (const d of prodSnap.docs) {
-        const data = d.data();
-        if (data.name && !data.nombre) {
-          await updateDoc(doc(firestoreDB, 'products', d.id), {
-            nombre: data.name.toUpperCase()
-          });
-          pCount++;
-        }
-      }
-
-      toast.success(`Migración completada. Clientes: ${cCount}, Productos: ${pCount}`, { id: "mig" });
-    } catch (e) {
-      console.error(e);
-      toast.error("Error en migración", { id: "mig" });
     }
   }
 
@@ -669,23 +620,6 @@ function Config() {
           >
             <Save size={18} />
             {saving ? 'Guardando...' : 'Guardar Cambios'}
-          </button>
-          
-          <button 
-            type="button" 
-            onClick={handleMigrateSchema} 
-            style={{
-              padding: '12px 20px',
-              background: '#ffffff',
-              color: '#dc2626',
-              border: '1px solid #fecaca',
-              borderRadius: '10px',
-              fontWeight: 700,
-              fontSize: '13px',
-              cursor: 'pointer'
-            }}
-          >
-            [ADMIN] Migrar Base de Datos
           </button>
         </div>
 
