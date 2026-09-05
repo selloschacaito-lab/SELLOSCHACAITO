@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
-import { useUpdate } from '../contexts/UpdateContext';
-import { Package, ListTodo, Users, Search, PackageSearch, Tag, PieChart, Settings, LogOut, Sun, Moon, Menu, ChevronLeft, FileText, Percent, ClipboardList, MapPin, PanelLeft, BadgeDollarSign, ShoppingBag, UserCircle, FileCheck, Sparkles, Layers, Wrench, ExternalLink, Share2, Copy, Check, Boxes, DollarSign, Type } from 'lucide-react';
+import { Package, ListTodo, Users, Settings, LogOut, ChevronLeft, ClipboardList, PanelLeft, ShoppingBag, UserCircle, FileCheck, Wrench, DollarSign } from 'lucide-react';
 import { db } from '../firebase/config';
 import { ref, onValue } from 'firebase/database';
 import { toast } from 'react-hot-toast';
@@ -12,58 +11,12 @@ import logoSvg from '../assets/logo.svg';
 function Layout() {
   const { logout } = useAuth();
   const { activeProfile, logoutProfile } = useProfile();
-  const { hasUpdate, pendingUpdates, localVersionName, latestVersionName, openUpdateModal } = useUpdate();
   const navigate = useNavigate();
   const location = useLocation();
-  const [darkMode, setDarkMode] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [pendingInvoiceCount, setPendingInvoiceCount] = useState(0);
   const sidebarRef = useRef(null);
   const initialLoadRef = useRef(true);
-
-  // Alerta de actualización disponible visible en móvil y desktop
-  useEffect(() => {
-    if (hasUpdate) {
-      toast((t) => (
-        <div 
-          onClick={() => {
-            toast.dismiss(t.id);
-            openUpdateModal();
-          }} 
-          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
-        >
-          <span style={{ fontSize: '18px' }}>🚀</span>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: '13px', color: '#ffffff' }}>
-              ¡Nueva versión v{latestVersionName || '2.6.0'} disponible!
-            </div>
-            <div style={{ fontSize: '11px', color: '#93c5fd' }}>
-              Toca aquí para actualizar en 1 clic
-            </div>
-          </div>
-        </div>
-      ), {
-        id: 'system-update-toast',
-        duration: 9000,
-        position: 'top-center',
-        style: {
-          background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)',
-          color: '#ffffff',
-          borderRadius: '14px',
-          border: '1.5px solid #3b82f6',
-          boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
-          padding: '12px 16px'
-        }
-      });
-    }
-  }, [hasUpdate, latestVersionName, openUpdateModal]);
-
-  // Asegurar tema Whitestamp limpio
-  useEffect(() => {
-    document.documentElement.removeAttribute('data-theme');
-    document.body.removeAttribute('data-theme');
-    localStorage.removeItem('sc_whitestamp_theme');
-  }, []);
 
   // Escuchar órdenes de Firebase para contar facturas pendientes y alertar a Mayra
   useEffect(() => {
@@ -166,19 +119,6 @@ function Layout() {
     return () => unsubscribe();
   }, [activeProfile, pendingInvoiceCount, navigate]);
 
-  // Close sidebar when clicking outside
-
-  useEffect(() => {
-    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-    if (darkMode) {
-      document.body.classList.add('dark');
-      if (metaThemeColor) metaThemeColor.setAttribute('content', '#111827');
-    } else {
-      document.body.classList.remove('dark');
-      if (metaThemeColor) metaThemeColor.setAttribute('content', '#ffffff');
-    }
-  }, [darkMode]);
-
   // Mouse tracking for background blob
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -199,14 +139,10 @@ function Layout() {
     { name: 'Facturación',          path: '/facturacion',   icon: <FileCheck size={18} />, badge: pendingInvoiceCount > 0 ? pendingInvoiceCount : null },
     { name: 'Ventas',               path: '/ventas',        icon: <ShoppingBag size={18} /> },
     { name: 'Clientes',             path: '/clientes',      icon: <Users size={18} /> },
-    { name: 'Recibos',              path: '/recibos',       icon: <FileText size={18} /> },
     { name: 'Presupuestos',         path: '/presupuestos',  icon: <ClipboardList size={18} /> },
     { name: 'Cambio',               path: '/cambio',        icon: <DollarSign size={18} /> },
     { name: 'Herramientas',         path: '/herramientas',  icon: <Wrench size={18} /> },
-    { name: 'Madera & Bolsas',      path: '/madera',        icon: <Boxes size={18} /> },
     { name: 'Inventario & Precios', path: '/inventario',    icon: <Package size={18} /> },
-    { name: 'Marketing',            path: '/marketing',     icon: <Sparkles size={18} /> },
-    { name: 'Texto',                path: '/texto',         icon: <Type size={18} /> },
     { name: 'Configuración',        path: '/configuracion', icon: <Settings size={18} /> },
     { name: 'Usuarios',             path: '/usuarios',      icon: <UserCircle size={18} /> },
   ];
@@ -227,45 +163,6 @@ function Layout() {
       overflow: 'hidden',
       backgroundColor: '#f8fafc'
     }}>
-
-      {/* 🚀 BOTÓN FLOTANTE DE ACTUALIZACIÓN (VISIBLE EN MÓVIL Y ESCRITORIO) */}
-      {hasUpdate && (
-        <div 
-          onClick={openUpdateModal}
-          style={{
-            position: 'fixed',
-            top: '14px',
-            right: '16px',
-            zIndex: 9999,
-            background: 'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)',
-            color: '#ffffff',
-            padding: '8px 14px',
-            borderRadius: '999px',
-            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.35), 0 0 0 1.5px rgba(147, 197, 253, 0.4)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            cursor: 'pointer',
-            transition: 'transform 0.15s ease'
-          }}
-          title="Toca para actualizar a la última versión"
-        >
-          <span style={{ fontSize: '14px' }}>🚀</span>
-          <span style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '-0.01em' }}>
-            Actualizar a v{latestVersionName || '2.6.0'}
-          </span>
-          <span style={{
-            background: '#2563eb',
-            color: '#fff',
-            fontSize: '10px',
-            fontWeight: 900,
-            padding: '2px 7px',
-            borderRadius: '999px'
-          }}>
-            NUEVA
-          </span>
-        </div>
-      )}
 
       {/* Backdrop overlay */}
       <div
@@ -454,82 +351,6 @@ function Layout() {
           borderTop: '1px solid #e2e8f0',
           paddingTop: '1.25rem'
         }}>
-          {/* Botón de Actualización Inteligente */}
-          <button
-            type="button"
-            onClick={openUpdateModal}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '0.5rem',
-              color: hasUpdate ? '#1e40af' : '#475569',
-              background: hasUpdate ? '#eff6ff' : '#f8fafc',
-              border: hasUpdate ? '1.5px solid #93c5fd' : '1px solid #e2e8f0',
-              padding: '0.55rem 0.75rem',
-              borderRadius: '10px',
-              fontFamily: 'inherit',
-              fontSize: '0.8rem',
-              fontWeight: 800,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              boxShadow: hasUpdate ? '0 2px 8px rgba(59, 130, 246, 0.2)' : 'none'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = hasUpdate ? '#dbeafe' : '#f1f5f9';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = hasUpdate ? '#eff6ff' : '#f8fafc';
-            }}
-            title={hasUpdate ? `Hay ${pendingUpdates.length} actualización(es) pendiente(s)` : `Sistema en versión ${localVersionName}`}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span>{hasUpdate ? '🚀' : '🔄'}</span>
-              <span>{hasUpdate ? 'Actualización' : `Versión v${localVersionName}`}</span>
-            </div>
-            {hasUpdate && (
-              <span style={{
-                background: '#2563eb',
-                color: '#ffffff',
-                fontSize: '10px',
-                fontWeight: 900,
-                padding: '2px 6px',
-                borderRadius: '10px'
-              }}>
-                {pendingUpdates.length}
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              color: '#64748b',
-              background: 'transparent',
-              padding: '0.55rem 0.75rem',
-              borderRadius: '8px',
-              fontFamily: 'inherit',
-              fontSize: '0.85rem',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#f8fafc';
-              e.currentTarget.style.color = '#0f172a';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = '#64748b';
-            }}
-          >
-            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-            {darkMode ? 'Modo Claro' : 'Modo Noche'}
-          </button>
-
           <button
             onClick={() => {
               logoutProfile();

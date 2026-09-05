@@ -4,23 +4,14 @@ import {
   Wrench,
   BadgeDollarSign,
   Percent,
-  PanelLeft,
-  Boxes
+  PanelLeft
 } from 'lucide-react';
 import Costos from './Costos';
 import Retenciones from './Retenciones';
-import Madera from './Madera';
 import SalidasTaller from './SalidasTaller';
 import '../styles/whitestamp.css';
 
 const TABS = [
-  {
-    id: 'madera',
-    label: 'Madera & Bolsas',
-    desc: '12 medidas estándar, regla de contenedor y cotizador de packaging',
-    icon: Boxes,
-    color: '#d97706'
-  },
   {
     id: 'costos',
     label: 'Costos y Precios',
@@ -47,11 +38,11 @@ const TABS = [
 export default function Herramientas() {
   const { toggleSidebar } = useOutletContext() || {};
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = searchParams.get('tab') || 'madera';
-  
+  const initialTab = searchParams.get('tab') || 'costos';
+
   const [activeTab, setActiveTab] = useState(() => {
     const found = TABS.find(t => t.id === initialTab);
-    return found ? found.id : 'madera';
+    return found ? found.id : 'costos';
   });
 
   useEffect(() => {
@@ -226,7 +217,6 @@ export default function Herramientas() {
 
       {/* Tab Content Rendering */}
       <div style={{ width: '100%', padding: '0 8px' }}>
-        {activeTab === 'madera' && <Madera isEmbedded={true} />}
         {activeTab === 'costos' && <Costos isEmbedded={true} />}
         {activeTab === 'retenciones' && <Retenciones isEmbedded={true} />}
         {activeTab === 'taller' && <SalidasTaller isEmbedded={true} />}
