@@ -46,12 +46,17 @@ export default function Calculator({ isEmbedded = false }) {
   const [bcvEuroRate, setBcvEuroRate] = useState('850,2540');
   const [euroDeliveryAmount, setEuroDeliveryAmount] = useState('5,00');
   const [bsInput, setBsInput] = useState('');
+  // Cuál de los dos campos (dólares o bolívares) fue el último que el usuario editó.
+  // El otro campo siempre se muestra calculado en vivo a partir de este, para que
+  // nunca se quede con un valor "congelado" que no coincide con el real.
+  const [lastEdited, setLastEdited] = useState('usd'); // 'usd' | 'bs'
   const [discountBase, setDiscountBase] = useState('16,00');
   const [prices, setPrices] = useState(['12,00', '3,50', '', '', '', '']);
   const [isFetchingRate, setIsFetchingRate] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('conversor'); // 'conversor' | 'delivery' | 'precios'
 
   const dateStr = new Date().toLocaleDateString('es-VE', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -129,21 +134,28 @@ export default function Calculator({ isEmbedded = false }) {
   };
 
   const handleUsdChange = (val) => {
+    setLastEdited('usd');
     setUsdTotal(val);
     setDiscountBase(val);
     localStorage.setItem('sc_usd', parseNum(val).toString());
   };
 
   const handleBsChange = (val) => {
+    setLastEdited('bs');
     setBsInput(val);
     const bsNum = parseNum(val);
     const rate = parseNum(bcvRate);
-    if (rate > 0 && bsNum > 0) {
+    if (rate > 0) {
       const usdEquiv = bsNum / rate;
-      setUsdTotal(fmt(usdEquiv));
       setDiscountBase(fmt(usdEquiv));
       localStorage.setItem('sc_usd', usdEquiv.toString());
     }
+  };
+
+  // Vuelve a dejar el campo de Dólares como "el que manda" y limpia el de Bolívares.
+  const clearBsInput = () => {
+    setLastEdited('usd');
+    setBsInput('');
   };
 
   const handleEuroChange = (val) => {
@@ -159,9 +171,18 @@ export default function Calculator({ isEmbedded = false }) {
   };
 
   const pricesTotalNum = prices.reduce((acc, p) => acc + parseNum(p), 0);
-  const usdNum = parseNum(usdTotal);
   const rateNum = parseNum(bcvRate);
+  // Monto canónico en dólares: si el último campo editado fue Bolívares, se deriva
+  // de ahí; si no, se toma directo del campo de Dólares. Así ambos campos quedan
+  // siempre sincronizados sin importar cuál se tocó de último.
+  const usdNum = (lastEdited === 'bs' && rateNum > 0) ? (parseNum(bsInput) / rateNum) : parseNum(usdTotal);
   const vesTotalNum = usdNum * rateNum;
+
+  // Valores mostrados en cada campo: el que NO se está editando activamente se
+  // calcula en vivo; el que sí se está editando conserva el texto tal cual lo
+  // escribe el usuario (para no pelear con el cursor mientras teclea).
+  const usdFieldValue = lastEdited === 'bs' ? fmt(usdNum) : usdTotal;
+  const bsFieldValue = lastEdited === 'usd' ? fmt(vesTotalNum) : bsInput;
 
   // Cálculos Euro Delivery (Alexander)
   const euroNum = parseNum(euroDeliveryAmount);
@@ -306,12 +327,47 @@ Dirección:`;
           </div>
         </header>
 
+        {/* PESTAÑAS */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '18px', flexWrap: 'wrap' }}>
+          {[
+            { id: 'conversor', label: 'Conversor $ ⇄ Bs', icon: DollarSign },
+            { id: 'delivery', label: 'Delivery (Euros)', icon: Truck },
+            { id: 'precios', label: 'Lista de Precios & Descuento', icon: Percent }
+          ].map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '7px',
+                  padding: '9px 16px',
+                  borderRadius: '10px',
+                  border: isActive ? '1.5px solid #10b981' : '1px solid #e2e8f0',
+                  background: isActive ? '#ecfdf5' : '#ffffff',
+                  color: isActive ? '#065f46' : '#64748b',
+                  fontSize: '13px',
+                  fontWeight: isActive ? 800 : 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Icon size={15} /> {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
         {/* GRILLA DE CONVERSIÓN */}
         <div className="calc-grid">
-          
-          {/* Lado Izquierdo: Conversor Principal & Delivery Motorizado */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            
+
+          {activeTab === 'conversor' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '640px' }}>
+
             <article className="calc-card">
               <div className="calc-card-title">
                 <span>Conversión Principal ($ USD)</span>
@@ -321,15 +377,15 @@ Dirección:`;
               {/* Input Dólares */}
               <div className="calc-input-group">
                 <label className="calc-input-label">Monto en Dólares ($)</label>
-                <div className="calc-input-shell">
-                  <input 
-                    type="text" 
+                <div className="calc-input-shell" style={{ borderColor: lastEdited === 'usd' ? '#10b981' : undefined }}>
+                  <input
+                    type="text"
                     className="calc-big-input"
                     inputMode="decimal"
-                    value={usdTotal}
+                    value={usdFieldValue}
                     onChange={e => handleUsdChange(e.target.value)}
-                    onBlur={() => setUsdTotal(fmt(parseNum(usdTotal)))}
-                    onFocus={e => e.target.select()}
+                    onBlur={() => setUsdTotal(fmt(usdNum))}
+                    onFocus={e => { setLastEdited('usd'); e.target.select(); }}
                   />
                   <span className="calc-suffix">$</span>
                 </div>
@@ -338,17 +394,27 @@ Dirección:`;
               {/* Input Bolívares Inverso */}
               <div className="calc-input-group">
                 <label className="calc-input-label">Monto en Bolívares (Bs - Conversor Inverso)</label>
-                <div className="calc-input-shell">
-                  <input 
-                    type="text" 
+                <div className="calc-input-shell" style={{ borderColor: lastEdited === 'bs' ? '#10b981' : undefined }}>
+                  <input
+                    type="text"
                     className="calc-big-input"
                     inputMode="decimal"
-                    placeholder={fmt(vesTotalNum)}
-                    value={bsInput}
+                    value={bsFieldValue}
                     onChange={e => handleBsChange(e.target.value)}
-                    onFocus={e => e.target.select()}
+                    onBlur={() => setBsInput(fmt(parseNum(bsFieldValue)))}
+                    onFocus={e => { setLastEdited('bs'); e.target.select(); }}
                   />
                   <span className="calc-suffix">Bs</span>
+                  {lastEdited === 'bs' && bsInput && (
+                    <button
+                      type="button"
+                      onClick={clearBsInput}
+                      title="Volver a calcular desde el monto en Dólares"
+                      style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '13px', fontWeight: 800, padding: '0 4px' }}
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -417,7 +483,11 @@ Dirección:`;
               </div>
 
             </article>
+          </div>
+          )}
 
+          {activeTab === 'delivery' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '640px' }}>
             {/* SECCIÓN DELIVERY MOTORIZADO (EUROS / ALEXANDER) */}
             <article className="calc-card" style={{ border: '1.5px solid #a7f3d0', background: '#ffffff' }}>
               <div className="calc-card-title">
@@ -530,12 +600,11 @@ Dirección:`;
               </div>
 
             </article>
-
           </div>
+          )}
 
-          {/* Lado Derecho: Lista de Precios y Descuento 20% */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            
+          {activeTab === 'precios' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '640px' }}>
             {/* Lista Rápida de Precios */}
             <article className="calc-card">
               <div className="calc-card-title">
@@ -631,8 +700,8 @@ Dirección:`;
                 </button>
               </div>
             </article>
-
           </div>
+          )}
 
         </div>
 

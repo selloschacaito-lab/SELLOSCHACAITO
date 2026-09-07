@@ -99,9 +99,8 @@
 
 /* Grilla de Contenido */
 .calc-grid {
-  display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-  gap: 24px;
+  display: flex;
+  justify-content: center;
 }
 
 /* Tarjeta Principal de Conversión */
@@ -359,9 +358,6 @@
   }
   .calc-header {
     padding: 16px;
-  }
-  .calc-grid {
-    grid-template-columns: 1fr;
   }
   .calc-actions-grid {
     grid-template-columns: 1fr;
