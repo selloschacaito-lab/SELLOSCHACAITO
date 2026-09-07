@@ -11,6 +11,9 @@ extends CanvasLayer
 @onready var shoot_ring: Control = $ShootButtonRight/AimRing
 @onready var health_fill: ColorRect = $Vitals/HealthFill
 @onready var shield_fill: ColorRect = $Vitals/ShieldFill
+@onready var ammo_label: Label = $AmmoBox/AmmoLabel
+@onready var reload_label: Label = $AmmoBox/ReloadLabel
+@onready var reload_button: Button = $ReloadButton
 
 const VITALS_WIDTH: float = 240.0
 
@@ -42,7 +45,12 @@ func _ready() -> void:
 	player = get_tree().get_first_node_in_group("player")
 	if shoot_ring:
 		shoot_ring.visible = false
+	if reload_label:
+		reload_label.visible = false
+	if reload_button:
+		reload_button.pressed.connect(_on_reload_button)
 	_connect_vitals()
+	_connect_weapon()
 
 func _connect_vitals() -> void:
 	if not player:
@@ -55,6 +63,28 @@ func _connect_vitals() -> void:
 	# Estado inicial inmediato.
 	_on_health_changed(hc.health, hc.max_health)
 	_on_shield_changed(hc.shield, hc.max_shield)
+
+func _connect_weapon() -> void:
+	if not player:
+		return
+	var w: Node = player.weapon
+	if not w:
+		return
+	if w.has_signal("ammo_changed"):
+		w.ammo_changed.connect(_on_ammo_changed)
+		_on_ammo_changed(w.current_mag, w.reserve_ammo)
+	if w.has_signal("reload_started"):
+		w.reload_started.connect(func(_d): if reload_label: reload_label.visible = true)
+	if w.has_signal("reload_finished"):
+		w.reload_finished.connect(func(): if reload_label: reload_label.visible = false)
+
+func _on_ammo_changed(magazine: int, reserve: int) -> void:
+	if ammo_label:
+		ammo_label.text = "%d / %d" % [magazine, reserve]
+
+func _on_reload_button() -> void:
+	if player:
+		player.reload_weapon()
 
 func _on_health_changed(current: float, maximum: float) -> void:
 	var r: float = current / maximum if maximum > 0.0 else 0.0
@@ -145,6 +175,10 @@ func _process(_delta: float) -> void:
 
 	var gamepad_used := _poll_gamepad()
 	_poll_keyboard_mouse(gamepad_used)
+
+	# Recarga manual: tecla R o botón X del gamepad.
+	if Input.is_action_just_pressed("reload"):
+		player.reload_weapon()
 
 	if Input.is_action_just_pressed("ui_cancel"):
 		get_tree().quit()

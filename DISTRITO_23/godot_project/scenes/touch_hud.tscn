@@ -178,5 +178,50 @@ offset_top = 25.0
 offset_right = 250.0
 offset_bottom = 55.0
 grow_horizontal = 2
-text = "[ WASD ] Moverse  |  [ Ratón + Click ] Apuntar/Disparar  |  [ Gamepad ] Stick Izq mueve · Stick Der + RT apunta/dispara  |  [ ESC ] Salir"
+text = "[ WASD ] Moverse  |  [ Ratón + Click ] Apuntar/Disparar  |  [ R ] Recargar  |  [ Gamepad ] Stick Izq mueve · Stick Der + RT dispara · X recarga  |  [ ESC ] Salir"
 horizontal_alignment = 1
+
+[node name="AmmoBox" type="Control" parent="."]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -260.0
+offset_top = -70.0
+offset_right = -60.0
+offset_bottom = -20.0
+grow_horizontal = 0
+grow_vertical = 0
+
+[node name="AmmoLabel" type="Label" parent="AmmoBox"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+text = "12 / 96"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="ReloadLabel" type="Label" parent="AmmoBox"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -22.0
+text = "RECARGANDO..."
+horizontal_alignment = 2
+modulate = Color(1, 0.85, 0.3, 1)
+
+[node name="ReloadButton" type="Button" parent="."]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -420.0
+offset_top = -150.0
+offset_right = -320.0
+offset_bottom = -100.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "RECARGAR"

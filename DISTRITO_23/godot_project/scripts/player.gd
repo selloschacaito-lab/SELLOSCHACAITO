@@ -68,6 +68,13 @@ func _physics_process(delta: float) -> void:
 	handle_recoil(delta)
 	move_and_slide()
 
+## Recarga el arma actual (llamado desde HUD, tecla R o gamepad).
+func reload_weapon() -> void:
+	if health.is_dead():
+		return
+	if weapon and weapon.has_method("start_reload"):
+		weapon.start_reload()
+
 ## Recibe daño (llamado por balas, zonas de daño, etc.)
 func take_damage(amount: float) -> void:
 	health.apply_damage(amount)
