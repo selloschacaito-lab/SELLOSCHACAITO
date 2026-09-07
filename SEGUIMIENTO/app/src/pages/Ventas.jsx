@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useOutletContext } from 'react-router-dom';
 import { db } from '../firebase/config';
 import { ref, onValue } from 'firebase/database';
-import { Settings, DollarSign, Filter, Clock, Users, AlertTriangle, Package, Activity, ArrowRight, TrendingUp, Sparkles, Crown, Calendar, PanelLeft, Bookmark, FileText } from 'lucide-react';
+import { Settings, DollarSign, Filter, Clock, Users, AlertTriangle, Package, Activity, ArrowRight, TrendingUp, Sparkles, Crown, Calendar, Bookmark, FileText } from 'lucide-react';
 import { useProfile } from '../contexts/ProfileContext';
 import SalesHistoryModal from '../components/SalesHistoryModal';
 import AuditOrdersModal from '../components/AuditOrdersModal';
@@ -46,7 +45,6 @@ function formatDuration(ms) {
 }
 
 export default function Ventas() {
-  const { toggleSidebar } = useOutletContext() || {};
   const { activeProfile } = useProfile();
   const [orders, setOrders] = useState({});
   const [loadingOrders, setLoadingOrders] = useState(true);
@@ -341,29 +339,6 @@ export default function Ventas() {
           gap: '10px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {toggleSidebar && (
-              <button 
-                onClick={toggleSidebar} 
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '10px',
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  color: '#64748b',
-                  cursor: 'pointer',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                  flexShrink: 0
-                }}
-                title="Abrir menú"
-                type="button"
-              >
-                <PanelLeft size={18} />
-              </button>
-            )}
             <h1 style={{
               fontSize: '22px',
               fontWeight: 800,

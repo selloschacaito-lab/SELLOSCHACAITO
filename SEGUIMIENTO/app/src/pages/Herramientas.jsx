@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useOutletContext } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
   Wrench,
   BadgeDollarSign,
-  Percent,
-  PanelLeft
+  Percent
 } from 'lucide-react';
 import Costos from './Costos';
 import Retenciones from './Retenciones';
@@ -36,7 +35,6 @@ const TABS = [
 ];
 
 export default function Herramientas() {
-  const { toggleSidebar } = useOutletContext() || {};
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get('tab') || 'costos';
 
@@ -88,30 +86,6 @@ export default function Herramientas() {
             gap: '12px'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              {toggleSidebar && (
-                <button 
-                  onClick={toggleSidebar} 
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '10px',
-                    background: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    color: '#64748b',
-                    cursor: 'pointer',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-                    transition: 'all 0.15s ease',
-                    flexShrink: 0
-                  }}
-                  title="Abrir menú"
-                  type="button"
-                >
-                  <PanelLeft size={18} />
-                </button>
-              )}
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{

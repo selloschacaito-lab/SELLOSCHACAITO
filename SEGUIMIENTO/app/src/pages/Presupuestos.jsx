@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useOutletContext } from 'react-router-dom';
-import { Download, FileText, Plus, Trash2, Calculator, Settings, PanelLeft } from 'lucide-react';
+import { Download, FileText, Plus, Trash2, Calculator, Settings } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { toast } from 'react-hot-toast';
@@ -8,7 +7,6 @@ import '../styles/whitestamp.css';
 import './Presupuestos.css';
 
 export default function Presupuestos() {
-  const { toggleSidebar } = useOutletContext() || {};
   const [bcvRate, setBcvRate] = useState('');
   const [dateStr, setDateStr] = useState('');
   const [quoteNumber, setQuoteNumber] = useState('');
@@ -280,16 +278,6 @@ export default function Presupuestos() {
       {/* Controles / Formulario con Scroll Interno */}
       <div className="pres-controls">
         <div className="pres-header-top">
-          {toggleSidebar && (
-            <button 
-              onClick={toggleSidebar} 
-              className="pres-sidebar-btn" 
-              title="Abrir menú"
-              type="button"
-            >
-              <PanelLeft size={18} />
-            </button>
-          )}
           <h2 className="controls-title">Presupuestos</h2>
         </div>
         

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
-import { Package, ListTodo, Users, Settings, LogOut, ChevronLeft, ClipboardList, PanelLeft, ShoppingBag, UserCircle, FileCheck, Wrench, DollarSign, BarChart3 } from 'lucide-react';
+import { Package, ListTodo, Users, Settings, LogOut, ChevronLeft, ChevronRight, ClipboardList, ShoppingBag, UserCircle, FileCheck, Wrench, DollarSign, BarChart3 } from 'lucide-react';
 import { db } from '../firebase/config';
 import { ref, onValue } from 'firebase/database';
 import { toast } from 'react-hot-toast';
@@ -15,8 +15,41 @@ function Layout() {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [pendingInvoiceCount, setPendingInvoiceCount] = useState(0);
+  const [isDesktopPointer, setIsDesktopPointer] = useState(true);
   const sidebarRef = useRef(null);
   const initialLoadRef = useRef(true);
+  const hoverTimeoutRef = useRef(null);
+
+  // Detectar si el dispositivo tiene un puntero fino con hover real (PC de escritorio)
+  // vs. una pantalla táctil (teléfono, tablet, o laptop táctil grande) — se trata todo
+  // lo táctil igual, sin importar el ancho de pantalla.
+  useEffect(() => {
+    const mql = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const update = () => setIsDesktopPointer(mql.matches);
+    update();
+    mql.addEventListener('change', update);
+    return () => mql.removeEventListener('change', update);
+  }, []);
+
+  const handleEdgeMouseEnter = () => {
+    if (!isDesktopPointer) return;
+    hoverTimeoutRef.current = setTimeout(() => {
+      setIsSidebarOpen(true);
+    }, 500);
+  };
+
+  const handleEdgeMouseLeave = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    };
+  }, []);
 
   // Escuchar órdenes de Firebase para contar facturas pendientes y alertar a Mayra
   useEffect(() => {
@@ -167,6 +200,63 @@ function Layout() {
       overflow: 'hidden',
       backgroundColor: '#f8fafc'
     }}>
+
+      {/* Borde izquierdo: en PC, franja delgada sensible al hover que abre el menú;
+          en táctil, pestañita fija con flecha para tocar y abrir */}
+      {isDesktopPointer ? (
+        <div
+          onMouseEnter={handleEdgeMouseEnter}
+          onMouseLeave={handleEdgeMouseLeave}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            bottom: 0,
+            width: '14px',
+            zIndex: 55,
+            opacity: isSidebarOpen ? 0 : 1,
+            pointerEvents: isSidebarOpen ? 'none' : 'auto',
+            transition: 'opacity 0.2s ease',
+            display: 'flex',
+            alignItems: 'center'
+          }}
+        >
+          <div style={{
+            width: '4px',
+            height: '64px',
+            marginLeft: '3px',
+            borderRadius: '0 4px 4px 0',
+            background: '#cbd5e1'
+          }} />
+        </div>
+      ) : (
+        <button
+          onClick={() => setIsSidebarOpen(true)}
+          aria-label="Abrir menú"
+          style={{
+            position: 'fixed',
+            left: 0,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 55,
+            width: '22px',
+            height: '52px',
+            borderRadius: '0 10px 10px 0',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderLeft: 'none',
+            boxShadow: '2px 0 8px rgba(0,0,0,0.08)',
+            display: isSidebarOpen ? 'none' : 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#64748b',
+            padding: 0,
+            cursor: 'pointer'
+          }}
+        >
+          <ChevronRight size={16} />
+        </button>
+      )}
 
       {/* Backdrop overlay */}
       <div
@@ -453,7 +543,7 @@ function Layout() {
           width: '100%'
         }}
       >
-        <Outlet context={{ toggleSidebar: () => setIsSidebarOpen(true) }} />
+        <Outlet context={{}} />
       </main>
 
     </div>

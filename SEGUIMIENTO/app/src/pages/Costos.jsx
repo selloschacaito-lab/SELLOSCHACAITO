@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
-import { 
-  BadgeDollarSign, 
-  RefreshCw, 
+import {
+  BadgeDollarSign,
+  RefreshCw,
   DollarSign, 
   Percent, 
   Plus, 
@@ -13,8 +12,7 @@ import {
   Check, 
   Sparkles, 
   Layers, 
-  ArrowRight,
-  PanelLeft
+  ArrowRight
 } from 'lucide-react';
 import '../styles/whitestamp.css';
 import './Costos.css';
@@ -41,8 +39,6 @@ function fmt(n, decimals = 2) {
 }
 
 export default function Costos({ isEmbedded = false }) {
-  const outletCtx = useOutletContext() || {};
-  const toggleSidebar = isEmbedded ? null : outletCtx.toggleSidebar;
   // Rate
   const [bcvRate, setBcvRate] = useState('784,6633');
   const [isFetchingRate, setIsFetchingRate] = useState(false);
@@ -259,16 +255,6 @@ export default function Costos({ isEmbedded = false }) {
         <header className="costos-header">
           <div className="costos-title-box">
             <div className="costos-header-left">
-              {toggleSidebar && (
-                <button 
-                  onClick={toggleSidebar} 
-                  className="costos-sidebar-btn" 
-                  title="Abrir menú"
-                  type="button"
-                >
-                  <PanelLeft size={18} />
-                </button>
-              )}
               <div className="costos-icon-badge">
                 <BadgeDollarSign size={24} />
               </div>

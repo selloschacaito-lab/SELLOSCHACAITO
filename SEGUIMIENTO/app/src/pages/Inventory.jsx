@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useOutletContext } from 'react-router-dom';
 import { firestoreDB, db } from '../firebase/config';
 import { collection, onSnapshot, doc, writeBatch, setDoc, deleteDoc } from 'firebase/firestore';
 import { ref, onValue } from 'firebase/database';
 import {
   Search, AlertTriangle, Plus, Edit2, Trash2, Tag,
   DollarSign, Package, Check, X, TrendingUp, Sparkles,
-  Layers, RefreshCw, PanelLeft, ChevronLeft, ChevronRight,
+  Layers, RefreshCw, ChevronLeft, ChevronRight,
   Download, ClipboardList, ClipboardCheck, Wrench
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -15,7 +14,6 @@ import { useProfile } from '../contexts/ProfileContext';
 import { downloadInventoryExcel } from '../utils/exportInventory';
 
 function Inventory({ isModal = false }) {
-  const { toggleSidebar } = useOutletContext() || {};
   const { activeProfile } = useProfile();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -560,27 +558,6 @@ function Inventory({ isModal = false }) {
           boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            {toggleSidebar && !isModal && (
-              <button 
-                onClick={toggleSidebar} 
-                style={{
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  color: '#64748b',
-                  cursor: 'pointer',
-                  padding: '8px',
-                  borderRadius: '10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.15s ease'
-                }}
-                title="Abrir menú"
-                type="button"
-              >
-                <PanelLeft size={18} />
-              </button>
-            )}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>

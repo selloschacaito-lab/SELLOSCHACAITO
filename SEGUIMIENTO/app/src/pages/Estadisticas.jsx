@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useOutletContext } from 'react-router-dom';
 import { db, firestoreDB } from '../firebase/config';
 import { ref, onValue } from 'firebase/database';
 import { collection, onSnapshot } from 'firebase/firestore';
@@ -8,7 +7,7 @@ import {
   XAxis, YAxis, Tooltip, Legend, CartesianGrid, ResponsiveContainer
 } from 'recharts';
 import {
-  PanelLeft, TrendingUp, TrendingDown, Minus, AlertTriangle,
+  TrendingUp, TrendingDown, Minus, AlertTriangle,
   Users, Package, DollarSign, ShoppingBag, Search, LayoutGrid, Boxes
 } from 'lucide-react';
 import { computeClientMetrics } from '../utils/crmUtils';
@@ -121,7 +120,6 @@ function SectionCard({ title, children }) {
 }
 
 export default function Estadisticas() {
-  const { toggleSidebar } = useOutletContext() || {};
   const [ordersMap, setOrdersMap] = useState({});
   const [clients, setClients] = useState([]);
   const [products, setProducts] = useState([]);
@@ -484,11 +482,6 @@ export default function Estadisticas() {
       {/* Header */}
       <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '20px', padding: '20px 24px', marginBottom: '18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          {toggleSidebar && (
-            <button onClick={toggleSidebar} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b', cursor: 'pointer', padding: '8px', borderRadius: '10px', display: 'flex' }} title="Abrir menú" type="button">
-              <PanelLeft size={18} />
-            </button>
-          )}
           <div>
             <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: 0 }}>Estadísticas</h1>
             <p style={{ color: '#64748b', margin: '4px 0 0', fontSize: '13px' }}>Panel general en tiempo real · {label}</p>

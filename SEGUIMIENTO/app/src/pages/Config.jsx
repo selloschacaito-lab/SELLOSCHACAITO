@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
 import { db, firestoreDB } from '../firebase/config';
 import { doc, onSnapshot, setDoc, collection, getDocs } from 'firebase/firestore';
 import { ref as rtdbRef, get as rtdbGet } from 'firebase/database';
-import { Save, RefreshCw, PanelLeft, Download, Layers, Plus, Trash2, FileSpreadsheet } from 'lucide-react';
+import { Save, RefreshCw, Download, Layers, Plus, Trash2, FileSpreadsheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { toast } from 'react-hot-toast';
 import { buildInventorySheet } from '../utils/exportInventory';
 
 function Config() {
-  const { toggleSidebar } = useOutletContext() || {};
   const [tasa, setTasa] = useState('');
   const [mayorista, setMayorista] = useState('0.80');
   const [googleReviewLink, setGoogleReviewLink] = useState('https://maps.app.goo.gl/selloschacaito');
@@ -153,30 +151,6 @@ function Config() {
         alignItems: 'center',
         gap: '16px'
       }}>
-        {toggleSidebar && (
-          <button 
-            onClick={toggleSidebar} 
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              background: '#ffffff',
-              border: '1px solid #cbd5e1',
-              color: '#64748b',
-              cursor: 'pointer',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-              transition: 'all 0.15s ease',
-              flexShrink: 0
-            }}
-            title="Abrir menú lateral"
-            type="button"
-          >
-            <PanelLeft size={18} />
-          </button>
-        )}
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
             Configuración del Sistema

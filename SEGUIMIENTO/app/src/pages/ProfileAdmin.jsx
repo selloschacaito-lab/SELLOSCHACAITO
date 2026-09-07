@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
 import { db } from '../firebase/config';
 import { ref, onValue, set, push, remove } from 'firebase/database';
-import { Plus, Trash2, Power, X, Check, Users, ShieldCheck, PanelLeft, Pencil, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Power, X, Check, Users, ShieldCheck, Pencil, Sparkles } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import ProfileCustomizerModal from '../components/ProfileCustomizerModal';
 import '../styles/whitestamp.css';
 import './ProfileAdmin.css';
 
 function ProfileAdmin() {
-  const { toggleSidebar } = useOutletContext() || {};
   const [profiles, setProfiles] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
   const [editingProfile, setEditingProfile] = useState(null);
@@ -85,16 +83,6 @@ function ProfileAdmin() {
         <header className="profile-header">
           <div className="header-info">
             <div className="header-top-row">
-              {toggleSidebar && (
-                <button 
-                  onClick={toggleSidebar} 
-                  className="sidebar-toggle-btn"
-                  title="Abrir menú lateral"
-                  type="button"
-                >
-                  <PanelLeft size={18} />
-                </button>
-              )}
               <div className="header-badge">
                 <ShieldCheck size={14} />
                 <span>Control de Accesos</span>

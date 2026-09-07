@@ -1,15 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useOutletContext } from 'react-router-dom';
 import { firestoreDB } from '../firebase/config';
 import { collection, onSnapshot } from 'firebase/firestore';
-import { Wrench, PanelLeft } from 'lucide-react';
+import { Wrench } from 'lucide-react';
 
 // Historial de salidas de inventario para el taller de reparaciones.
 // Lee la colección `inventory_movements` (escrita desde Inventory.jsx al registrar
 // una salida a taller) y filtra/ordena en el cliente para no depender de un índice
 // compuesto de Firestore — el volumen de esta colección es bajo.
 export default function SalidasTaller({ isEmbedded = false }) {
-  const { toggleSidebar } = useOutletContext() || {};
   const [movements, setMovements] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,11 +45,6 @@ export default function SalidasTaller({ isEmbedded = false }) {
           gap: '14px',
           boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
         }}>
-          {toggleSidebar && (
-            <button onClick={toggleSidebar} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b', cursor: 'pointer', padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Abrir menú" type="button">
-              <PanelLeft size={18} />
-            </button>
-          )}
           <div>
             <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
               Salidas a Taller

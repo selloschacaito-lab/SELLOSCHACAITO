@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useOutletContext } from 'react-router-dom';
 import { db } from '../firebase/config';
 import { ref, onValue, update } from 'firebase/database';
 import { useProfile } from '../contexts/ProfileContext';
@@ -7,9 +6,8 @@ import {
   FileCheck, 
   Search, 
   Copy, 
-  Check, 
-  PanelLeft, 
-  FileText, 
+  Check,
+  FileText,
   DollarSign, 
   CheckCircle2, 
   Clock, 
@@ -93,7 +91,6 @@ function getOrderTotalBs(order) {
 }
 
 export default function Facturacion() {
-  const { toggleSidebar } = useOutletContext() || {};
   const { activeProfile } = useProfile();
   const [orders, setOrders] = useState({});
   const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'invoiced' | 'unpaid' | 'all'
@@ -651,16 +648,6 @@ Quedamos a su disposición para la emisión de su factura fiscal. ¡Muchas graci
         {/* HEADER */}
         <header className="facturacion-header">
           <div className="facturacion-header-left">
-            {toggleSidebar && (
-              <button 
-                onClick={toggleSidebar} 
-                className="facturacion-sidebar-btn" 
-                title="Abrir menú"
-                type="button"
-              >
-                <PanelLeft size={18} />
-              </button>
-            )}
             <div className="facturacion-title-box">
               <h1>
                 <FileCheck size={24} color="#10b981" /> Facturación Fiscal & Caja

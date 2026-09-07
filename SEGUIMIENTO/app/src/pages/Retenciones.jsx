@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
-import { Calculator as CalcIcon, DollarSign, Percent, ArrowRightLeft, PanelLeft } from 'lucide-react';
+import { Calculator as CalcIcon, DollarSign, Percent, ArrowRightLeft } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import '../styles/whitestamp.css';
 
@@ -29,8 +28,6 @@ function parseFlexNum(v) {
 }
 
 export default function Retenciones({ isEmbedded = false }) {
-  const outletCtx = useOutletContext() || {};
-  const toggleSidebar = isEmbedded ? null : outletCtx.toggleSidebar;
   const [bcvRate, setBcvRate] = useState('');
   const [inputAmount, setInputAmount] = useState('');
   const [inputType, setInputType] = useState('gross'); // 'gross', 'net', 'audit'
@@ -227,29 +224,6 @@ export default function Retenciones({ isEmbedded = false }) {
         boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {toggleSidebar && (
-            <button 
-              onClick={toggleSidebar} 
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '36px',
-                height: '36px',
-                borderRadius: '8px',
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                color: '#64748b',
-                cursor: 'pointer',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                flexShrink: 0
-              }}
-              title="Abrir menú"
-              type="button"
-            >
-              <PanelLeft size={18} />
-            </button>
-          )}
           <div>
             <h2 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0, color: '#0f172a', letterSpacing: '-0.01em' }}>Calculadora de Retenciones</h2>
             <p style={{ color: '#64748b', margin: '3px 0 0 0', fontSize: '0.85rem' }}>Calcula facturas, retenciones y descifra pagos de clientes.</p>

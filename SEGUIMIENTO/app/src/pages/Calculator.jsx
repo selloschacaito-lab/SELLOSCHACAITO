@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useOutletContext } from 'react-router-dom';
 import { 
   DollarSign, 
   RefreshCcw, 
   Coins, 
   Download, 
   Copy, 
-  Send, 
-  PanelLeft, 
-  TrendingUp, 
+  Send,
+  TrendingUp,
   Receipt, 
   Percent, 
   ExternalLink,
@@ -39,8 +37,6 @@ function fmt(n, decimals = 2) {
 }
 
 export default function Calculator({ isEmbedded = false }) {
-  const outletCtx = useOutletContext() || {};
-  const toggleSidebar = isEmbedded ? null : outletCtx.toggleSidebar;
   const [usdTotal, setUsdTotal] = useState('16,00');
   const [bcvRate, setBcvRate] = useState('784,6633');
   const [bcvEuroRate, setBcvEuroRate] = useState('850,2540');
@@ -267,16 +263,6 @@ Dirección:`;
         {/* HEADER WHITESTAMP */}
         <header className="calc-header">
           <div className="calc-header-left">
-            {toggleSidebar && (
-              <button 
-                onClick={toggleSidebar} 
-                className="calc-sidebar-btn" 
-                title="Abrir menú"
-                type="button"
-              >
-                <PanelLeft size={18} />
-              </button>
-            )}
             <div className="calc-title-box">
               <h1>
                 <DollarSign size={18} color="#10b981" /> Cambio

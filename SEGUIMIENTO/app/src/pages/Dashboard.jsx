@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useOutletContext } from 'react-router-dom';
 import { db } from '../firebase/config';
 import { ref, onValue } from 'firebase/database';
-import { Package, Search, Bell, MapPin, PanelLeft, FolderArchive, Plus, Sparkles, ChevronDown, FileText, ShoppingCart, Users, X } from 'lucide-react';
+import { Package, Search, Bell, MapPin, FolderArchive, Plus, Sparkles, ChevronDown, FileText, ShoppingCart, Users, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import KanbanBoard from '../components/KanbanBoard';
 import OrderModal from '../components/OrderModal';
@@ -14,7 +13,6 @@ import Clients from './Clients';
 import Inventory from './Inventory';
 
 function Dashboard() {
-  const { toggleSidebar } = useOutletContext();
   const [orders, setOrders] = useState({});
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -152,15 +150,8 @@ function Dashboard() {
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <header className="glass app-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%' }}>
-          {/* Sidebar toggle + Logo compacto */}
+          {/* Logo compacto */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-            <button 
-              onClick={toggleSidebar}
-              style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
-              title="Abrir menú"
-            >
-              <PanelLeft size={18} />
-            </button>
             <img src="/logo-sc.png?v=1" alt="Logo" style={{ width: '1.75rem', height: '1.75rem', objectFit: 'contain', borderRadius: '50%' }} />
             <span className="hide-on-mobile" style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)', whiteSpace: 'nowrap' }}>Sellos Chacaito</span>
           </div>
