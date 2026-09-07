@@ -330,9 +330,8 @@ Dirección:`;
         {/* PESTAÑAS */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '18px', flexWrap: 'wrap' }}>
           {[
-            { id: 'conversor', label: 'Conversor $ ⇄ Bs', icon: DollarSign },
-            { id: 'delivery', label: 'Delivery (Euros)', icon: Truck },
-            { id: 'precios', label: 'Lista de Precios & Descuento', icon: Percent }
+            { id: 'conversor', label: 'Conversor y Precios', icon: DollarSign },
+            { id: 'delivery', label: 'Delivery (Euros)', icon: Truck }
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -366,7 +365,10 @@ Dirección:`;
         <div className="calc-grid">
 
           {activeTab === 'conversor' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '640px' }}>
+          <div style={{ display: 'flex', gap: '20px', width: '100%', flexWrap: 'wrap' }}>
+
+          {/* Columna Izquierda: Conversor Principal */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: '1 1 460px' }}>
 
             <article className="calc-card">
               <div className="calc-card-title">
@@ -484,6 +486,107 @@ Dirección:`;
 
             </article>
           </div>
+
+          {/* Columna Derecha: Lista de Precios + Descuento 20% */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: '1 1 340px' }}>
+            {/* Lista Rápida de Precios */}
+            <article className="calc-card">
+              <div className="calc-card-title">
+                <span>Lista Rápida de Precios</span>
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>6 casillas</span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {prices.map((p, i) => (
+                  <div key={i} className="calc-price-row">
+                    <span className="calc-price-num">{i + 1}</span>
+                    <div className="calc-price-input-shell">
+                      <input
+                        type="text"
+                        className="calc-price-input"
+                        inputMode="decimal"
+                        value={p}
+                        onChange={e => updatePrice(i, e.target.value)}
+                        onBlur={() => {
+                          const np = [...prices];
+                          np[i] = fmt(parseNum(np[i]));
+                          setPrices(np);
+                          localStorage.setItem('sc_prices', JSON.stringify(np));
+                        }}
+                        onFocus={e => e.target.select()}
+                        placeholder="0,00"
+                      />
+                      <span style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 700 }}>$</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--ws-border-subtle)', paddingTop: '14px' }}>
+                <div>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Total Lista</span>
+                  <div style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a' }}>${fmt(pricesTotalNum)}</div>
+                </div>
+
+                <button
+                  type="button"
+                  className="calc-btn-secondary"
+                  style={{ padding: '8px 14px', fontSize: '12px' }}
+                  onClick={usePricesTotal}
+                >
+                  Usar Total
+                </button>
+              </div>
+            </article>
+
+            {/* Descuento 20% */}
+            <article className="calc-card">
+              <div className="calc-card-title">
+                <span>Calcular 20% Descuento</span>
+                <Percent size={16} color="#10b981" />
+              </div>
+
+              <div className="calc-input-group">
+                <label className="calc-input-label">Monto Base ($)</label>
+                <div className="calc-input-shell" style={{ height: '44px' }}>
+                  <input
+                    type="text"
+                    className="calc-big-input"
+                    style={{ fontSize: '16px' }}
+                    inputMode="decimal"
+                    value={discountBase}
+                    onChange={e => setDiscountBase(e.target.value)}
+                    onBlur={() => setDiscountBase(fmt(parseNum(discountBase)))}
+                    onFocus={e => e.target.select()}
+                  />
+                  <span className="calc-suffix" style={{ fontSize: '14px' }}>$</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--ws-bg-canvas)', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--ws-border-subtle)' }}>
+                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Ahorro 20%:</span>
+                <b style={{ color: '#dc2626', fontSize: '14px' }}>-${fmt(discountAmountNum)}</b>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--ws-border-subtle)', paddingTop: '14px' }}>
+                <div>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Total con Descuento</span>
+                  <div style={{ fontSize: '18px', fontWeight: 900, color: '#10b981' }}>${fmt(discountFinalNum)}</div>
+                </div>
+
+                <button
+                  type="button"
+                  className="calc-btn-secondary"
+                  style={{ padding: '8px 14px', fontSize: '12px' }}
+                  onClick={useDiscountTotal}
+                >
+                  Usar Total
+                </button>
+              </div>
+            </article>
+          </div>
+
+          </div>
           )}
 
           {activeTab === 'delivery' && (
@@ -599,106 +702,6 @@ Dirección:`;
                 </button>
               </div>
 
-            </article>
-          </div>
-          )}
-
-          {activeTab === 'precios' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '640px' }}>
-            {/* Lista Rápida de Precios */}
-            <article className="calc-card">
-              <div className="calc-card-title">
-                <span>Lista Rápida de Precios</span>
-                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>6 casillas</span>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {prices.map((p, i) => (
-                  <div key={i} className="calc-price-row">
-                    <span className="calc-price-num">{i + 1}</span>
-                    <div className="calc-price-input-shell">
-                      <input 
-                        type="text" 
-                        className="calc-price-input"
-                        inputMode="decimal"
-                        value={p}
-                        onChange={e => updatePrice(i, e.target.value)}
-                        onBlur={() => {
-                          const np = [...prices];
-                          np[i] = fmt(parseNum(np[i]));
-                          setPrices(np);
-                          localStorage.setItem('sc_prices', JSON.stringify(np));
-                        }}
-                        onFocus={e => e.target.select()}
-                        placeholder="0,00"
-                      />
-                      <span style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 700 }}>$</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--ws-border-subtle)', paddingTop: '14px' }}>
-                <div>
-                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Total Lista</span>
-                  <div style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a' }}>${fmt(pricesTotalNum)}</div>
-                </div>
-
-                <button 
-                  type="button"
-                  className="calc-btn-secondary"
-                  style={{ padding: '8px 14px', fontSize: '12px' }}
-                  onClick={usePricesTotal}
-                >
-                  Usar Total
-                </button>
-              </div>
-            </article>
-
-            {/* Descuento 20% */}
-            <article className="calc-card">
-              <div className="calc-card-title">
-                <span>Calcular 20% Descuento</span>
-                <Percent size={16} color="#10b981" />
-              </div>
-
-              <div className="calc-input-group">
-                <label className="calc-input-label">Monto Base ($)</label>
-                <div className="calc-input-shell" style={{ height: '44px' }}>
-                  <input 
-                    type="text" 
-                    className="calc-big-input"
-                    style={{ fontSize: '16px' }}
-                    inputMode="decimal"
-                    value={discountBase}
-                    onChange={e => setDiscountBase(e.target.value)}
-                    onBlur={() => setDiscountBase(fmt(parseNum(discountBase)))}
-                    onFocus={e => e.target.select()}
-                  />
-                  <span className="calc-suffix" style={{ fontSize: '14px' }}>$</span>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--ws-bg-canvas)', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--ws-border-subtle)' }}>
-                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Ahorro 20%:</span>
-                <b style={{ color: '#dc2626', fontSize: '14px' }}>-${fmt(discountAmountNum)}</b>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--ws-border-subtle)', paddingTop: '14px' }}>
-                <div>
-                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Total con Descuento</span>
-                  <div style={{ fontSize: '18px', fontWeight: 900, color: '#10b981' }}>${fmt(discountFinalNum)}</div>
-                </div>
-
-                <button 
-                  type="button"
-                  className="calc-btn-secondary"
-                  style={{ padding: '8px 14px', fontSize: '12px' }}
-                  onClick={useDiscountTotal}
-                >
-                  Usar Total
-                </button>
-              </div>
             </article>
           </div>
           )}
