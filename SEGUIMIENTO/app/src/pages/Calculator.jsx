@@ -279,56 +279,46 @@ Dirección:`;
             )}
             <div className="calc-title-box">
               <h1>
-                <DollarSign size={24} color="#10b981" /> Calculadora de Cambio
+                <DollarSign size={18} color="#10b981" /> Cambio
               </h1>
-              <p>Conversión instantánea en Bolívares y Dólares según tasa oficial BCV</p>
             </div>
           </div>
 
-          {/* Tasas Oficiales BCV (USD & EUR) */}
-          <div className="calc-rate-badge" style={{ gap: '14px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', color: '#64748b' }}>
-                BCV Dólar
-              </span>
-              <span className="calc-rate-num" style={{ fontSize: '15px' }}>{bcvRate} <span style={{ fontSize: '11px', fontWeight: 700 }}>Bs/$</span></span>
-            </div>
+          {/* Tasas Oficiales BCV (USD & EUR) — compactas, en una sola línea */}
+          <div className="calc-rate-badge">
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>
+              $ <b className="calc-rate-num">{bcvRate}</b>
+            </span>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#047857' }}>
+              € <b className="calc-rate-num" style={{ color: '#047857' }}>{bcvEuroRate}</b>
+            </span>
 
-            <div style={{ width: '1px', background: '#e2e8f0', height: '28px' }} />
-
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', color: '#047857' }}>
-                BCV Euro
-              </span>
-              <span className="calc-rate-num" style={{ fontSize: '15px', color: '#047857' }}>{bcvEuroRate} <span style={{ fontSize: '11px', fontWeight: 700 }}>Bs/€</span></span>
-            </div>
-
-            <div style={{ display: 'flex', gap: '4px', marginLeft: '4px' }}>
-              <button 
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <button
                 type="button"
                 className="calc-btn-secondary"
-                style={{ padding: '6px 10px', fontSize: '12px' }}
+                style={{ padding: '4px 7px' }}
                 onClick={fetchBCV}
                 disabled={isFetchingRate}
                 title="Actualizar tasas oficiales"
               >
-                <RefreshCcw size={14} className={isFetchingRate ? 'animate-spin' : ''} />
+                <RefreshCcw size={12} className={isFetchingRate ? 'animate-spin' : ''} />
               </button>
-              <button 
+              <button
                 type="button"
                 className="calc-btn-secondary"
-                style={{ padding: '6px 10px', fontSize: '12px' }}
+                style={{ padding: '4px 7px' }}
                 onClick={() => setShowHistoryModal(true)}
                 title="Ver historial de tasas"
               >
-                <History size={14} />
+                <History size={12} />
               </button>
             </div>
           </div>
         </header>
 
         {/* PESTAÑAS */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '18px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
           {[
             { id: 'conversor', label: 'Conversor y Precios', icon: DollarSign },
             { id: 'delivery', label: 'Delivery (Euros)', icon: Truck }
@@ -343,19 +333,19 @@ Dirección:`;
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '7px',
-                  padding: '9px 16px',
-                  borderRadius: '10px',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
                   border: isActive ? '1.5px solid #10b981' : '1px solid #e2e8f0',
                   background: isActive ? '#ecfdf5' : '#ffffff',
                   color: isActive ? '#065f46' : '#64748b',
-                  fontSize: '13px',
+                  fontSize: '12px',
                   fontWeight: isActive ? 800 : 700,
                   cursor: 'pointer',
                   transition: 'all 0.15s ease'
                 }}
               >
-                <Icon size={15} /> {tab.label}
+                <Icon size={13} /> {tab.label}
               </button>
             );
           })}
@@ -365,10 +355,10 @@ Dirección:`;
         <div className="calc-grid">
 
           {activeTab === 'conversor' && (
-          <div style={{ display: 'flex', gap: '20px', width: '100%', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '10px', width: '100%', flexWrap: 'wrap' }}>
 
           {/* Columna Izquierda: Conversor Principal */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: '1 1 460px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: '1 1 460px' }}>
 
             <article className="calc-card">
               <div className="calc-card-title">
@@ -435,7 +425,7 @@ Dirección:`;
                   className="calc-btn-whatsapp"
                   onClick={handleSendWhatsApp}
                 >
-                  <Send size={16} /> Enviar Combo por WA
+                  <Send size={14} /> Enviar Combo por WA
                 </button>
 
                 <button
@@ -443,7 +433,7 @@ Dirección:`;
                   className="calc-btn-primary"
                   onClick={handleCopySummary}
                 >
-                  <Copy size={16} /> Copiar Cotización Completa
+                  <Copy size={14} /> Copiar Cotización Completa
                 </button>
               </div>
 
@@ -467,17 +457,17 @@ Dirección:`;
               <div style={{
                 background: '#f8fafc',
                 border: '1px solid #e2e8f0',
-                borderRadius: '12px',
-                padding: '10px 14px',
-                fontSize: '12px',
+                borderRadius: '10px',
+                padding: '6px 10px',
+                fontSize: '10.5px',
                 color: '#334155',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '3px'
+                gap: '1px'
               }}>
-                <div style={{ fontWeight: 800, color: '#0f172a', display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                <div style={{ fontWeight: 800, color: '#0f172a', display: 'flex', justifyContent: 'space-between', marginBottom: '1px' }}>
                   <span>🏦 Banesco (Pago Móvil / Transferencia):</span>
-                  <span style={{ fontSize: '11px', color: '#10b981', fontWeight: 800 }}>Sellos Chacaíto</span>
+                  <span style={{ fontSize: '10px', color: '#10b981', fontWeight: 800 }}>Sellos Chacaíto</span>
                 </div>
                 <div>• <strong>Teléfono:</strong> 04143256743</div>
                 <div>• <strong>RIF:</strong> J 315705680</div>
@@ -488,7 +478,7 @@ Dirección:`;
           </div>
 
           {/* Columna Derecha: Lista de Precios + Descuento 20% */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: '1 1 340px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: '1 1 340px' }}>
             {/* Lista Rápida de Precios */}
             <article className="calc-card">
               <div className="calc-card-title">
@@ -496,7 +486,7 @@ Dirección:`;
                 <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>6 casillas</span>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {prices.map((p, i) => (
                   <div key={i} className="calc-price-row">
                     <span className="calc-price-num">{i + 1}</span>
@@ -522,16 +512,15 @@ Dirección:`;
                 ))}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--ws-border-subtle)', paddingTop: '14px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--ws-border-subtle)', paddingTop: '8px' }}>
                 <div>
-                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Total Lista</span>
-                  <div style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a' }}>${fmt(pricesTotalNum)}</div>
+                  <span style={{ fontSize: '10px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Total Lista</span>
+                  <div style={{ fontSize: '15px', fontWeight: 900, color: '#0f172a' }}>${fmt(pricesTotalNum)}</div>
                 </div>
 
                 <button
                   type="button"
                   className="calc-btn-secondary"
-                  style={{ padding: '8px 14px', fontSize: '12px' }}
                   onClick={usePricesTotal}
                 >
                   Usar Total
@@ -543,41 +532,39 @@ Dirección:`;
             <article className="calc-card">
               <div className="calc-card-title">
                 <span>Calcular 20% Descuento</span>
-                <Percent size={16} color="#10b981" />
+                <Percent size={14} color="#10b981" />
               </div>
 
               <div className="calc-input-group">
                 <label className="calc-input-label">Monto Base ($)</label>
-                <div className="calc-input-shell" style={{ height: '44px' }}>
+                <div className="calc-input-shell">
                   <input
                     type="text"
                     className="calc-big-input"
-                    style={{ fontSize: '16px' }}
                     inputMode="decimal"
                     value={discountBase}
                     onChange={e => setDiscountBase(e.target.value)}
                     onBlur={() => setDiscountBase(fmt(parseNum(discountBase)))}
                     onFocus={e => e.target.select()}
                   />
-                  <span className="calc-suffix" style={{ fontSize: '14px' }}>$</span>
+                  <span className="calc-suffix">$</span>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--ws-bg-canvas)', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--ws-border-subtle)' }}>
-                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Ahorro 20%:</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--ws-bg-canvas)', padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--ws-border-subtle)' }}>
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>Ahorro 20%:</span>
                 <b style={{ color: '#dc2626', fontSize: '14px' }}>-${fmt(discountAmountNum)}</b>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--ws-border-subtle)', paddingTop: '14px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--ws-border-subtle)', paddingTop: '8px' }}>
                 <div>
-                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Total con Descuento</span>
-                  <div style={{ fontSize: '18px', fontWeight: 900, color: '#10b981' }}>${fmt(discountFinalNum)}</div>
+                  <span style={{ fontSize: '10px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Total con Descuento</span>
+                  <div style={{ fontSize: '15px', fontWeight: 900, color: '#10b981' }}>${fmt(discountFinalNum)}</div>
                 </div>
 
                 <button
                   type="button"
                   className="calc-btn-secondary"
-                  style={{ padding: '8px 14px', fontSize: '12px' }}
                   onClick={useDiscountTotal}
                 >
                   Usar Total
@@ -590,27 +577,27 @@ Dirección:`;
           )}
 
           {activeTab === 'delivery' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '640px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '640px' }}>
             {/* SECCIÓN DELIVERY MOTORIZADO (EUROS / ALEXANDER) */}
             <article className="calc-card" style={{ border: '1.5px solid #a7f3d0', background: '#ffffff' }}>
               <div className="calc-card-title">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ background: '#ecfdf5', color: '#10b981', padding: '6px', borderRadius: '8px', display: 'flex' }}>
-                    <Truck size={18} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ background: '#ecfdf5', color: '#10b981', padding: '4px', borderRadius: '6px', display: 'flex' }}>
+                    <Truck size={14} />
                   </div>
                   <div>
-                    <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '15px' }}>Cobro de Delivery (Euros)</span>
-                    <span style={{ display: 'block', fontSize: '11px', color: '#64748b', fontWeight: 600 }}>Motorizado: Alexander</span>
+                    <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '13px' }}>Cobro de Delivery (Euros)</span>
+                    <span style={{ display: 'block', fontSize: '10px', color: '#64748b', fontWeight: 600 }}>Motorizado: Alexander</span>
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 800, textTransform: 'uppercase' }}>Tasa Euro BCV</span>
-                  <div style={{ fontSize: '13px', fontWeight: 900, color: '#047857' }}>{bcvEuroRate} <span style={{ fontSize: '10px' }}>Bs/€</span></div>
+                  <span style={{ fontSize: '9px', color: '#64748b', fontWeight: 800, textTransform: 'uppercase' }}>Tasa Euro BCV</span>
+                  <div style={{ fontSize: '12px', fontWeight: 900, color: '#047857' }}>{bcvEuroRate} <span style={{ fontSize: '9px' }}>Bs/€</span></div>
                 </div>
               </div>
 
               {/* Botones rápidos de montos en Euros */}
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
                 {['3,00', '4,00', '5,00', '6,00', '8,00', '10,00'].map(amt => {
                   const isSelected = parseNum(euroDeliveryAmount) === parseNum(amt);
                   return (
@@ -619,12 +606,12 @@ Dirección:`;
                       type="button"
                       onClick={() => handleEuroChange(amt)}
                       style={{
-                        padding: '6px 12px',
-                        borderRadius: '8px',
+                        padding: '4px 9px',
+                        borderRadius: '7px',
                         border: isSelected ? '1.5px solid #10b981' : '1px solid #e2e8f0',
                         background: isSelected ? '#ecfdf5' : '#f8fafc',
                         color: isSelected ? '#065f46' : '#475569',
-                        fontSize: '12px',
+                        fontSize: '11px',
                         fontWeight: 800,
                         cursor: 'pointer',
                         transition: 'all 0.15s ease'
@@ -640,8 +627,8 @@ Dirección:`;
               <div className="calc-input-group">
                 <label className="calc-input-label">Monto del Delivery en Euros (€)</label>
                 <div className="calc-input-shell" style={{ borderColor: '#a7f3d0' }}>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     className="calc-big-input"
                     inputMode="decimal"
                     value={euroDeliveryAmount}
@@ -654,9 +641,9 @@ Dirección:`;
               </div>
 
               {/* Total Delivery en Bolívares */}
-              <div className="calc-result-box" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', padding: '12px 14px' }}>
+              <div className="calc-result-box" style={{ background: '#ecfdf5', borderColor: '#a7f3d0' }}>
                 <span className="calc-result-label" style={{ color: '#065f46' }}>Total Delivery a Transferir</span>
-                <div className="calc-result-val" style={{ color: '#047857', fontSize: '22px' }}>
+                <div className="calc-result-val" style={{ color: '#047857' }}>
                   Bs. {fmt(deliveryBsTotalNum)}
                 </div>
               </div>
@@ -665,17 +652,17 @@ Dirección:`;
               <div style={{
                 background: '#f8fafc',
                 border: '1px solid #e2e8f0',
-                borderRadius: '12px',
-                padding: '12px 14px',
+                borderRadius: '10px',
+                padding: '6px 10px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '5px',
-                fontSize: '12.5px',
+                gap: '1px',
+                fontSize: '10.5px',
                 color: '#334155'
               }}>
-                <div style={{ fontWeight: 800, color: '#0f172a', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                <div style={{ fontWeight: 800, color: '#0f172a', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1px' }}>
                   <span>Datos de Pago Móvil (Alexander):</span>
-                  <span style={{ fontSize: '11px', background: '#e0f2fe', color: '#0284c7', fontWeight: 800, padding: '2px 8px', borderRadius: '999px' }}>Motorizado</span>
+                  <span style={{ fontSize: '10px', background: '#e0f2fe', color: '#0284c7', fontWeight: 800, padding: '1px 7px', borderRadius: '999px' }}>Motorizado</span>
                 </div>
                 <div>🏦 <strong>Banco:</strong> BANCO DE VENEZUELA (0102)</div>
                 <div>🪪 <strong>C.I.:</strong> 13.739.158</div>
@@ -684,21 +671,21 @@ Dirección:`;
               </div>
 
               {/* Botones de Acción Delivery */}
-              <div className="calc-actions-grid" style={{ marginTop: '8px' }}>
-                <button 
+              <div className="calc-actions-grid">
+                <button
                   type="button"
                   className="calc-btn-whatsapp"
                   onClick={handleSendDeliveryEuroWhatsApp}
                 >
-                  <Send size={16} /> Enviar a Cliente por WA
+                  <Send size={14} /> Enviar a Cliente por WA
                 </button>
 
-                <button 
+                <button
                   type="button"
                   className="calc-btn-primary"
                   onClick={handleCopyDeliveryEuro}
                 >
-                  <Copy size={16} /> Copiar Datos de Delivery
+                  <Copy size={14} /> Copiar Datos de Delivery
                 </button>
               </div>
 
