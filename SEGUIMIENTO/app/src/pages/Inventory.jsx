@@ -28,6 +28,9 @@ function Inventory({ isModal = false }) {
   const [countFilter, setCountFilter] = useState('ALL'); // 'ALL' | 'PENDIENTE' | 'CONTADO'
   const countModeActive = countSession?.estado === 'activa';
 
+  // Motivo al subir stock (compra nueva vs. corrección de conteo)
+  const [pendingIncrease, setPendingIncrease] = useState(null); // { product, newQty }
+
   // Salida de Inventario para Taller (reparaciones)
   const [workshopExitProduct, setWorkshopExitProduct] = useState(null);
   const [workshopExitQty, setWorkshopExitQty] = useState('');
@@ -199,20 +202,15 @@ function Inventory({ isModal = false }) {
     return { contados, total: products.length };
   }, [products, countModeActive, countSession]);
 
-  // Quick Direct Stock Update (+ / -)
-  const handleDirectUpdate = async (product, newQty) => {
-    if (isNaN(newQty) || newQty < 0) {
-      toast.error('Cantidad inválida');
-      return;
-    }
+  // Quick Direct Stock Update (+ / -). Si el stock SUBE, se pregunta el motivo
+  // (compra nueva vs. corrección) para que el análisis de "cuánto entra vs.
+  // cuánto sale" en Estadísticas sea exacto, en vez de asumir que todo "+" es compra.
+  const commitStockChange = async (product, newQty, motivo) => {
     const currentQty = product.cantidad ?? 0;
-    if (newQty === currentQty) return;
-
     const diff = newQty - currentQty;
     const action = diff > 0 ? 'add' : 'subtract';
     const absDiff = Math.abs(diff);
 
-    // Optimistic UI update
     setProducts(prev => prev.map(p => p.id === product.id ? { ...p, cantidad: newQty } : p));
 
     try {
@@ -228,7 +226,8 @@ function Inventory({ isModal = false }) {
         cantidad: absDiff,
         stock_anterior: currentQty,
         stock_nuevo: newQty,
-        motivo: 'Ajuste rápido desde inventario',
+        motivo: motivo || 'Ajuste rápido desde inventario',
+        motivoEntrada: action === 'add' ? motivo : null,
         fecha: new Date().toISOString()
       });
 
@@ -238,6 +237,23 @@ function Inventory({ isModal = false }) {
       console.error(error);
       toast.error('Error actualizando stock');
     }
+  };
+
+  const handleDirectUpdate = (product, newQty) => {
+    if (isNaN(newQty) || newQty < 0) {
+      toast.error('Cantidad inválida');
+      return;
+    }
+    const currentQty = product.cantidad ?? 0;
+    if (newQty === currentQty) return;
+
+    if (newQty > currentQty) {
+      // Sube el stock: preguntar el motivo antes de guardar
+      setPendingIncrease({ product, newQty });
+      return;
+    }
+
+    commitStockChange(product, newQty, 'Ajuste rápido desde inventario');
   };
 
   // Iniciar un nuevo conteo físico de inventario
@@ -1788,6 +1804,55 @@ function Inventory({ isModal = false }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ===================== MODAL: MOTIVO AL SUBIR STOCK ===================== */}
+      {pendingIncrease && createPortal(
+        <div
+          className="modal-overlay"
+          onClick={() => setPendingIncrease(null)}
+          style={{ background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', zIndex: 1100 }}
+        >
+          <div
+            className="modal-content"
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#ffffff', borderRadius: '20px', border: '1px solid #e2e8f0',
+              maxWidth: '380px', width: '95%', padding: '22px'
+            }}
+          >
+            <h3 style={{ margin: '0 0 6px', fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>
+              ¿Por qué sube el stock?
+            </h3>
+            <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#64748b' }}>
+              {pendingIncrease.product.nombre}: {pendingIncrease.product.cantidad ?? 0} → {pendingIncrease.newQty}
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => { commitStockChange(pendingIncrease.product, pendingIncrease.newQty, 'Compra nueva'); setPendingIncrease(null); }}
+                style={{ padding: '12px', borderRadius: '10px', border: 'none', background: '#10b981', color: '#fff', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}
+              >
+                📦 Compra nueva (repuse mercancía)
+              </button>
+              <button
+                type="button"
+                onClick={() => { commitStockChange(pendingIncrease.product, pendingIncrease.newQty, 'Corrección de conteo'); setPendingIncrease(null); }}
+                style={{ padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#334155', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}
+              >
+                🔧 Corrección (estaba mal contado)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingIncrease(null)}
+                style={{ padding: '10px', borderRadius: '10px', border: 'none', background: 'none', color: '#94a3b8', fontWeight: 700, fontSize: '12.5px', cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>,
         document.body

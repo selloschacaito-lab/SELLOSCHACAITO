@@ -9,7 +9,7 @@ import {
 } from 'recharts';
 import {
   PanelLeft, TrendingUp, TrendingDown, Minus, AlertTriangle,
-  Users, Package, DollarSign, ShoppingBag
+  Users, Package, DollarSign, ShoppingBag, Search, LayoutGrid, Boxes
 } from 'lucide-react';
 import { computeClientMetrics } from '../utils/crmUtils';
 import { getPeriodBounds, isWithin, compareMetric, PERIOD_OPTIONS } from '../utils/periodUtils';
@@ -25,6 +25,38 @@ const CANCEL_REASON_LABELS = {
 };
 
 const COLORS = ['#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899'];
+
+// Colores reconocidos en el nombre del producto (ej. "TRODAT CLASSIC 4911 AZUL CIELO").
+// Se busca la primera coincidencia y se agrupa por el color base (ignora
+// modificadores como "pastel"/"neón"/"cielo" para no fragmentar demasiado).
+const COLOR_WORDS = [
+  { match: /AZUL/, label: 'Azul' },
+  { match: /VERDE/, label: 'Verde' },
+  { match: /ROJO/, label: 'Rojo' },
+  { match: /NEGRO/, label: 'Negro' },
+  { match: /BLANCO/, label: 'Blanco' },
+  { match: /GRIS/, label: 'Gris' },
+  { match: /AMARILLO/, label: 'Amarillo' },
+  { match: /NARANJA/, label: 'Naranja' },
+  { match: /VIOLETA/, label: 'Violeta' },
+  { match: /MORADO/, label: 'Morado' },
+  { match: /LILA/, label: 'Lila' },
+  { match: /FUCSIA/, label: 'Fucsia' },
+  { match: /DORADO/, label: 'Dorado' },
+  { match: /PLATEADO/, label: 'Plateado' },
+  { match: /TURQUESA/, label: 'Turquesa' },
+  { match: /AGUAMARINA/, label: 'Aguamarina' },
+  { match: /CREMA/, label: 'Crema' },
+  { match: /ROSA(DO)?/, label: 'Rosado' }
+];
+
+function extractColor(nombre) {
+  const n = (nombre || '').toUpperCase();
+  for (const c of COLOR_WORDS) {
+    if (c.match.test(n)) return c.label;
+  }
+  return null;
+}
 
 // Mismo criterio que usan Ventas.jsx / AuditOrdersModal.jsx para saber si un
 // pedido ya se convirtió en venta (no se reinventa, se replica la fórmula).
@@ -95,6 +127,10 @@ export default function Estadisticas() {
   const [products, setProducts] = useState([]);
   const [movements, setMovements] = useState([]);
   const [periodKey, setPeriodKey] = useState('mes');
+  const [activeTab, setActiveTab] = useState('general'); // 'general' | 'productos'
+  const [productSearch, setProductSearch] = useState('');
+  const [productCategoryFilter, setProductCategoryFilter] = useState('ALL');
+  const [compareProductId, setCompareProductId] = useState('');
 
   useEffect(() => {
     const unsub = onValue(ref(db, 'orders'), (snap) => setOrdersMap(snap.val() || {}));
@@ -280,6 +316,151 @@ export default function Estadisticas() {
     return { totalValue, lowStockCount: lowStock.length, lowStock, tallerUnits };
   }, [products, movements, currentStart, currentEnd]);
 
+  // ===================== ANÁLISIS DE PRODUCTOS =====================
+  const productCategories = useMemo(() => {
+    const set = new Set();
+    products.forEach(p => set.add((p.categoria || 'SIN CATEGORÍA').trim().toUpperCase()));
+    return Array.from(set).sort();
+  }, [products]);
+
+  const productAnalysis = useMemo(() => {
+    // Solo ventas ya pagadas dentro del período, con sus items
+    const paidInPeriod = ordersInPeriod.filter(isPaidOrder);
+
+    // Acumuladores por producto
+    const perProduct = {}; // key: productId || nombre
+    const perColor = {};
+    const perProductAdvisor = {}; // key: productKey -> { alvaro, kriz }
+
+    paidInPeriod.forEach(o => {
+      const isWholesaleOrder = o.clientType === 'mayorista';
+      const items = Array.isArray(o.items) ? o.items : [];
+      items.forEach(it => {
+        const nombre = (it.nombre || it.name || 'Sin nombre').trim().toUpperCase();
+        const key = it.productId && it.productId !== 'custom' ? it.productId : nombre;
+        const qty = Number(it.cantidad || it.quantity || 1);
+        const precio = Number(it.precioUSD ?? it.precio ?? 0);
+
+        if (!perProduct[key]) {
+          perProduct[key] = { key, nombre, unidades: 0, revenue: 0, unidadesDetal: 0, unidadesMayorista: 0 };
+        }
+        perProduct[key].unidades += qty;
+        perProduct[key].revenue += qty * precio;
+        if (isWholesaleOrder) perProduct[key].unidadesMayorista += qty;
+        else perProduct[key].unidadesDetal += qty;
+
+        const color = extractColor(nombre);
+        if (color) perColor[color] = (perColor[color] || 0) + qty;
+
+        if (!perProductAdvisor[key]) perProductAdvisor[key] = { nombre, alvaro: 0, kriz: 0 };
+        if (matchAdvisor(o, 'ALVARO')) perProductAdvisor[key].alvaro += qty;
+        else if (matchAdvisor(o, 'KRIZ')) perProductAdvisor[key].kriz += qty;
+      });
+    });
+
+    // Filtrar por categoría/búsqueda usando el catálogo de productos (para costo y para
+    // incluir productos con 0 ventas en el período, importante para "menos vendidos").
+    const catalogFiltered = products.filter(p => {
+      if (productCategoryFilter !== 'ALL' && (p.categoria || 'SIN CATEGORÍA').trim().toUpperCase() !== productCategoryFilter) return false;
+      if (productSearch.trim() && !(p.nombre || '').toUpperCase().includes(productSearch.trim().toUpperCase())) return false;
+      return true;
+    });
+
+    const merged = catalogFiltered.map(p => {
+      const key = p.id;
+      const nombreUp = (p.nombre || '').toUpperCase();
+      const sold = perProduct[key] || perProduct[nombreUp] || { unidades: 0, revenue: 0, unidadesDetal: 0, unidadesMayorista: 0 };
+      const costo = Number(p.costo) || 0;
+      const costoTotal = costo * sold.unidades;
+      const ganancia = sold.revenue - costoTotal;
+      return {
+        id: p.id,
+        nombre: p.nombre,
+        unidades: sold.unidades,
+        revenue: sold.revenue,
+        costoTotal,
+        ganancia,
+        unidadesDetal: sold.unidadesDetal,
+        unidadesMayorista: sold.unidadesMayorista
+      };
+    });
+
+    const topVendidos = [...merged].sort((a, b) => b.unidades - a.unidades).slice(0, 10);
+    const menosVendidos = [...merged].sort((a, b) => a.unidades - b.unidades).slice(0, 10);
+    const topGanancia = [...merged].sort((a, b) => b.ganancia - a.ganancia).slice(0, 10);
+
+    const colorData = Object.entries(perColor)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+
+    const mayoristaVsDetal = merged.reduce((acc, p) => {
+      acc.detal += p.unidadesDetal;
+      acc.mayorista += p.unidadesMayorista;
+      return acc;
+    }, { detal: 0, mayorista: 0 });
+
+    // Quiebres de stock: veces que un producto llegó a 0 en el período (desde inventory_movements)
+    const stockoutCounts = {};
+    movements.forEach(m => {
+      if (Number(m.stock_nuevo) === 0 && isWithin(m.fecha, currentStart, currentEnd)) {
+        stockoutCounts[m.producto_id] = (stockoutCounts[m.producto_id] || 0) + 1;
+      }
+    });
+    const stockoutsTop = Object.entries(stockoutCounts)
+      .map(([productId, count]) => {
+        const p = products.find(pr => pr.id === productId);
+        return { nombre: p?.nombre || 'Producto eliminado', count };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    return { topVendidos, menosVendidos, topGanancia, colorData, mayoristaVsDetal, stockoutsTop, merged };
+  }, [ordersInPeriod, products, movements, currentStart, currentEnd, productCategoryFilter, productSearch]);
+
+  const compareProductData = useMemo(() => {
+    if (!compareProductId) return null;
+    const paidInPeriod = ordersInPeriod.filter(isPaidOrder);
+    const product = products.find(p => p.id === compareProductId);
+    if (!product) return null;
+    const nombreUp = (product.nombre || '').toUpperCase();
+    let alvaro = 0, kriz = 0;
+    paidInPeriod.forEach(o => {
+      const items = Array.isArray(o.items) ? o.items : [];
+      items.forEach(it => {
+        const itNombre = (it.nombre || it.name || '').trim().toUpperCase();
+        if (it.productId !== compareProductId && itNombre !== nombreUp) return;
+        const qty = Number(it.cantidad || it.quantity || 1);
+        if (matchAdvisor(o, 'ALVARO')) alvaro += qty;
+        else if (matchAdvisor(o, 'KRIZ')) kriz += qty;
+      });
+    });
+    return [{ name: product.nombre, Álvaro: alvaro, Kriz: kriz }];
+  }, [compareProductId, ordersInPeriod, products]);
+
+  // Última venta de cada producto (con TODO el historial, no solo el período
+  // seleccionado), para detectar productos "estancados" sin importar el filtro.
+  const STAGNANT_DAYS_THRESHOLD = 60;
+  const stagnantProductsCount = useMemo(() => {
+    const lastSoldMs = {};
+    allOrdersList.filter(isPaidOrder).forEach(o => {
+      const items = Array.isArray(o.items) ? o.items : [];
+      const t = new Date(o.paidAt || o.createdAt).getTime();
+      if (isNaN(t)) return;
+      items.forEach(it => {
+        const key = it.productId && it.productId !== 'custom' ? it.productId : (it.nombre || '').trim().toUpperCase();
+        if (!lastSoldMs[key] || t > lastSoldMs[key]) lastSoldMs[key] = t;
+      });
+    });
+    const now = Date.now();
+    return products.filter(p => {
+      if (Number(p.cantidad ?? 0) <= 0) return false; // sin stock, no aplica
+      const last = lastSoldMs[p.id] || lastSoldMs[(p.nombre || '').toUpperCase()];
+      if (!last) return true; // nunca se ha vendido y tiene stock
+      const days = (now - last) / (1000 * 60 * 60 * 24);
+      return days > STAGNANT_DAYS_THRESHOLD;
+    }).length;
+  }, [allOrdersList, products]);
+
   // ===================== ALERTAS =====================
   const alerts = useMemo(() => {
     const list = [];
@@ -292,8 +473,11 @@ export default function Estadisticas() {
     if (personal.mayra.avgHours !== null && personal.mayra.avgHours > 24) {
       list.push({ text: `La facturación está tardando más de 24h en promedio`, color: '#f59e0b' });
     }
+    if (stagnantProductsCount > 0) {
+      list.push({ text: `${stagnantProductsCount} producto(s) con stock llevan más de ${STAGNANT_DAYS_THRESHOLD} días sin venderse`, color: '#f59e0b' });
+    }
     return list;
-  }, [inventarioStats, ventasConversion, personal, previousStart]);
+  }, [inventarioStats, ventasConversion, personal, previousStart, stagnantProductsCount]);
 
   return (
     <div className="animate-fade-in" style={{ width: '100%', padding: '20px 20px 80px', boxSizing: 'border-box' }}>
@@ -342,6 +526,38 @@ export default function Estadisticas() {
         </div>
       )}
 
+      {/* Pestañas */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '18px' }}>
+        <button
+          type="button"
+          onClick={() => setActiveTab('general')}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '9px 16px', borderRadius: '10px',
+            border: activeTab === 'general' ? '1.5px solid #10b981' : '1px solid #e2e8f0',
+            background: activeTab === 'general' ? '#ecfdf5' : '#ffffff',
+            color: activeTab === 'general' ? '#065f46' : '#64748b',
+            fontSize: '13px', fontWeight: activeTab === 'general' ? 800 : 700, cursor: 'pointer'
+          }}
+        >
+          <LayoutGrid size={15} /> General
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('productos')}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '9px 16px', borderRadius: '10px',
+            border: activeTab === 'productos' ? '1.5px solid #10b981' : '1px solid #e2e8f0',
+            background: activeTab === 'productos' ? '#ecfdf5' : '#ffffff',
+            color: activeTab === 'productos' ? '#065f46' : '#64748b',
+            fontSize: '13px', fontWeight: activeTab === 'productos' ? 800 : 700, cursor: 'pointer'
+          }}
+        >
+          <Boxes size={15} /> Análisis de Productos
+        </button>
+      </div>
+
+      {activeTab === 'general' && (
+      <>
       {/* VENTAS Y CONVERSIÓN */}
       <SectionCard title="Ventas y Conversión">
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '18px' }}>
@@ -452,6 +668,150 @@ export default function Estadisticas() {
           <StatCard label="Unidades a Taller (período)" value={inventarioStats.tallerUnits} icon={Package} color="#f59e0b" />
         </div>
       </SectionCard>
+      </>
+      )}
+
+      {activeTab === 'productos' && (
+      <>
+        {/* Filtros: búsqueda + categoría */}
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '18px' }}>
+          <div style={{ position: 'relative', flex: '1 1 220px' }}>
+            <Search size={15} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '12px' }} />
+            <input
+              type="search"
+              placeholder="Buscar producto por nombre..."
+              value={productSearch}
+              onChange={e => setProductSearch(e.target.value)}
+              style={{ width: '100%', height: '38px', padding: '0 12px 0 34px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '13px', boxSizing: 'border-box' }}
+            />
+          </div>
+          <select
+            value={productCategoryFilter}
+            onChange={e => setProductCategoryFilter(e.target.value)}
+            style={{ height: '38px', padding: '0 12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '13px', fontWeight: 700, color: '#334155' }}
+          >
+            <option value="ALL">Todas las categorías</option>
+            {productCategories.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+
+        {/* Más vendidos / Menos vendidos */}
+        <SectionCard title="Productos Más Vendidos (Top 10, por unidades)">
+          <div style={{ height: `${productAnalysis.topVendidos.length * 34 + 20}px`, minHeight: '200px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={productAnalysis.topVendidos} layout="vertical" margin={{ left: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis type="number" fontSize={11} />
+                <YAxis type="category" dataKey="nombre" width={180} fontSize={10.5} />
+                <Tooltip />
+                <Bar dataKey="unidades" name="Unidades vendidas" fill="#10b981" radius={[0, 6, 6, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Productos Menos Vendidos (Bottom 10, incluye los que nunca se han vendido)">
+          <div style={{ height: `${productAnalysis.menosVendidos.length * 34 + 20}px`, minHeight: '200px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={productAnalysis.menosVendidos} layout="vertical" margin={{ left: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis type="number" fontSize={11} allowDecimals={false} />
+                <YAxis type="category" dataKey="nombre" width={180} fontSize={10.5} />
+                <Tooltip />
+                <Bar dataKey="unidades" name="Unidades vendidas" fill="#ef4444" radius={[0, 6, 6, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </SectionCard>
+
+        {/* Color más/menos vendido */}
+        <SectionCard title="Ventas por Color (solo productos con color en el nombre)">
+          {productAnalysis.colorData.length > 0 ? (
+            <div style={{ height: `${productAnalysis.colorData.length * 30 + 20}px`, minHeight: '160px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={productAnalysis.colorData} layout="vertical" margin={{ left: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis type="number" fontSize={11} />
+                  <YAxis type="category" dataKey="name" width={90} fontSize={12} />
+                  <Tooltip />
+                  <Bar dataKey="value" name="Unidades" fill="#8b5cf6" radius={[0, 6, 6, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <span style={{ fontSize: '12.5px', color: '#94a3b8' }}>Sin ventas con color identificable en este período/filtro.</span>
+          )}
+        </SectionCard>
+
+        {/* Costo vs Venta / Ganancia */}
+        <SectionCard title="Costo vs. Venta — Top 10 por Ganancia">
+          <div style={{ height: `${productAnalysis.topGanancia.length * 34 + 20}px`, minHeight: '200px', marginBottom: '12px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={productAnalysis.topGanancia} layout="vertical" margin={{ left: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis type="number" fontSize={11} unit="$" />
+                <YAxis type="category" dataKey="nombre" width={180} fontSize={10.5} />
+                <Tooltip formatter={(v) => `$${fmt(v)}`} />
+                <Legend />
+                <Bar dataKey="costoTotal" name="Costo ($)" fill="#94a3b8" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="revenue" name="Venta ($)" fill="#10b981" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </SectionCard>
+
+        {/* Mayorista vs Detal */}
+        <SectionCard title="Detal vs. Mayorista (unidades vendidas)">
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <StatCard label="Detal" value={productAnalysis.mayoristaVsDetal.detal} icon={ShoppingBag} color="#10b981" />
+            <StatCard label="Mayorista" value={productAnalysis.mayoristaVsDetal.mayorista} icon={Users} color="#f59e0b" />
+          </div>
+        </SectionCard>
+
+        {/* Comparar Kriz vs Álvaro por producto */}
+        <SectionCard title="Comparar un Producto: Álvaro vs. Kriz">
+          <select
+            value={compareProductId}
+            onChange={e => setCompareProductId(e.target.value)}
+            style={{ height: '38px', padding: '0 12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '14px', maxWidth: '360px', width: '100%' }}
+          >
+            <option value="">Selecciona un producto...</option>
+            {products.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+          </select>
+          {compareProductData && (
+            <div style={{ height: '180px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={compareProductData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="name" fontSize={11} />
+                  <YAxis fontSize={11} allowDecimals={false} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="Álvaro" fill="#10b981" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="Kriz" fill="#8b5cf6" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </SectionCard>
+
+        {/* Quiebres de stock */}
+        <SectionCard title="Quiebres de Stock (veces que llegó a 0 en el período)">
+          {productAnalysis.stockoutsTop.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {productAnalysis.stockoutsTop.map((s, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', padding: '6px 10px', background: '#f8fafc', borderRadius: '8px' }}>
+                  <span style={{ fontWeight: 700, color: '#334155' }}>{s.nombre}</span>
+                  <span style={{ fontWeight: 800, color: '#ef4444' }}>{s.count} vez(ces)</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <span style={{ fontSize: '12.5px', color: '#94a3b8' }}>Ningún producto llegó a 0 unidades en este período.</span>
+          )}
+        </SectionCard>
+      </>
+      )}
     </div>
   );
 }
