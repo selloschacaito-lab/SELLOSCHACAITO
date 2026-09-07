@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 import { createPortal } from 'react-dom';
 import { normalizeWhatsApp } from '../utils/formatters';
 import ClientDrawer from '../components/ClientDrawer';
+import { computeClientMetrics } from '../utils/crmUtils';
 
 function Clients({ isModal = false }) {
   const [clients, setClients] = useState([]);
@@ -15,6 +16,11 @@ function Clients({ isModal = false }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClientForDrawer, setSelectedClientForDrawer] = useState(null);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  // Detección de clientes que probablemente son mayoristas (compraban con ~20%
+  // de descuento) pero quedaron marcados como "normal" al migrar de sistema.
+  const [isDetectingWholesale, setIsDetectingWholesale] = useState(false);
+  const [wholesaleCandidates, setWholesaleCandidates] = useState(null); // null = no se ha corrido el análisis
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -163,6 +169,81 @@ function Clients({ isModal = false }) {
     }
   }
 
+  // Analiza el historial de compras de cada cliente "normal" y detecta si la
+  // mayoría de lo que pagó por sus productos coincide con el precio con 20%
+  // de descuento (precio mayorista) en vez del precio normal de lista.
+  async function handleDetectWholesale() {
+    setIsDetectingWholesale(true);
+    try {
+      const prodSnap = await getDocs(collection(firestoreDB, 'products'));
+      const productsById = {};
+      prodSnap.docs.forEach(d => { productsById[d.id] = d.data(); });
+
+      const candidates = clients.filter(c => c.tipo !== 'mayorista');
+      const results = [];
+
+      candidates.forEach(client => {
+        const metrics = computeClientMetrics(client, orders);
+        if (!metrics) return;
+
+        let discountedCount = 0;
+        let totalCount = 0;
+        let ratioSum = 0;
+
+        metrics.salesOrders.forEach(o => {
+          (o.items || []).forEach(it => {
+            const prod = productsById[it.productId];
+            if (!prod) return;
+            const retail = Number(prod.precio || prod.precioVenta || 0);
+            const paid = Number(it.precioUSD ?? it.precio ?? 0);
+            if (retail <= 0 || paid <= 0) return;
+            const ratio = paid / retail;
+            totalCount++;
+            // Rango amplio alrededor de 0.80 (20% de descuento) para tolerar
+            // redondeos y pequeños ajustes de precio a lo largo del tiempo.
+            if (ratio >= 0.70 && ratio <= 0.90) {
+              discountedCount++;
+              ratioSum += ratio;
+            }
+          });
+        });
+
+        if (totalCount > 0 && (discountedCount / totalCount) > 0.5) {
+          results.push({
+            client,
+            discountedCount,
+            totalCount,
+            avgDiscountPct: Math.round((1 - (ratioSum / discountedCount)) * 100)
+          });
+        }
+      });
+
+      results.sort((a, b) => (b.discountedCount / b.totalCount) - (a.discountedCount / a.totalCount));
+      setWholesaleCandidates(results);
+
+      if (results.length === 0) {
+        toast.success('No se encontraron clientes con patrón de descuento mayorista sin marcar');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Error al analizar los clientes');
+    } finally {
+      setIsDetectingWholesale(false);
+    }
+  }
+
+  async function handleMarkAsWholesale(clientId) {
+    try {
+      await updateDoc(doc(firestoreDB, 'clients', clientId), { tipo: 'mayorista' });
+      setClients(prev => prev.map(c => c.id === clientId ? { ...c, tipo: 'mayorista' } : c));
+      setWholesaleCandidates(prev => prev ? prev.filter(r => r.client.id !== clientId) : prev);
+      toast.success('Cliente marcado como mayorista');
+    } catch (err) {
+      console.error(err);
+      toast.error('Error al marcar el cliente');
+    }
+  }
+
   async function handleDelete(id) {
     if (window.confirm('¿Estás seguro de que deseas eliminar este cliente? Solo hazlo si fue un error o nunca ha hecho pedidos.')) {
       try {
@@ -274,14 +355,38 @@ function Clients({ isModal = false }) {
           }}
         />
         {searchTerm && (
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={() => setSearchTerm('')}
             style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 800 }}
           >
             ✕
           </button>
         )}
+        <button
+          type="button"
+          onClick={handleDetectWholesale}
+          disabled={isDetectingWholesale}
+          title="Busca clientes que compraron con ~20% de descuento pero no están marcados como mayoristas"
+          style={{
+            flexShrink: 0,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 14px',
+            borderRadius: '8px',
+            border: '1px solid #fde68a',
+            background: '#fffbeb',
+            color: '#b45309',
+            fontSize: '12px',
+            fontWeight: 800,
+            cursor: isDetectingWholesale ? 'not-allowed' : 'pointer',
+            opacity: isDetectingWholesale ? 0.7 : 1,
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <Star size={14} /> {isDetectingWholesale ? 'Analizando...' : 'Detectar Mayoristas'}
+        </button>
       </div>
 
       <div style={{
@@ -618,11 +723,82 @@ function Clients({ isModal = false }) {
         document.body
       )}
       {selectedClientForDrawer && (
-        <ClientDrawer 
+        <ClientDrawer
           client={selectedClientForDrawer}
           allOrders={orders}
           onClose={() => setSelectedClientForDrawer(null)}
         />
+      )}
+
+      {/* ===================== MODAL: DETECTAR MAYORISTAS ===================== */}
+      {wholesaleCandidates && createPortal(
+        <div
+          className="modal-overlay"
+          onClick={() => setWholesaleCandidates(null)}
+          style={{ background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', zIndex: 1100 }}
+        >
+          <div
+            className="modal-content"
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#ffffff', borderRadius: '20px', border: '1px solid #e2e8f0',
+              maxWidth: '560px', width: '95%', maxHeight: '80vh', display: 'flex', flexDirection: 'column'
+            }}
+          >
+            <div style={{ padding: '18px 22px', borderBottom: '1px solid #e2e8f0' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Star size={18} color="#b45309" /> Posibles Clientes Mayoristas
+              </h3>
+              <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: '#64748b' }}>
+                Clientes marcados como "normal" cuyo historial de compras muestra ~20% de descuento en la mayoría de los productos.
+              </p>
+            </div>
+
+            <div style={{ padding: '14px 22px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {wholesaleCandidates.length === 0 ? (
+                <p style={{ fontSize: '13px', color: '#94a3b8', textAlign: 'center', padding: '20px 0' }}>
+                  No se encontraron clientes con ese patrón sin marcar.
+                </p>
+              ) : (
+                wholesaleCandidates.map(r => (
+                  <div key={r.client.id} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '10px 14px', borderRadius: '10px', border: '1px solid #f1f5f9', background: '#f8fafc'
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: '13.5px', color: '#0f172a' }}>{r.client.nombre || r.client.name}</div>
+                      <div style={{ fontSize: '11.5px', color: '#64748b' }}>
+                        {r.discountedCount} de {r.totalCount} productos con ~{r.avgDiscountPct}% de descuento
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleMarkAsWholesale(r.client.id)}
+                      style={{
+                        padding: '7px 12px', borderRadius: '8px', border: 'none',
+                        background: '#f59e0b', color: '#ffffff', fontSize: '12px', fontWeight: 800, cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      Marcar Mayorista
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div style={{ padding: '14px 22px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setWholesaleCandidates(null)}
+                style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#ffffff', color: '#64748b', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
