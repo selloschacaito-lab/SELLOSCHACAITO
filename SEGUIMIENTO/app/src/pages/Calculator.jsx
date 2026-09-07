@@ -428,6 +428,25 @@ Dirección:`;
                 </div>
               </div>
 
+              {/* Botones de Acción — arriba, para no tener que bajar a buscarlos */}
+              <div className="calc-actions-grid">
+                <button
+                  type="button"
+                  className="calc-btn-whatsapp"
+                  onClick={handleSendWhatsApp}
+                >
+                  <Send size={16} /> Enviar Combo por WA
+                </button>
+
+                <button
+                  type="button"
+                  className="calc-btn-primary"
+                  onClick={handleCopySummary}
+                >
+                  <Copy size={16} /> Copiar Cotización Completa
+                </button>
+              </div>
+
               {/* Desglose con IVA 16% */}
               <div className="calc-iva-box">
                 <div className="calc-iva-row">
@@ -463,25 +482,6 @@ Dirección:`;
                 <div>• <strong>Teléfono:</strong> 04143256743</div>
                 <div>• <strong>RIF:</strong> J 315705680</div>
                 <div>• <strong>Cuenta:</strong> 01340277912771092630</div>
-              </div>
-
-              {/* Botones de Acción */}
-              <div className="calc-actions-grid">
-                <button 
-                  type="button"
-                  className="calc-btn-whatsapp"
-                  onClick={handleSendWhatsApp}
-                >
-                  <Send size={16} /> Enviar Combo por WA
-                </button>
-
-                <button 
-                  type="button"
-                  className="calc-btn-primary"
-                  onClick={handleCopySummary}
-                >
-                  <Copy size={16} /> Copiar Cotización Completa
-                </button>
               </div>
 
             </article>
