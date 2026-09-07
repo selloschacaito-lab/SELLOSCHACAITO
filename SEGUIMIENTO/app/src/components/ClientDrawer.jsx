@@ -73,6 +73,7 @@ export default function ClientDrawer({ client, allOrders = [], onClose }) {
   const clientRif = (client.rif || client.cedula || '').toUpperCase();
   const rawPhone = client.whatsapp || client.phone || client.telefono || '';
   const cleanPhone = String(rawPhone).replace(/\D/g, '');
+  const clientTelefonoLocal = client.telefonoLocal || '';
   const clientAddress = (client.direccion || '').toUpperCase();
   const clientEmail = (client.correo || '').toLowerCase();
 
@@ -269,7 +270,7 @@ export default function ClientDrawer({ client, allOrders = [], onClose }) {
           </div>
 
           {/* Quick Client Details Info */}
-          {(clientAddress || clientEmail) && (
+          {(clientAddress || clientEmail || clientTelefonoLocal) && (
             <div style={{
               background: 'var(--surface-hover, #f8fafc)',
               borderRadius: '0.75rem',
@@ -290,6 +291,12 @@ export default function ClientDrawer({ client, allOrders = [], onClose }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Mail size={15} color="#64748b" style={{ flexShrink: 0 }} />
                   <span style={{ color: 'var(--text-main, #334155)', wordBreak: 'break-all' }}>{clientEmail}</span>
+                </div>
+              )}
+              {clientTelefonoLocal && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Phone size={15} color="#64748b" style={{ flexShrink: 0 }} />
+                  <span style={{ color: 'var(--text-main, #334155)' }}>Tel. Local (Factura): {clientTelefonoLocal}</span>
                 </div>
               )}
             </div>

@@ -30,6 +30,7 @@ function Clients({ isModal = false }) {
     nombre: '',
     rif: '',
     whatsapp: '',
+    telefonoLocal: '', // Teléfono local/fiscal de la empresa, para clientes que escriben por un WhatsApp distinto al de facturación
     correo: '',
     direccion: '',
     tipo: 'normal' // 'normal' | 'mayorista'
@@ -70,10 +71,11 @@ function Clients({ isModal = false }) {
       return clients.slice(0, 100); // Mostrar maximo 100 por defecto para rendimiento
     }
     const q = searchTerm.trim().toLowerCase();
-    return clients.filter(c => 
+    return clients.filter(c =>
       (c.nombre || '').toLowerCase().includes(q) ||
       (c.rif || '').toLowerCase().includes(q) ||
-      (c.whatsapp || '').includes(q)
+      (c.whatsapp || '').includes(q) ||
+      (c.telefonoLocal || '').includes(q)
     ).slice(0, 100);
   }, [clients, searchTerm]);
 
@@ -84,6 +86,7 @@ function Clients({ isModal = false }) {
         nombre: client.nombre || '',
         rif: client.rif || '',
         whatsapp: client.whatsapp || '',
+        telefonoLocal: client.telefonoLocal || '',
         correo: client.correo || '',
         direccion: client.direccion || '',
         tipo: client.tipo || 'normal'
@@ -94,6 +97,7 @@ function Clients({ isModal = false }) {
         nombre: '',
         rif: '',
         whatsapp: '',
+        telefonoLocal: '',
         correo: '',
         direccion: '',
         tipo: 'normal'
@@ -131,6 +135,7 @@ function Clients({ isModal = false }) {
         nombre: (formData.nombre || '').trim().toUpperCase(),
         rif: (formData.rif || '').trim().toUpperCase(),
         whatsapp: normalizeWhatsApp(formData.whatsapp),
+        telefonoLocal: (formData.telefonoLocal || '').trim(),
         correo: (formData.correo || '').trim().toLowerCase(),
         direccion: (formData.direccion || '').trim().toUpperCase(),
         tipo: formData.tipo
@@ -325,6 +330,9 @@ function Clients({ isModal = false }) {
                     {client.rif && (
                       <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '1px' }}>RIF: {client.rif}</div>
                     )}
+                    {client.telefonoLocal && (
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '1px' }}>Tel. Local: {client.telefonoLocal}</div>
+                    )}
                   </div>
                   {client.tipo === 'mayorista' && (
                     <span style={{ background: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '999px', fontSize: '0.68rem', fontWeight: 850, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
@@ -432,6 +440,9 @@ function Clients({ isModal = false }) {
                       ) : (
                         <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Sin teléfono</span>
                       )}
+                      {client.telefonoLocal && (
+                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>Local: {client.telefonoLocal}</div>
+                      )}
                     </td>
                     <td style={{ padding: '0.75rem' }}>
                       {client.tipo === 'mayorista' ? (
@@ -536,13 +547,24 @@ function Clients({ isModal = false }) {
               </div>
 
               <div className="input-group">
-                <label className="input-label">Teléfono / WhatsApp</label>
-                <input 
-                  type="text" 
-                  className="input-field" 
+                <label className="input-label">WhatsApp</label>
+                <input
+                  type="text"
+                  className="input-field"
                   value={formData.whatsapp}
                   onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
                   placeholder="Ej. +584121234567"
+                />
+              </div>
+
+              <div className="input-group">
+                <label className="input-label">Teléfono Local (Factura)</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={formData.telefonoLocal}
+                  onChange={(e) => setFormData({ ...formData, telefonoLocal: e.target.value })}
+                  placeholder="Ej. 02121234567 (opcional, para empresas)"
                 />
               </div>
 

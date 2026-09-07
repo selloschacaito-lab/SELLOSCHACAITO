@@ -91,6 +91,7 @@ export default function POSModal({ order = null, onClose, onSuccess }) {
     nombre: order?.clientName || '',
     rif: order?.clientRif || order?.rif || '',
     whatsapp: formatDisplayPhone(order?.whatsapp || ''),
+    telefonoLocal: order?.telefonoLocal || '',
     direccion: order?.clientAddress || order?.address || '',
     tipo: order?.clientType || order?.tipo || 'normal'
   });
@@ -381,6 +382,7 @@ export default function POSModal({ order = null, onClose, onSuccess }) {
       nombre: (c.nombre || '').toUpperCase(),
       rif: (c.rif || c.cedula || '').toUpperCase(),
       whatsapp: formatDisplayPhone(c.whatsapp || c.telefono || ''),
+      telefonoLocal: c.telefonoLocal || '',
       direccion: (c.direccion || '').toUpperCase(),
       tipo: isMayorista ? 'mayorista' : 'normal'
     });
@@ -614,6 +616,7 @@ export default function POSModal({ order = null, onClose, onSuccess }) {
               nombre: client.nombre.toUpperCase(),
               rif: client.rif.toUpperCase(),
               whatsapp: cleanWhatsapp,
+              telefonoLocal: (client.telefonoLocal || '').trim(),
               direccion: (client.direccion || '').toUpperCase(),
               updatedAt: nowISO
             });
@@ -622,6 +625,7 @@ export default function POSModal({ order = null, onClose, onSuccess }) {
               nombre: client.nombre.toUpperCase(),
               rif: client.rif.toUpperCase(),
               whatsapp: cleanWhatsapp,
+              telefonoLocal: (client.telefonoLocal || '').trim(),
               direccion: (client.direccion || '').toUpperCase(),
               tipo: client.tipo || 'normal',
               createdAt: nowISO,
@@ -725,6 +729,7 @@ export default function POSModal({ order = null, onClose, onSuccess }) {
         clientName: client.nombre.toUpperCase(),
         clientRif: client.rif.toUpperCase(),
         whatsapp: cleanWhatsapp,
+        telefonoLocal: (client.telefonoLocal || '').trim(),
         clientAddress: (client.direccion || '').toUpperCase(),
         designer: designerName,
         items: items.map(it => ({
@@ -1251,13 +1256,35 @@ export default function POSModal({ order = null, onClose, onSuccess }) {
 
                     <div>
                       <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>
-                        WHATSAPP / TELÉFONO
+                        WHATSAPP
                       </label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="Ej. 04121234567"
                         value={client.whatsapp}
                         onChange={e => setClient(prev => ({ ...prev, whatsapp: e.target.value }))}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          fontSize: '0.9rem',
+                          borderRadius: '0.65rem',
+                          border: '1px solid var(--border-strong, #cbd5e1)',
+                          background: 'var(--surface, #ffffff)',
+                          color: 'var(--text-main)',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>
+                        TELÉFONO LOCAL (FACTURA) — OPCIONAL
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ej. 02121234567 (empresas)"
+                        value={client.telefonoLocal}
+                        onChange={e => setClient(prev => ({ ...prev, telefonoLocal: e.target.value }))}
                         style={{
                           width: '100%',
                           padding: '10px 14px',
