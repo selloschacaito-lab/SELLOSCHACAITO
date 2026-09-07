@@ -26,7 +26,8 @@ import {
   Sparkles,
   ExternalLink,
   ShieldCheck,
-  MapPin
+  MapPin,
+  UserX
 } from 'lucide-react';
 import ImageViewer from './ImageViewer';
 import { compressImageToBase64 } from '../utils/imageUtils';
@@ -76,6 +77,10 @@ function OrderModal({ order, onClose, onEdit }) {
   // Quick payment register for "Por Pagar"
   const [registeringPaymentMethod, setRegisteringPaymentMethod] = useState('Pago Móvil');
   const [registeringPaymentRef, setRegisteringPaymentRef] = useState('');
+
+  // Descartar pedido (CRM: lead que no se convirtió)
+  const [showDiscardMenu, setShowDiscardMenu] = useState(false);
+  const [isDiscarding, setIsDiscarding] = useState(false);
   const [isMarkingPaid, setIsMarkingPaid] = useState(false);
 
   // Target Workshop Photo Slot Selector ('reference' | 'finishedPhoto')
@@ -290,6 +295,38 @@ function OrderModal({ order, onClose, onEdit }) {
         console.error("Error al archivar pedido:", error);
         toast.error("Error al archivar el pedido.");
       }
+    }
+  };
+
+  // Descartar el pedido (lead que no se convirtió en venta), con motivo específico.
+  // Alimenta el % de conversión que ya calculan Ventas y Auditoría (Ventas.jsx / AuditOrdersModal.jsx).
+  const DISCARD_REASONS = [
+    { key: 'no_compro', label: 'Cliente no compró' },
+    { key: 'sin_respuesta', label: 'Cliente no dijo nada' },
+    { key: 'dejar_seguir', label: 'Dejar de seguir' }
+  ];
+
+  const handleDiscardOrder = async (reasonKey, reasonLabel) => {
+    if (!window.confirm(`¿Marcar este pedido como descartado (${reasonLabel})? Saldrá del tablero de pedidos activos.`)) return;
+    setIsDiscarding(true);
+    try {
+      const nowISO = new Date().toISOString();
+      await update(ref(db, `orders/${order.id}`), {
+        status: 'cancelled',
+        statusId: 'cancelled',
+        cancelReason: reasonKey,
+        cancelReasonLabel: reasonLabel,
+        cancelledAt: nowISO,
+        updatedAt: nowISO
+      });
+      toast.success(`Pedido descartado: ${reasonLabel}`);
+      setShowDiscardMenu(false);
+      onClose();
+    } catch (err) {
+      console.error('Error al descartar pedido:', err);
+      toast.error('Error al descartar el pedido');
+    } finally {
+      setIsDiscarding(false);
     }
   };
 
@@ -1234,15 +1271,82 @@ Link: ${window.location.origin}/delivery/${order.id}`}
             >
               <Edit size={18} />
             </button>
-            <button 
+            <button
               title="Eliminar Pedido"
-              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '6px', display: 'flex' }} 
+              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '6px', display: 'flex' }}
               onClick={handleDelete}
             >
               <Trash2 size={18} />
             </button>
-            <button 
-              style={{ 
+
+            <div style={{ position: 'relative' }}>
+              <button
+                type="button"
+                title="Descartar pedido (no se convirtió en venta)"
+                disabled={isDiscarding}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  background: '#fff7ed',
+                  color: '#c2410c',
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  borderRadius: '8px',
+                  border: '1px solid #fed7aa',
+                  cursor: isDiscarding ? 'not-allowed' : 'pointer'
+                }}
+                onClick={() => setShowDiscardMenu(v => !v)}
+              >
+                <UserX size={14} /> Descartar
+              </button>
+
+              {showDiscardMenu && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '110%',
+                  left: 0,
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
+                  padding: '6px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '2px',
+                  minWidth: '190px',
+                  zIndex: 20
+                }}>
+                  {DISCARD_REASONS.map(r => (
+                    <button
+                      key={r.key}
+                      type="button"
+                      disabled={isDiscarding}
+                      onClick={() => handleDiscardOrder(r.key, r.label)}
+                      style={{
+                        textAlign: 'left',
+                        background: 'none',
+                        border: 'none',
+                        padding: '8px 10px',
+                        borderRadius: '6px',
+                        fontSize: '12.5px',
+                        fontWeight: 700,
+                        color: '#334155',
+                        cursor: isDiscarding ? 'not-allowed' : 'pointer'
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = '#fff7ed'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <button
+              style={{
                 display: 'inline-flex', 
                 alignItems: 'center', 
                 gap: '5px', 

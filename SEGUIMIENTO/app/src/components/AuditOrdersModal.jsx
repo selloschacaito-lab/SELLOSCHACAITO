@@ -106,6 +106,7 @@ export default function AuditOrdersModal({ advisorName, allOrders = [], onClose 
     let initiatedCount = advisorOrders.length;
     let invoicedCount = 0;
     let cancelledCount = 0;
+    const cancelReasonCounts = {};
 
     let totalLeadToPaidMs = 0;
     let countLeadToPaid = 0;
@@ -120,6 +121,8 @@ export default function AuditOrdersModal({ advisorName, allOrders = [], onClose 
       const isCancelled = o.status === 'cancelled' || o.isCancelled;
       if (isCancelled) {
         cancelledCount++;
+        const reasonLabel = o.cancelReasonLabel || 'Sin motivo especificado';
+        cancelReasonCounts[reasonLabel] = (cancelReasonCounts[reasonLabel] || 0) + 1;
       }
 
       const isPaid = (
@@ -178,6 +181,7 @@ export default function AuditOrdersModal({ advisorName, allOrders = [], onClose 
       initiatedCount,
       invoicedCount,
       cancelledCount,
+      cancelReasonCounts,
       conversionRate,
       avgLeadToPaid: countLeadToPaid > 0 ? totalLeadToPaidMs / countLeadToPaid : null,
       avgPaidToPrint: countPaidToPrint > 0 ? totalPaidToPrintMs / countPaidToPrint : null,
@@ -329,6 +333,15 @@ export default function AuditOrdersModal({ advisorName, allOrders = [], onClose 
               {kpis.initiatedCount} clientes
             </div>
             <span style={{ fontSize: '11px', color: '#ef4444', fontWeight: 600 }}>{kpis.cancelledCount} descartados</span>
+            {Object.keys(kpis.cancelReasonCounts).length > 0 && (
+              <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                {Object.entries(kpis.cancelReasonCounts).map(([label, count]) => (
+                  <span key={label} style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 600 }}>
+                    · {label}: {count}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '12px 14px' }}>
@@ -470,6 +483,11 @@ export default function AuditOrdersModal({ advisorName, allOrders = [], onClose 
                       }}>
                         {statusInfo.name}
                       </span>
+                      {isCancelled && order.cancelReasonLabel && (
+                        <div style={{ fontSize: '10.5px', color: '#b91c1c', fontWeight: 700, marginTop: '3px' }}>
+                          {order.cancelReasonLabel}
+                        </div>
+                      )}
                     </td>
 
                     <td style={{ padding: '12px 8px' }}>
