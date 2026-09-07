@@ -9,6 +9,10 @@ extends CanvasLayer
 @onready var joystick_knob: Control = $JoystickLeft/Base/Knob
 @onready var shoot_btn: Control = $ShootButtonRight/ButtonVisual
 @onready var shoot_ring: Control = $ShootButtonRight/AimRing
+@onready var health_fill: ColorRect = $Vitals/HealthFill
+@onready var shield_fill: ColorRect = $Vitals/ShieldFill
+
+const VITALS_WIDTH: float = 240.0
 
 var player: Player
 
@@ -38,6 +42,27 @@ func _ready() -> void:
 	player = get_tree().get_first_node_in_group("player")
 	if shoot_ring:
 		shoot_ring.visible = false
+	_connect_vitals()
+
+func _connect_vitals() -> void:
+	if not player:
+		return
+	var hc: HealthComponent = player.get_node_or_null("HealthComponent")
+	if not hc:
+		return
+	hc.health_changed.connect(_on_health_changed)
+	hc.shield_changed.connect(_on_shield_changed)
+	# Estado inicial inmediato.
+	_on_health_changed(hc.health, hc.max_health)
+	_on_shield_changed(hc.shield, hc.max_shield)
+
+func _on_health_changed(current: float, maximum: float) -> void:
+	var r: float = current / maximum if maximum > 0.0 else 0.0
+	health_fill.size.x = VITALS_WIDTH * clampf(r, 0.0, 1.0)
+
+func _on_shield_changed(current: float, maximum: float) -> void:
+	var r: float = current / maximum if maximum > 0.0 else 0.0
+	shield_fill.size.x = VITALS_WIDTH * clampf(r, 0.0, 1.0)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:

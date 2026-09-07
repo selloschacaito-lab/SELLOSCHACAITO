@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://distrito23player01"]
+[gd_scene load_steps=7 format=3 uid="uid://distrito23player01"]
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/smooth_camera.gd" id="2_camera"]
 [ext_resource type="Script" path="res://scripts/pistol.gd" id="3_pistol"]
 [ext_resource type="Texture2D" path="res://assets/player_topdown.png" id="4_ptex"]
 [ext_resource type="Texture2D" path="res://assets/light_radial.png" id="5_ltex"]
+[ext_resource type="Script" path="res://scripts/health_component.gd" id="6_health"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_player"]
 radius = 20.0
@@ -15,6 +16,9 @@ script = ExtResource("1_player")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_player")
+
+[node name="HealthComponent" type="Node" parent="."]
+script = ExtResource("6_health")
 
 [node name="Camera2D" type="Camera2D" parent="."]
 position_smoothing_enabled = false

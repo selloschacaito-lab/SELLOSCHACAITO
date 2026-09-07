@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://distrito23greybox01"]
+[gd_scene load_steps=26 format=3 uid="uid://distrito23greybox01"]
 
 [ext_resource type="PackedScene" uid="uid://distrito23player01" path="res://scenes/player.tscn" id="1_player"]
 [ext_resource type="PackedScene" uid="uid://distrito23hud01" path="res://scenes/touch_hud.tscn" id="2_hud"]
@@ -7,6 +7,10 @@
 [ext_resource type="PackedScene" uid="uid://cybereffects01" path="res://scenes/effects/cyber_post_process.tscn" id="5_post"]
 [ext_resource type="Shader" path="res://shaders/wet_floor.gdshader" id="6_wet"]
 [ext_resource type="Texture2D" path="res://assets/light_radial.png" id="7_light"]
+[ext_resource type="Script" path="res://scripts/damage_area.gd" id="8_dmg"]
+
+[sub_resource type="RectangleShape2D" id="rs_hazard"]
+size = Vector2(150, 150)
 
 [sub_resource type="GDScript" id="GDScript_main"]
 script/source = "extends Node2D
@@ -401,6 +405,31 @@ position = Vector2(-360, 70)
 
 [node name="D3" parent="Targets" instance=ExtResource("3_dummy")]
 position = Vector2(120, 500)
+
+[node name="HazardZone" type="Area2D" parent="." groups=["hazard"]]
+position = Vector2(340, -300)
+collision_mask = 1
+script = ExtResource("8_dmg")
+damage_per_second = 22.0
+
+[node name="Col" type="CollisionShape2D" parent="HazardZone"]
+shape = SubResource("rs_hazard")
+
+[node name="Marca" type="ColorRect" parent="HazardZone"]
+offset_left = -75.0
+offset_top = -75.0
+offset_right = 75.0
+offset_bottom = 75.0
+color = Color(1, 0.15, 0.2, 0.14)
+
+[node name="Borde" type="ReferenceRect" parent="HazardZone"]
+offset_left = -75.0
+offset_top = -75.0
+offset_right = 75.0
+offset_bottom = 75.0
+border_color = Color(1, 0.2, 0.3, 0.55)
+border_width = 2.0
+editor_only = false
 
 [node name="Player" parent="." instance=ExtResource("1_player")]
 position = Vector2(0, 0)

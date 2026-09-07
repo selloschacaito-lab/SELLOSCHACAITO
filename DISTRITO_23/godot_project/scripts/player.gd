@@ -24,11 +24,17 @@ extends CharacterBody2D
 ## Empuje direccional de cámara por disparo, en píxeles (hacia atrás del tiro). 0 = desactivado.
 @export var camera_kick: float = 0.0
 
+@export_group("Supervivencia")
+## Segundos que tarda el jugador en reaparecer tras morir (placeholder hasta checkpoints).
+@export var respawn_delay: float = 1.2
+
 # Referencias internas
 @onready var visual: Node2D = $Visual
+@onready var sprite: Sprite2D = $Visual/Sprite2D
 @onready var weapon_holder: Node2D = $Visual/WeaponHolder
 @onready var weapon: Node2D = $Visual/WeaponHolder/Pistol
 @onready var camera: Camera2D = $Camera2D
+@onready var health: HealthComponent = $HealthComponent
 
 # Estados
 var move_input: Vector2 = Vector2.ZERO
@@ -40,15 +46,70 @@ var last_facing_direction: Vector2 = Vector2.RIGHT
 var _weapon_base_pos: Vector2 = Vector2.ZERO
 var _recoil_offset: float = 0.0
 
+# Supervivencia
+var _spawn_position: Vector2 = Vector2.ZERO
+
 func _ready() -> void:
 	last_facing_direction = Vector2.RIGHT
 	_weapon_base_pos = weapon_holder.position
+	_spawn_position = global_position
+	health.damaged.connect(_on_damaged)
+	health.died.connect(_on_died)
 
 func _physics_process(delta: float) -> void:
+	# Muerto: se frena y no acepta control hasta reaparecer.
+	if health.is_dead():
+		velocity = velocity.move_toward(Vector2.ZERO, friction * delta)
+		move_and_slide()
+		return
+
 	handle_locomotion(delta)
 	handle_aim_and_rotation(delta)
 	handle_recoil(delta)
 	move_and_slide()
+
+## Recibe daño (llamado por balas, zonas de daño, etc.)
+func take_damage(amount: float) -> void:
+	health.apply_damage(amount)
+
+func _on_damaged(_amount: float) -> void:
+	_flash_damage()
+
+func _flash_damage() -> void:
+	if not is_instance_valid(sprite):
+		return
+	sprite.modulate = Color(2.5, 0.4, 0.4, 1.0)
+	await get_tree().create_timer(0.09).timeout
+	if is_instance_valid(sprite) and not health.is_dead():
+		sprite.modulate = Color.WHITE
+
+## Placeholder de muerte/reaparición (Fase 2.5 lo sustituirá por checkpoints).
+func _on_died() -> void:
+	velocity = Vector2.ZERO
+	is_aiming_independently = false
+	aim_input = Vector2.ZERO
+	move_input = Vector2.ZERO
+	visual.modulate = Color(0.35, 0.35, 0.4, 0.55)
+	await get_tree().create_timer(respawn_delay).timeout
+	global_position = _spawn_position
+	velocity = Vector2.ZERO
+	visual.modulate = Color.WHITE
+	if is_instance_valid(sprite):
+		sprite.modulate = Color.WHITE
+	health.full_restore()
+
+func _unhandled_input(event: InputEvent) -> void:
+	# Atajos de prueba solo en builds de depuración: K = -15 daño, L = +25 vida, J = matar.
+	if not OS.is_debug_build():
+		return
+	if event is InputEventKey and event.pressed and not event.echo:
+		match event.keycode:
+			KEY_K:
+				take_damage(15.0)
+			KEY_L:
+				health.heal(25.0)
+			KEY_J:
+				take_damage(9999.0)
 
 ## Manejo de locomoción desacoplado
 func handle_locomotion(delta: float) -> void:
@@ -90,6 +151,8 @@ func get_fire_angle() -> float:
 
 ## Recibe comando de disparo (llamado desde HUD, Mouse o Gamepad)
 func fire_weapon() -> void:
+	if health.is_dead():
+		return
 	if weapon and weapon.has_method("shoot"):
 		var did_fire: bool = weapon.shoot(get_fire_angle())
 		if did_fire:
