@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { db } from '../firebase/config';
 import { ref, onValue } from 'firebase/database';
-import { Package, Search, Bell, MapPin, FolderArchive, Plus, Sparkles, ChevronDown, FileText, ShoppingCart, Users, X } from 'lucide-react';
+import { Search, Bell, MapPin, FolderArchive, Plus, Sparkles, ChevronDown, FileText, ShoppingCart } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import KanbanBoard from '../components/KanbanBoard';
 import OrderModal from '../components/OrderModal';
@@ -9,8 +9,6 @@ import PrintAlertsModal from '../components/PrintAlertsModal';
 import NewOrderModal from '../components/NewOrderModal';
 import DeliveryMapModal from '../components/DeliveryMapModal';
 import POSModal from '../components/POSModal';
-import Clients from './Clients';
-import Inventory from './Inventory';
 
 function Dashboard() {
   const [orders, setOrders] = useState({});
@@ -26,8 +24,6 @@ function Dashboard() {
   const [showArchived, setShowArchived] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showPosModal, setShowPosModal] = useState(false);
-  const [showClientsModal, setShowClientsModal] = useState(false);
-  const [showInventoryModal, setShowInventoryModal] = useState(false);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const initialLoadRef = useRef(true);
   const dropdownRef = useRef(null);
@@ -315,22 +311,6 @@ function Dashboard() {
       <main className="glass-card workspace">
         <div className="workspace-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
           <h2 className="workspace-title">{showArchived ? 'Pedidos Archivados (Entregados)' : 'Panel de Pedidos Activos'}</h2>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button 
-              className="btn-secondary"
-              onClick={() => setShowClientsModal(true)}
-              style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
-            >
-              <Users size={16} /> CLIENTES
-            </button>
-            <button 
-              className="btn-secondary"
-              onClick={() => setShowInventoryModal(true)}
-              style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
-            >
-              <Package size={16} /> INVENTARIO
-            </button>
-          </div>
         </div>
         {loadingOrders ? (
           <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
@@ -400,134 +380,6 @@ function Dashboard() {
           isOpen={showPosModal} 
           onClose={() => setShowPosModal(false)} 
         />
-      )}
-
-      {showClientsModal && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: isMobile ? '#ffffff' : 'rgba(15, 23, 42, 0.45)',
-          backdropFilter: isMobile ? 'none' : 'blur(4px)',
-          zIndex: 99999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: isMobile ? 0 : '1rem'
-        }}>
-          <div style={{
-            background: '#ffffff',
-            width: '100%',
-            maxWidth: '1200px',
-            height: isMobile ? '100dvh' : '92vh',
-            maxHeight: isMobile ? '100dvh' : '900px',
-            borderRadius: isMobile ? 0 : '1.5rem',
-            overflow: 'hidden',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column',
-            boxShadow: isMobile ? 'none' : '0 20px 50px rgba(0,0,0,0.15)'
-          }}>
-            <div style={{
-              padding: isMobile ? '0.75rem 1rem' : '1rem 1.5rem',
-              borderBottom: '1px solid #e2e8f0',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              background: '#f8fafc'
-            }}>
-              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.15rem', fontWeight: 900, letterSpacing: '0.5px' }}>
-                <div style={{ background: 'var(--primary, #47FF00)', color: '#1F2329', borderRadius: '8px', padding: '6px', display: 'flex' }}>
-                  <Users size={18} />
-                </div>
-                CLIENTES
-              </h3>
-              <button 
-                onClick={() => setShowClientsModal(false)} 
-                style={{ 
-                  background: '#f1f5f9', 
-                  border: 'none', 
-                  borderRadius: '50%',
-                  width: '36px',
-                  height: '36px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  padding: 0
-                }}
-              >
-                <X size={20} color="#0f172a" />
-              </button>
-            </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '0.75rem' : '1.25rem' }}>
-              <Clients isModal={true} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showInventoryModal && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: isMobile ? '#ffffff' : 'rgba(15, 23, 42, 0.45)',
-          backdropFilter: isMobile ? 'none' : 'blur(4px)',
-          zIndex: 99999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: isMobile ? 0 : '1rem'
-        }}>
-          <div style={{
-            background: '#ffffff',
-            width: '100%',
-            maxWidth: '1200px',
-            height: isMobile ? '100dvh' : '92vh',
-            maxHeight: isMobile ? '100dvh' : '900px',
-            borderRadius: isMobile ? 0 : '1.5rem',
-            overflow: 'hidden',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column',
-            boxShadow: isMobile ? 'none' : '0 20px 50px rgba(0,0,0,0.15)'
-          }}>
-            <div style={{
-              padding: isMobile ? '0.75rem 1rem' : '1rem 1.5rem',
-              borderBottom: '1px solid #e2e8f0',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              background: '#f8fafc'
-            }}>
-              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.15rem', fontWeight: 900, letterSpacing: '0.5px' }}>
-                <div style={{ background: 'var(--primary, #47FF00)', color: '#1F2329', borderRadius: '8px', padding: '6px', display: 'flex' }}>
-                  <Package size={18} />
-                </div>
-                INVENTARIO
-              </h3>
-              <button 
-                onClick={() => setShowInventoryModal(false)} 
-                style={{ 
-                  background: '#f1f5f9', 
-                  border: 'none', 
-                  borderRadius: '50%',
-                  width: '36px',
-                  height: '36px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  padding: 0
-                }}
-              >
-                <X size={20} color="#0f172a" />
-              </button>
-            </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '0.75rem' : '1.25rem' }}>
-              <Inventory isModal={true} />
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
