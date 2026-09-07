@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProfileProvider } from './contexts/ProfileContext';
@@ -26,6 +26,8 @@ import DeliveryView from './pages/DeliveryView';
 import PaymentView from './pages/PaymentView';
 import VerRecibo from './pages/VerRecibo';
 import CatalogoPublico from './pages/CatalogoPublico';
+import AdminOnlyRoute from './components/AdminOnlyRoute';
+const Estadisticas = lazy(() => import('./pages/Estadisticas'));
 import { db } from './firebase/config';
 import { ref, set } from 'firebase/database';
 
@@ -101,6 +103,13 @@ function App() {
                 <Route path="cambio" element={<Calculator />} />
                 <Route path="configuracion" element={<Config />} />
                 <Route path="usuarios" element={<ProfileAdmin />} />
+                <Route path="estadisticas" element={
+                  <AdminOnlyRoute>
+                    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Cargando estadísticas...</div>}>
+                      <Estadisticas />
+                    </Suspense>
+                  </AdminOnlyRoute>
+                } />
               </Route>
 
               <Route path="*" element={<Navigate to="/" replace />} />

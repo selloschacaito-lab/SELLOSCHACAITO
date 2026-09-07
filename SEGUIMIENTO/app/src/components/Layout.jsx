@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
-import { Package, ListTodo, Users, Settings, LogOut, ChevronLeft, ClipboardList, PanelLeft, ShoppingBag, UserCircle, FileCheck, Wrench, DollarSign } from 'lucide-react';
+import { Package, ListTodo, Users, Settings, LogOut, ChevronLeft, ClipboardList, PanelLeft, ShoppingBag, UserCircle, FileCheck, Wrench, DollarSign, BarChart3 } from 'lucide-react';
 import { db } from '../firebase/config';
 import { ref, onValue } from 'firebase/database';
 import { toast } from 'react-hot-toast';
@@ -145,6 +145,10 @@ function Layout() {
     { name: 'Inventario & Precios', path: '/inventario',    icon: <Package size={18} /> },
     { name: 'Configuración',        path: '/configuracion', icon: <Settings size={18} /> },
     { name: 'Usuarios',             path: '/usuarios',      icon: <UserCircle size={18} /> },
+    // Solo Álvaro ve "Estadísticas" (además, la ruta en sí está protegida en App.jsx)
+    ...(activeProfile?.name?.toLowerCase().includes('alvaro')
+      ? [{ name: 'Estadísticas', path: '/estadisticas', icon: <BarChart3 size={18} /> }]
+      : [])
   ];
 
   async function handleLogout() {
