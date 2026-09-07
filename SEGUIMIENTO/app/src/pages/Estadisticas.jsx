@@ -211,7 +211,7 @@ export default function Estadisticas() {
     });
     const avgInvoiceHours = countInvoice > 0 ? (totalInvoiceMs / countInvoice) / (1000 * 60 * 60) : null;
 
-    // FelizAI: velocidad de producción (printedAt -> finishedAt), ahora filtrado
+    // Felizai: velocidad de producción (printedAt -> finishedAt), ahora filtrado
     // por quién realmente hizo la transición (campo finishedBy, agregado hoy).
     // Los pedidos terminados ANTES de este cambio no tienen finishedBy y no
     // cuentan para nadie en particular — es lo correcto, no se puede inventar
@@ -397,8 +397,8 @@ export default function Estadisticas() {
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <StatCard label="Mayra · Facturas emitidas" value={personal.mayra.facturas} icon={DollarSign} color="#f59e0b" />
           <StatCard label="Mayra · Tiempo prom. facturar" value={personal.mayra.avgHours !== null ? personal.mayra.avgHours.toFixed(1) : '-'} suffix={personal.mayra.avgHours !== null ? 'h' : ''} icon={TrendingUp} color="#f59e0b" />
-          <StatCard label="FelizAI · Pedidos terminados" value={personal.felizai.terminados} icon={Package} color="#3b82f6" />
-          <StatCard label="FelizAI · Tiempo prom. producción" value={personal.felizai.avgHours !== null ? personal.felizai.avgHours.toFixed(1) : '-'} suffix={personal.felizai.avgHours !== null ? 'h' : ''} icon={TrendingUp} color="#3b82f6" />
+          <StatCard label="Felizai · Pedidos terminados" value={personal.felizai.terminados} icon={Package} color="#3b82f6" />
+          <StatCard label="Felizai · Tiempo prom. producción" value={personal.felizai.avgHours !== null ? personal.felizai.avgHours.toFixed(1) : '-'} suffix={personal.felizai.avgHours !== null ? 'h' : ''} icon={TrendingUp} color="#3b82f6" />
         </div>
       </SectionCard>
 
