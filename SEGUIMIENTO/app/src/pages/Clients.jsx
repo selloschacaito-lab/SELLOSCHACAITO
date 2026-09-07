@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { firestoreDB, db } from '../firebase/config';
 import { collection, doc, addDoc, updateDoc, deleteDoc, query, orderBy, limit, getDocs, where, onSnapshot } from 'firebase/firestore';
 import { ref, onValue } from 'firebase/database';
-import { Users, Search, Plus, Edit2, Trash2, Phone, Star, Eye } from 'lucide-react';
+import { Users, Search, Plus, Edit2, Trash2, Phone, Star, Eye, PanelLeft } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { createPortal } from 'react-dom';
 import { normalizeWhatsApp } from '../utils/formatters';
@@ -10,6 +11,7 @@ import ClientDrawer from '../components/ClientDrawer';
 import { computeClientMetrics } from '../utils/crmUtils';
 
 function Clients({ isModal = false }) {
+  const { toggleSidebar } = useOutletContext() || {};
   const [clients, setClients] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -274,13 +276,36 @@ function Clients({ isModal = false }) {
           gap: '14px',
           boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
         }}>
-          <div>
-            <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
-              Clientes
-            </h1>
-            <p style={{ color: '#64748b', margin: '3px 0 0', fontSize: '13px', fontWeight: 500 }}>
-              Directorio de clientes frecuentes, mayoristas y fichas CRM
-            </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            {toggleSidebar && (
+              <button
+                onClick={toggleSidebar}
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  color: '#64748b',
+                  cursor: 'pointer',
+                  padding: '8px',
+                  borderRadius: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.15s ease'
+                }}
+                title="Abrir menú"
+                type="button"
+              >
+                <PanelLeft size={18} />
+              </button>
+            )}
+            <div>
+              <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
+                Clientes
+              </h1>
+              <p style={{ color: '#64748b', margin: '3px 0 0', fontSize: '13px', fontWeight: 500 }}>
+                Directorio de clientes frecuentes, mayoristas y fichas CRM
+              </p>
+            </div>
           </div>
           <button 
             onClick={() => handleOpenModal()} 
