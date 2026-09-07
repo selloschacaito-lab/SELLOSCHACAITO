@@ -8,6 +8,7 @@ import POSModal from './POSModal';
 import { db } from '../firebase/config';
 import { ref, update, get, remove } from 'firebase/database';
 import { logActivity } from '../services/activityLogger';
+import { useProfile } from '../contexts/ProfileContext';
 import confetti from 'canvas-confetti';
 import { toast } from 'react-hot-toast';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -25,6 +26,7 @@ const STATUSES = [
 ];
 
 function KanbanBoard({ orders, searchTerm = '', showArchived = false, onOrderClick, highlightedOrderId = null }) {
+  const { activeProfile } = useProfile();
   const [uploadingOrder, setUploadingOrder] = useState(null);
   const [missingTypes, setMissingTypes] = useState([]);
   const [deliveringOrder, setDeliveringOrder] = useState(null);
@@ -238,15 +240,24 @@ Le notificaremos cuando esté listo para retiro o despacho. ¡Saludos!`);
     const nowISO = new Date().toISOString();
     const statusName = STATUSES.find(s => s.id === nextStatus)?.name || nextStatus;
     
+    const staffName = activeProfile?.name || 'Desconocido';
+
     const timestampUpdates = {};
     if (nextStatus === 'fina' && !order?.paidAt) {
       timestampUpdates.paidAt = nowISO;
     }
     if (nextStatus === 'printing' && !order?.printedAt) {
       timestampUpdates.printedAt = nowISO;
+      timestampUpdates.printedBy = staffName;
+    }
+    if (nextStatus === 'production' && !order?.productionStartedAt) {
+      // Antes no se registraba ni la fecha ni quién pasaba el pedido a esta etapa.
+      timestampUpdates.productionStartedAt = nowISO;
+      timestampUpdates.productionStartedBy = staffName;
     }
     if (nextStatus === 'finished' && !order?.finishedAt) {
       timestampUpdates.finishedAt = nowISO;
+      timestampUpdates.finishedBy = staffName;
     }
     if (nextStatus === 'delivered' && !order?.deliveredAt) {
       timestampUpdates.deliveredAt = nowISO;

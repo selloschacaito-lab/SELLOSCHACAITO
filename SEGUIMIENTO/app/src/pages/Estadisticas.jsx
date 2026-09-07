@@ -211,10 +211,17 @@ export default function Estadisticas() {
     });
     const avgInvoiceHours = countInvoice > 0 ? (totalInvoiceMs / countInvoice) / (1000 * 60 * 60) : null;
 
-    // FelizAI: velocidad de producción agregada (printedAt -> finishedAt)
-    const finishedInPeriod = ordersInPeriod.filter(o => o.finishedAt && isWithin(o.finishedAt, currentStart, currentEnd));
+    // FelizAI: velocidad de producción (printedAt -> finishedAt), ahora filtrado
+    // por quién realmente hizo la transición (campo finishedBy, agregado hoy).
+    // Los pedidos terminados ANTES de este cambio no tienen finishedBy y no
+    // cuentan para nadie en particular — es lo correcto, no se puede inventar
+    // ese dato retroactivamente.
+    const finishedByFelizai = ordersInPeriod.filter(o =>
+      o.finishedAt && isWithin(o.finishedAt, currentStart, currentEnd) &&
+      (o.finishedBy || '').toLowerCase().includes('feliz')
+    );
     let totalProdMs = 0, countProd = 0;
-    finishedInPeriod.forEach(o => {
+    finishedByFelizai.forEach(o => {
       if (o.printedAt && o.finishedAt) {
         const p = new Date(o.printedAt).getTime(), f = new Date(o.finishedAt).getTime();
         if (f >= p) { totalProdMs += (f - p); countProd++; }
@@ -229,7 +236,7 @@ export default function Estadisticas() {
       ],
       alvaro, kriz,
       mayra: { facturas: invoicedInPeriod.length, avgHours: avgInvoiceHours },
-      felizai: { terminados: finishedInPeriod.length, avgHours: avgProdHours }
+      felizai: { terminados: finishedByFelizai.length, avgHours: avgProdHours }
     };
   }, [ordersInPeriod, ordersInPrevPeriod, previousStart, currentStart, currentEnd]);
 
