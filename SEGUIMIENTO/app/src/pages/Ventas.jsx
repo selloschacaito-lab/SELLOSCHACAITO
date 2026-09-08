@@ -313,16 +313,16 @@ export default function Ventas() {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
     });
 
-    let texto = `📊 *Reporte del día* - ${fechaHoy}\nSellos Chacaíto\n\n`;
+    let texto = `*Reporte del día* - ${fechaHoy}\nSellos Chacaíto\n\n`;
 
     if (todaySales.length === 0) {
       texto += 'Aún no se ha registrado ninguna venta hoy.';
     } else {
-      texto += `💰 Total facturado: $${fmt(totalUSDToday)}`;
+      texto += `• Total facturado: $${fmt(totalUSDToday)}`;
       if (totalBsToday > 0) texto += ` (Bs ${fmt(totalBsToday)})`;
-      texto += `\n🧾 Cantidad de notas: ${todaySales.length}`;
-      texto += `\n📈 Ticket promedio: $${fmt(ticketPromedioToday)}`;
-      texto += `\n🔄 Conversión: ${conversion}% (${pagadosHoy} de ${iniciadosHoy} pedidos iniciados)`;
+      texto += `\n• Cantidad de notas: ${todaySales.length}`;
+      texto += `\n• Ticket promedio: $${fmt(ticketPromedioToday)}`;
+      texto += `\n• Conversión: ${conversion}% (${pagadosHoy} de ${iniciadosHoy} pedidos iniciados)`;
     }
 
     texto += '\n\n_Generado automáticamente desde el sistema._';
