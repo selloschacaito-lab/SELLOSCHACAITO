@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../firebase/config';
 import { ref, onValue } from 'firebase/database';
 import { Settings, DollarSign, Filter, Clock, Users, AlertTriangle, Package, Activity, ArrowRight, TrendingUp, Sparkles, Crown, Calendar, Bookmark, FileText, Send } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { useProfile } from '../contexts/ProfileContext';
 import SalesHistoryModal from '../components/SalesHistoryModal';
 import AuditOrdersModal from '../components/AuditOrdersModal';
@@ -309,6 +310,14 @@ export default function Ventas() {
   // ya se calculan arriba para el dashboard de Ventas (nada se recalcula
   // aparte) y abre WhatsApp con el mensaje listo para enviar.
   const handleEnviarReporteRafael = () => {
+    // Si los pedidos todavía se están cargando desde la base de datos,
+    // todaySales podría estar vacío por error (no porque de verdad no haya
+    // ventas) — se avisa y no se envía un reporte con datos incompletos.
+    if (loadingOrders) {
+      toast.error('Espera un segundo, los datos aún se están cargando...');
+      return;
+    }
+
     const fechaHoy = new Date().toLocaleDateString('es-VE', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
     });
@@ -383,6 +392,7 @@ export default function Ventas() {
             {/* Enviar Reporte del Día a Rafael por WhatsApp */}
             <button
               onClick={handleEnviarReporteRafael}
+              disabled={loadingOrders}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -390,17 +400,17 @@ export default function Ventas() {
                 padding: '0 14px',
                 height: '38px',
                 borderRadius: '10px',
-                background: '#25D366',
+                background: loadingOrders ? '#94a3b8' : '#25D366',
                 border: 'none',
                 color: '#ffffff',
                 fontSize: '12.5px',
                 fontWeight: 800,
-                cursor: 'pointer',
+                cursor: loadingOrders ? 'not-allowed' : 'pointer',
                 boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
                 flexShrink: 0,
                 whiteSpace: 'nowrap'
               }}
-              title="Enviar el reporte de ventas de hoy a Rafael por WhatsApp"
+              title={loadingOrders ? 'Cargando datos...' : 'Enviar el reporte de ventas de hoy a Rafael por WhatsApp'}
               type="button"
             >
               <Send size={16} /> <span className="hide-on-mobile">Reporte a Rafael</span>
