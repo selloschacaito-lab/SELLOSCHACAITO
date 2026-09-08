@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../firebase/config';
 import { ref, onValue } from 'firebase/database';
-import { Settings, DollarSign, Filter, Clock, Users, AlertTriangle, Package, Activity, ArrowRight, TrendingUp, Sparkles, Crown, Calendar, Bookmark, FileText } from 'lucide-react';
+import { Settings, DollarSign, Filter, Clock, Users, AlertTriangle, Package, Activity, ArrowRight, TrendingUp, Sparkles, Crown, Calendar, Bookmark, FileText, Send } from 'lucide-react';
 import { useProfile } from '../contexts/ProfileContext';
 import SalesHistoryModal from '../components/SalesHistoryModal';
 import AuditOrdersModal from '../components/AuditOrdersModal';
@@ -302,6 +302,34 @@ export default function Ventas() {
 
   const togglePref = (key) => setPrefs(prev => ({ ...prev, [key]: !prev[key] }));
 
+  // Número de WhatsApp de Rafael (con código de país, sin "+" ni espacios).
+  const RAFAEL_WHATSAPP = '584143256743';
+
+  // Arma el texto del reporte diario para Rafael con los mismos números que
+  // ya se calculan arriba para el dashboard de Ventas (nada se recalcula
+  // aparte) y abre WhatsApp con el mensaje listo para enviar.
+  const handleEnviarReporteRafael = () => {
+    const fechaHoy = new Date().toLocaleDateString('es-VE', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    });
+
+    let texto = `📊 *Reporte del día* - ${fechaHoy}\nSellos Chacaíto\n\n`;
+
+    if (todaySales.length === 0) {
+      texto += 'Aún no se ha registrado ninguna venta hoy.';
+    } else {
+      texto += `💰 Total facturado: $${fmt(totalUSDToday)}`;
+      if (totalBsToday > 0) texto += ` (Bs ${fmt(totalBsToday)})`;
+      texto += `\n🧾 Cantidad de notas: ${todaySales.length}`;
+      texto += `\n📈 Ticket promedio: $${fmt(ticketPromedioToday)}`;
+      texto += `\n🔄 Conversión: ${conversion}% (${pagadosHoy} de ${iniciadosHoy} pedidos iniciados)`;
+    }
+
+    texto += '\n\n_Generado automáticamente desde el sistema._';
+
+    window.open(`https://wa.me/${RAFAEL_WHATSAPP}?text=${encodeURIComponent(texto)}`, '_blank');
+  };
+
   return (
     <div style={{ padding: '1.25rem 16px', width: '100%', boxSizing: 'border-box' }}>
 
@@ -351,30 +379,58 @@ export default function Ventas() {
             </h1>
           </div>
 
-          {/* Botón Compacto de Configuración de Widgets */}
-          {mainView === 'dashboard' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Enviar Reporte del Día a Rafael por WhatsApp */}
             <button
-              onClick={() => setShowPrefsModal(true)}
+              onClick={handleEnviarReporteRafael}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                width: '38px',
+                gap: '6px',
+                padding: '0 14px',
                 height: '38px',
                 borderRadius: '10px',
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                color: '#64748b',
+                background: '#25D366',
+                border: 'none',
+                color: '#ffffff',
+                fontSize: '12.5px',
+                fontWeight: 800,
                 cursor: 'pointer',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                flexShrink: 0
+                boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+                flexShrink: 0,
+                whiteSpace: 'nowrap'
               }}
-              title="Personalizar Dashboard"
+              title="Enviar el reporte de ventas de hoy a Rafael por WhatsApp"
               type="button"
             >
-              <Settings size={18} />
+              <Send size={16} /> <span className="hide-on-mobile">Reporte a Rafael</span>
             </button>
-          )}
+
+            {/* Botón Compacto de Configuración de Widgets */}
+            {mainView === 'dashboard' && (
+              <button
+                onClick={() => setShowPrefsModal(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  color: '#64748b',
+                  cursor: 'pointer',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                  flexShrink: 0
+                }}
+                title="Personalizar Dashboard"
+                type="button"
+              >
+                <Settings size={18} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Fila 2: Selector Segmentado Responsivo (Dashboard vs Bitácora) */}
