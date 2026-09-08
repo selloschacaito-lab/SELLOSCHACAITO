@@ -6,12 +6,13 @@ import {
   Search, AlertTriangle, Plus, Edit2, Trash2, Tag,
   DollarSign, Package, Check, X, TrendingUp, Sparkles,
   Layers, RefreshCw, ChevronLeft, ChevronRight,
-  Download, ClipboardList, ClipboardCheck, Wrench
+  Download, ClipboardList, ClipboardCheck, Wrench, Truck
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { createPortal } from 'react-dom';
 import { useProfile } from '../contexts/ProfileContext';
 import { downloadInventoryExcel } from '../utils/exportInventory';
+import PurchaseOrderModal from '../components/PurchaseOrderModal';
 
 function Inventory({ isModal = false }) {
   const { activeProfile } = useProfile();
@@ -28,6 +29,7 @@ function Inventory({ isModal = false }) {
 
   // Motivo al subir stock (compra nueva vs. corrección de conteo)
   const [pendingIncrease, setPendingIncrease] = useState(null); // { product, newQty }
+  const [showPurchaseOrderModal, setShowPurchaseOrderModal] = useState(false);
 
   // Salida de Inventario para Taller (reparaciones)
   const [workshopExitProduct, setWorkshopExitProduct] = useState(null);
@@ -643,6 +645,29 @@ function Inventory({ isModal = false }) {
                 <ClipboardCheck size={16} /> Finalizar Conteo ({countProgress.contados}/{countProgress.total})
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={() => setShowPurchaseOrderModal(true)}
+              title="Registrar una compra (con IVA y envío) y actualizar stock y costos"
+              style={{
+                padding: '10px 16px',
+                borderRadius: '10px',
+                border: 'none',
+                background: '#f59e0b',
+                color: '#ffffff',
+                fontSize: '13px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(245, 158, 11, 0.25)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Truck size={16} /> Registrar Orden de Compra
+            </button>
 
             <button
               type="button"
@@ -1833,6 +1858,14 @@ function Inventory({ isModal = false }) {
           </div>
         </div>,
         document.body
+      )}
+
+      {/* ===================== MODAL: ORDEN DE COMPRA ===================== */}
+      {showPurchaseOrderModal && (
+        <PurchaseOrderModal
+          products={products}
+          onClose={() => setShowPurchaseOrderModal(false)}
+        />
       )}
 
     </div>
