@@ -20,6 +20,7 @@ import Costos from './pages/Costos';
 import Ventas from './pages/Ventas';
 import Facturacion from './pages/Facturacion';
 import Herramientas from './pages/Herramientas';
+import CalculadoraSellosMadera from './pages/CalculadoraSellosMadera';
 import VerGuia from './pages/VerGuia';
 import VerOrden from './pages/VerOrden';
 import DeliveryView from './pages/DeliveryView';
@@ -101,6 +102,7 @@ function App() {
                 <Route path="costos" element={<Navigate to="/herramientas?tab=costos" replace />} />
                 <Route path="retenciones" element={<Navigate to="/herramientas?tab=retenciones" replace />} />
                 <Route path="cambio" element={<Calculator />} />
+                <Route path="sellos-madera" element={<CalculadoraSellosMadera />} />
                 <Route path="configuracion" element={<Config />} />
                 <Route path="usuarios" element={<ProfileAdmin />} />
                 <Route path="estadisticas" element={

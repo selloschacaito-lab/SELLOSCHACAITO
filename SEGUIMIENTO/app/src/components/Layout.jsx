@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
-import { Package, ListTodo, Users, Settings, LogOut, ChevronLeft, ChevronRight, ClipboardList, ShoppingBag, UserCircle, FileCheck, Wrench, DollarSign, BarChart3 } from 'lucide-react';
+import { Package, ListTodo, Users, Settings, LogOut, ChevronLeft, ChevronRight, ClipboardList, ShoppingBag, UserCircle, FileCheck, Wrench, DollarSign, BarChart3, Stamp } from 'lucide-react';
 import { db } from '../firebase/config';
 import { ref, onValue } from 'firebase/database';
 import { toast } from 'react-hot-toast';
@@ -175,6 +175,7 @@ function Layout() {
     { name: 'Presupuestos',         path: '/presupuestos',  icon: <ClipboardList size={18} /> },
     { name: 'Cambio',               path: '/cambio',        icon: <DollarSign size={18} /> },
     { name: 'Herramientas',         path: '/herramientas',  icon: <Wrench size={18} /> },
+    { name: 'Sellos de Madera',     path: '/sellos-madera', icon: <Stamp size={18} /> },
     { name: 'Inventario & Precios', path: '/inventario',    icon: <Package size={18} /> },
     { name: 'Configuración',        path: '/configuracion', icon: <Settings size={18} /> },
     { name: 'Usuarios',             path: '/usuarios',      icon: <UserCircle size={18} /> },

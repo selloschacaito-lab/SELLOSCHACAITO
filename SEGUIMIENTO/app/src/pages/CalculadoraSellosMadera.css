@@ -1,0 +1,360 @@
+/* ==========================================================================
+   CALCULADORA DE SELLOS DE MADERA - TEMA WHITESTAMP
+   ========================================================================== */
+@import '../styles/whitestamp.css';
+
+.wsm-wrapper {
+  width: 100%;
+  min-height: 100%;
+  color: var(--ws-text-primary);
+  font-family: var(--ws-font-family);
+  background-color: var(--ws-bg-canvas);
+  padding: 32px 24px 80px;
+  box-sizing: border-box;
+}
+
+.wsm-container {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* --- HEADER --- */
+.wsm-header {
+  display: flex;
+  align-items: center;
+  background: var(--ws-card-bg);
+  border: 1px solid var(--ws-border-subtle);
+  border-radius: var(--ws-radius-xl);
+  padding: 24px 28px;
+  box-shadow: var(--ws-shadow-sm);
+}
+
+.wsm-title-box {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.wsm-icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--ws-accent-primary-light);
+  color: var(--ws-accent-primary);
+  border: 1px solid var(--ws-accent-primary-border);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.wsm-title-box h1 {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0 0 4px;
+  color: var(--ws-text-primary);
+  letter-spacing: -0.02em;
+}
+
+.wsm-title-box p {
+  font-size: 13px;
+  color: var(--ws-text-secondary);
+  margin: 0;
+}
+
+/* --- PESTAÑAS INTERNAS (preparado para la Etapa 4) --- */
+.wsm-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.wsm-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ws-card-bg);
+  border: 1px solid var(--ws-border-subtle);
+  color: var(--ws-text-secondary);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 10px 16px;
+  border-radius: var(--ws-radius-md);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.wsm-tab-btn.active {
+  background: color-mix(in srgb, var(--wsm-tab-color, var(--ws-accent-primary)) 12%, white);
+  border-color: var(--wsm-tab-color, var(--ws-accent-primary));
+  color: var(--wsm-tab-color, var(--ws-accent-primary));
+}
+
+/* --- TARJETA PRINCIPAL --- */
+.wsm-card {
+  background: var(--ws-card-bg);
+  border: 1px solid var(--ws-border-subtle);
+  border-radius: var(--ws-radius-xl);
+  padding: 24px;
+  box-shadow: var(--ws-shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-sizing: border-box;
+}
+
+.wsm-card-title {
+  display: flex;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ws-text-primary);
+  margin: 0;
+  border-bottom: 1px solid var(--ws-border-subtle);
+  padding-bottom: 14px;
+  gap: 8px;
+}
+
+.wsm-card-title span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* --- INPUTS ANCHO x ALTO --- */
+.wsm-inputs-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.wsm-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.wsm-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ws-text-secondary);
+}
+
+.wsm-input-shell {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 14px;
+  gap: 8px;
+  border: 1.5px solid var(--ws-border-subtle);
+  border-radius: var(--ws-radius-md);
+  background: var(--ws-bg-canvas);
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.wsm-input-shell:focus-within {
+  background: var(--ws-card-bg);
+  border-color: var(--ws-accent-primary);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.wsm-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ws-text-primary);
+  font-family: var(--ws-font-family);
+}
+
+.wsm-input-suffix {
+  color: var(--ws-text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.wsm-x-separator {
+  padding-bottom: 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ws-text-muted);
+}
+
+/* --- ESTADOS: vacío / error --- */
+.wsm-empty-state {
+  text-align: center;
+  padding: 20px;
+  color: var(--ws-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--ws-bg-canvas);
+  border-radius: var(--ws-radius-md);
+  border: 1px dashed var(--ws-border-subtle);
+}
+
+.wsm-error-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--ws-radius-md);
+  background: var(--ws-accent-danger-light);
+  border: 1px solid #fecaca;
+  color: var(--ws-accent-danger-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* --- RESULTADO --- */
+.wsm-result-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.wsm-result-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: var(--ws-radius-md);
+  background: var(--ws-bg-canvas);
+  border: 1px solid var(--ws-border-subtle);
+}
+
+.wsm-result-item span {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ws-text-secondary);
+}
+
+.wsm-result-item strong {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ws-text-primary);
+}
+
+.wsm-price-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: var(--ws-radius-md);
+  border: 1.5px solid var(--ws-border-subtle);
+  background: var(--ws-bg-canvas);
+}
+
+.wsm-price-box span {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.wsm-price-box strong {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.wsm-price-box.pvp {
+  background: var(--ws-accent-primary-light);
+  border-color: var(--ws-accent-primary-border);
+}
+.wsm-price-box.pvp span { color: var(--ws-accent-primary-text); }
+.wsm-price-box.pvp strong { color: var(--ws-accent-primary-hover); }
+
+.wsm-price-box.wholesale {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+.wsm-price-box.wholesale span { color: #1e40af; }
+.wsm-price-box.wholesale strong { color: #2563eb; }
+
+/* --- VER CÁLCULO (desplegable) --- */
+.wsm-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wsm-breakdown-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--ws-card-bg);
+  border: 1px solid var(--ws-border-subtle);
+  color: var(--ws-text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 14px;
+  border-radius: var(--ws-radius-md);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.wsm-breakdown-toggle:hover {
+  background: var(--ws-card-bg-subtle);
+  color: var(--ws-text-primary);
+}
+
+.wsm-breakdown-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: var(--ws-radius-md);
+  background: var(--ws-bg-canvas);
+  border: 1px solid var(--ws-border-subtle);
+}
+
+.wsm-breakdown-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12.5px;
+}
+
+.wsm-breakdown-row span {
+  color: var(--ws-text-secondary);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.wsm-breakdown-row strong {
+  color: var(--ws-text-primary);
+  font-weight: 700;
+  text-align: right;
+}
+
+/* --- Responsive Móvil --- */
+@media (max-width: 640px) {
+  .wsm-wrapper {
+    padding: 20px 16px 60px;
+  }
+
+  .wsm-result-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .wsm-breakdown-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .wsm-breakdown-row strong {
+    text-align: left;
+  }
+}
