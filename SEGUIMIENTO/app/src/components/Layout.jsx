@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
-import { Package, ListTodo, Users, Settings, LogOut, ChevronLeft, ChevronRight, ClipboardList, ShoppingBag, UserCircle, FileCheck, Wrench, DollarSign, BarChart3, Stamp } from 'lucide-react';
+import { ListTodo, Settings, LogOut, ChevronLeft, ChevronRight, FileCheck, Wrench, BarChart3, Database } from 'lucide-react';
 import { db } from '../firebase/config';
 import { ref, onValue } from 'firebase/database';
 import { toast } from 'react-hot-toast';
@@ -167,22 +167,19 @@ function Layout() {
     setIsSidebarOpen(false);
   }, [location.pathname]);
 
+  // Menú simplificado: Ventas+Estadísticas, Clientes+Inventario, Cambio+
+  // Presupuestos+Herramientas+Sellos de Madera, y Configuración+Usuarios
+  // ahora viven cada uno dentro de una sola página con pestañas (ver
+  // Reportes.jsx, BaseDeDatos.jsx, Utilidades.jsx, Configuracion.jsx).
+  // El acceso a las pestañas de Álvaro (Estadísticas/Usuarios) sigue
+  // protegido a nivel de ruta en App.jsx, no solo ocultando el ítem.
   const navItems = [
-    { name: 'Pedidos',              path: '/',              icon: <ListTodo size={18} /> },
-    { name: 'Facturación',          path: '/facturacion',   icon: <FileCheck size={18} />, badge: pendingInvoiceCount > 0 ? pendingInvoiceCount : null },
-    { name: 'Ventas',               path: '/ventas',        icon: <ShoppingBag size={18} /> },
-    { name: 'Clientes',             path: '/clientes',      icon: <Users size={18} /> },
-    { name: 'Presupuestos',         path: '/presupuestos',  icon: <ClipboardList size={18} /> },
-    { name: 'Cambio',               path: '/cambio',        icon: <DollarSign size={18} /> },
-    { name: 'Herramientas',         path: '/herramientas',  icon: <Wrench size={18} /> },
-    { name: 'Sellos de Madera',     path: '/sellos-madera', icon: <Stamp size={18} /> },
-    { name: 'Inventario & Precios', path: '/inventario',    icon: <Package size={18} /> },
-    { name: 'Configuración',        path: '/configuracion', icon: <Settings size={18} /> },
-    { name: 'Usuarios',             path: '/usuarios',      icon: <UserCircle size={18} /> },
-    // Solo Álvaro ve "Estadísticas" (además, la ruta en sí está protegida en App.jsx)
-    ...(activeProfile?.name?.toLowerCase().includes('alvaro')
-      ? [{ name: 'Estadísticas', path: '/estadisticas', icon: <BarChart3 size={18} /> }]
-      : [])
+    { name: 'Pedidos',        path: '/',              icon: <ListTodo size={18} /> },
+    { name: 'Facturación',    path: '/facturacion',   icon: <FileCheck size={18} />, badge: pendingInvoiceCount > 0 ? pendingInvoiceCount : null },
+    { name: 'Reportes',       path: '/reportes',      icon: <BarChart3 size={18} /> },
+    { name: 'Base de datos',  path: '/base-de-datos', icon: <Database size={18} /> },
+    { name: 'Utilidades',     path: '/utilidades',    icon: <Wrench size={18} /> },
+    { name: 'Configuración',  path: '/configuracion', icon: <Settings size={18} /> }
   ];
 
   async function handleLogout() {
@@ -377,7 +374,9 @@ function Layout() {
         {/* Navigation */}
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1, overflowY: 'auto' }}>
           {navItems.filter(item => !item.hidden).map((item, index) => {
-            const isActive = location.pathname === item.path;
+            const isActive = item.path === '/'
+              ? location.pathname === '/'
+              : location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
             return (
               <button
                 key={item.name}

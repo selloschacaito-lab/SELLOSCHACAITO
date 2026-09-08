@@ -21,6 +21,10 @@ import Ventas from './pages/Ventas';
 import Facturacion from './pages/Facturacion';
 import Herramientas from './pages/Herramientas';
 import CalculadoraSellosMadera from './pages/CalculadoraSellosMadera';
+import Reportes from './pages/Reportes';
+import BaseDeDatos from './pages/BaseDeDatos';
+import Utilidades from './pages/Utilidades';
+import Configuracion from './pages/Configuracion';
 import VerGuia from './pages/VerGuia';
 import VerOrden from './pages/VerOrden';
 import DeliveryView from './pages/DeliveryView';
@@ -91,27 +95,58 @@ function App() {
               <Route path="/" element={<PrivateRoute><ProfileRoute><Layout /></ProfileRoute></PrivateRoute>}>
                 {/* The main Kanban is the dashboard index for now */}
                 <Route index element={<Dashboard />} />
-                
-                <Route path="ventas" element={<Ventas />} />
+
                 <Route path="facturacion" element={<Facturacion />} />
-                <Route path="herramientas" element={<Herramientas />} />
-                <Route path="clientes" element={<Clients />} />
-                <Route path="productos" element={<Navigate to="/inventario" replace />} />
-                <Route path="inventario" element={<Inventory />} />
-                <Route path="presupuestos" element={<Presupuestos />} />
-                <Route path="costos" element={<Navigate to="/herramientas?tab=costos" replace />} />
-                <Route path="retenciones" element={<Navigate to="/herramientas?tab=retenciones" replace />} />
-                <Route path="cambio" element={<Calculator />} />
-                <Route path="sellos-madera" element={<CalculadoraSellosMadera />} />
-                <Route path="configuracion" element={<Config />} />
-                <Route path="usuarios" element={<ProfileAdmin />} />
-                <Route path="estadisticas" element={
-                  <AdminOnlyRoute>
-                    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Cargando estadísticas...</div>}>
-                      <Estadisticas />
-                    </Suspense>
-                  </AdminOnlyRoute>
-                } />
+
+                {/* Reportes: Ventas + Estadísticas (Estadísticas solo Álvaro) */}
+                <Route path="reportes" element={<Reportes />}>
+                  <Route index element={<Navigate to="ventas" replace />} />
+                  <Route path="ventas" element={<Ventas />} />
+                  <Route path="estadisticas" element={
+                    <AdminOnlyRoute>
+                      <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Cargando estadísticas...</div>}>
+                        <Estadisticas />
+                      </Suspense>
+                    </AdminOnlyRoute>
+                  } />
+                </Route>
+
+                {/* Base de Datos: Clientes + Inventario */}
+                <Route path="base-de-datos" element={<BaseDeDatos />}>
+                  <Route index element={<Navigate to="clientes" replace />} />
+                  <Route path="clientes" element={<Clients isModal={true} />} />
+                  <Route path="inventario" element={<Inventory />} />
+                </Route>
+
+                {/* Utilidades: Cambio + Presupuestos + Herramientas + Sellos de Madera */}
+                <Route path="utilidades" element={<Utilidades />}>
+                  <Route index element={<Navigate to="cambio" replace />} />
+                  <Route path="cambio" element={<Calculator isEmbedded={true} />} />
+                  <Route path="presupuestos" element={<Presupuestos />} />
+                  <Route path="herramientas" element={<Herramientas />} />
+                  <Route path="sellos-madera" element={<CalculadoraSellosMadera />} />
+                </Route>
+
+                {/* Configuración: Configuración general + Usuarios (Usuarios solo Álvaro) */}
+                <Route path="configuracion" element={<Configuracion />}>
+                  <Route index element={<Navigate to="general" replace />} />
+                  <Route path="general" element={<Config />} />
+                  <Route path="usuarios" element={<AdminOnlyRoute><ProfileAdmin /></AdminOnlyRoute>} />
+                </Route>
+
+                {/* Compatibilidad: rutas viejas redirigen a su nueva ubicación */}
+                <Route path="ventas" element={<Navigate to="/reportes/ventas" replace />} />
+                <Route path="estadisticas" element={<Navigate to="/reportes/estadisticas" replace />} />
+                <Route path="clientes" element={<Navigate to="/base-de-datos/clientes" replace />} />
+                <Route path="productos" element={<Navigate to="/base-de-datos/inventario" replace />} />
+                <Route path="inventario" element={<Navigate to="/base-de-datos/inventario" replace />} />
+                <Route path="cambio" element={<Navigate to="/utilidades/cambio" replace />} />
+                <Route path="presupuestos" element={<Navigate to="/utilidades/presupuestos" replace />} />
+                <Route path="herramientas" element={<Navigate to="/utilidades/herramientas" replace />} />
+                <Route path="sellos-madera" element={<Navigate to="/utilidades/sellos-madera" replace />} />
+                <Route path="costos" element={<Navigate to="/utilidades/herramientas?tab=costos" replace />} />
+                <Route path="retenciones" element={<Navigate to="/utilidades/herramientas?tab=retenciones" replace />} />
+                <Route path="usuarios" element={<Navigate to="/configuracion/usuarios" replace />} />
               </Route>
 
               <Route path="*" element={<Navigate to="/" replace />} />
