@@ -128,7 +128,7 @@ function Dashboard() {
   }, []);
 
   // Calcular estadísticas
-  const ordersList = Object.values(orders);
+  const ordersList = Object.values(orders).filter(o => !o.isDeleted);
   const activeOrders = ordersList.filter(o => o.status !== 'delivered');
   
   const todayStr = new Date().toISOString().split('T')[0];

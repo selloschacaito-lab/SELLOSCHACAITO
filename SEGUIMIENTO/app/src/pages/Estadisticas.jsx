@@ -156,7 +156,7 @@ export default function Estadisticas() {
     return () => unsub();
   }, []);
 
-  const allOrdersList = useMemo(() => Object.entries(ordersMap).map(([id, o]) => ({ id, ...o })), [ordersMap]);
+  const allOrdersList = useMemo(() => Object.entries(ordersMap).map(([id, o]) => ({ id, ...o })).filter(o => !o.isDeleted), [ordersMap]);
 
   const { currentStart, currentEnd, previousStart, previousEnd, label } = useMemo(
     () => getPeriodBounds(periodKey),

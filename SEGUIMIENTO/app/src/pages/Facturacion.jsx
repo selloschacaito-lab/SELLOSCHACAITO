@@ -34,10 +34,13 @@ import {
   ChevronDown,
   ChevronUp,
   MessageCircle,
-  Briefcase
+  Briefcase,
+  Trash2,
+  Undo2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDisplayPhone } from '../utils/formatters';
+import { logActivity } from '../services/activityLogger';
 import SaleDetailModal from '../components/SaleDetailModal';
 import './Facturacion.css';
 
@@ -169,9 +172,10 @@ export default function Facturacion() {
       ...(val && typeof val === 'object' ? val : {})
     })).filter(o => {
       if (!o || o.status === 'cancelled') return false;
+      if (o.isDeleted) return false; // los pedidos en la papelera no cuentan en ningún lado
       return (
-        o.status === 'fina' || 
-        o.hasFinaReceipt === true || 
+        o.status === 'fina' ||
+        o.hasFinaReceipt === true ||
         o.isPaid !== undefined ||
         o.paymentMethod === 'Por Pagar' ||
         Boolean(o.paidAt && (Number(o.totalAmount) > 0 || Number(o.totalAmountBs) > 0)) ||
@@ -223,6 +227,56 @@ export default function Facturacion() {
   const unpaidOrders = useMemo(() => {
     return paidSales.filter(o => o.isPaid === false || o.paymentMethod === 'Por Pagar');
   }, [paidSales]);
+
+  // Papelera: pedidos movidos a la papelera (no se cuentan en ninguna métrica)
+  const deletedOrders = useMemo(() => {
+    return Object.entries(orders || {})
+      .map(([id, o]) => ({ id, ...(o && typeof o === 'object' ? o : {}) }))
+      .filter(o => o && o.isDeleted)
+      .sort((a, b) => new Date(b.deletedAt || 0) - new Date(a.deletedAt || 0));
+  }, [orders]);
+
+  // Mover un pedido a la papelera (pide motivo obligatorio, queda en el registro)
+  const handleDeleteOrder = async (order) => {
+    const label = `#${order.orderNumber || order.id.slice(-5)} · ${(order.clientName || 'Sin nombre').toUpperCase()}`;
+    const motivo = window.prompt(`Vas a mover a la PAPELERA el pedido:\n${label}\n\nEscribe el motivo (obligatorio):`);
+    if (motivo === null) return;
+    if (!motivo.trim()) {
+      toast.error('Debes escribir un motivo para poder eliminar el pedido');
+      return;
+    }
+    try {
+      await update(ref(db, `orders/${order.id}`), {
+        isDeleted: true,
+        deletedAt: new Date().toISOString(),
+        deletedBy: activeProfile?.name || 'Desconocido',
+        deleteReason: motivo.trim()
+      });
+      logActivity('Pedido movido a papelera', `${label} — Motivo: ${motivo.trim()}`, order.id, activeProfile?.name);
+      toast.success('Pedido movido a la papelera');
+    } catch (e) {
+      console.error(e);
+      toast.error('Error al mover el pedido a la papelera');
+    }
+  };
+
+  // Restaurar un pedido desde la papelera (vuelve a aparecer en todo el sistema)
+  const handleRestoreOrder = async (order) => {
+    const label = `#${order.orderNumber || order.id.slice(-5)} · ${(order.clientName || 'Sin nombre').toUpperCase()}`;
+    if (!window.confirm(`¿Restaurar el pedido ${label}?\n\nVolverá a aparecer en Facturación, Ventas y el resto del sistema.`)) return;
+    try {
+      await update(ref(db, `orders/${order.id}`), {
+        isDeleted: false,
+        restoredAt: new Date().toISOString(),
+        restoredBy: activeProfile?.name || 'Desconocido'
+      });
+      logActivity('Pedido restaurado de papelera', label, order.id, activeProfile?.name);
+      toast.success('Pedido restaurado');
+    } catch (e) {
+      console.error(e);
+      toast.error('Error al restaurar el pedido');
+    }
+  };
 
   // Resumen Financiero & Dashboard de Métricas
   const stats = useMemo(() => {
@@ -873,7 +927,7 @@ Quedamos a su disposición para la emisión de su factura fiscal. ¡Muchas graci
             <span className="facturacion-tab-badge" style={{ background: '#f59e0b', color: '#ffffff' }}>{unpaidOrders.length}</span>
           </button>
 
-          <button 
+          <button
             type="button"
             className={`facturacion-tab-btn ${activeTab === 'all' ? 'active' : ''}`}
             onClick={() => setActiveTab('all')}
@@ -881,6 +935,21 @@ Quedamos a su disposición para la emisión de su factura fiscal. ¡Muchas graci
             <Layers size={16} />
             <span>Todas</span>
             <span className="facturacion-tab-badge" style={{ background: '#64748b', color: '#ffffff' }}>{paidSales.length}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`facturacion-tab-btn ${activeTab === 'trash' ? 'active' : ''}`}
+            onClick={() => setActiveTab('trash')}
+            style={{
+              borderColor: activeTab === 'trash' ? '#ef4444' : '#e2e8f0',
+              background: activeTab === 'trash' ? '#fef2f2' : '#ffffff',
+              color: activeTab === 'trash' ? '#991b1b' : '#64748b'
+            }}
+          >
+            <Trash2 size={16} color={activeTab === 'trash' ? '#dc2626' : '#94a3b8'} />
+            <span>Papelera</span>
+            <span className="facturacion-tab-badge" style={{ background: '#ef4444', color: '#ffffff' }}>{deletedOrders.length}</span>
           </button>
         </div>
 
@@ -958,7 +1027,79 @@ Quedamos a su disposición para la emisión de su factura fiscal. ¡Muchas graci
         )}
 
         {/* LISTA DE TARJETAS DE FACTURACIÓN */}
-        {activeTab === 'by_client' ? (
+        {activeTab === 'trash' ? (
+          <div className="facturacion-list">
+            {deletedOrders.length === 0 ? (
+              <div style={{
+                background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '20px',
+                padding: '48px 24px', textAlign: 'center', color: '#64748b',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px'
+              }}>
+                <Trash2 size={48} color="#cbd5e1" />
+                <h3 style={{ margin: 0, color: '#0f172a', fontWeight: 800 }}>La papelera está vacía</h3>
+                <p style={{ margin: 0, fontSize: '13px', maxWidth: '400px' }}>
+                  Los pedidos que elimines desde "Por Facturar" o "Por Pagar" aparecerán aquí y podrás restaurarlos si hizo falta.
+                </p>
+              </div>
+            ) : (
+              deletedOrders.map(order => {
+                const totalUSD = getOrderTotalUSD(order);
+                const totalBs = getOrderTotalBs(order);
+                return (
+                  <article key={order.id} className="factura-card" style={{ borderLeft: '4px solid #ef4444' }}>
+                    <div className="factura-card-top">
+                      <div className="factura-order-info">
+                        <div style={{ background: '#fef2f2', color: '#dc2626', borderRadius: '10px', padding: '8px', display: 'flex' }}>
+                          <Trash2 size={18} />
+                        </div>
+                        <div>
+                          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>
+                            #{order.orderNumber || order.id.slice(-5)} · {(order.clientName || 'Sin Nombre').toUpperCase()}
+                          </h3>
+                          <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>
+                            Eliminado por {order.deletedBy || 'Desconocido'} · {order.deletedAt ? new Date(order.deletedAt).toLocaleString('es-VE') : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>${fmt(totalUSD)}</div>
+                        <div style={{ fontSize: '11.5px', color: '#64748b' }}>Bs {fmt(totalBs)}</div>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      margin: '10px 0 0', padding: '10px 12px', background: '#fef2f2',
+                      border: '1px solid #fecaca', borderRadius: '10px', fontSize: '12.5px', color: '#991b1b'
+                    }}>
+                      <strong>Motivo:</strong> {order.deleteReason || 'Sin motivo registrado'}
+                    </div>
+
+                    <div className="factura-actions-row" style={{ marginTop: '10px' }}>
+                      <button
+                        type="button"
+                        className="factura-btn-copy"
+                        style={{ padding: '8px 14px', fontSize: '12px' }}
+                        onClick={() => setSelectedSaleForDetail(order)}
+                      >
+                        <ExternalLink size={14} />
+                        <span>Ver Detalle</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="factura-btn-copy"
+                        style={{ padding: '8px 14px', fontSize: '12px', background: '#ecfdf5', color: '#065f46', borderColor: '#10b981', fontWeight: 800 }}
+                        onClick={() => handleRestoreOrder(order)}
+                      >
+                        <Undo2 size={14} color="#10b981" />
+                        <span>Restaurar</span>
+                      </button>
+                    </div>
+                  </article>
+                );
+              })
+            )}
+          </div>
+        ) : activeTab === 'by_client' ? (
           <div className="facturacion-list">
             {filteredGroupedClients.length === 0 ? (
               <div style={{
@@ -1486,6 +1627,29 @@ Quedamos a su disposición para la emisión de su factura fiscal. ¡Muchas graci
                         >
                           <Building2 size={14} color="#2563eb" />
                           <span>Mover a Acumuladas</span>
+                        </button>
+                      )}
+
+                      {(activeTab === 'pending' || activeTab === 'unpaid') && !order.isInvoiced && (
+                        <button
+                          type="button"
+                          className="factura-btn-copy"
+                          style={{
+                            padding: '8px 14px',
+                            fontSize: '12px',
+                            background: '#fef2f2',
+                            color: '#991b1b',
+                            borderColor: '#fecaca',
+                            fontWeight: 800,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                          onClick={() => handleDeleteOrder(order)}
+                          title="Mover este pedido a la papelera (se puede restaurar después)"
+                        >
+                          <Trash2 size={14} color="#dc2626" />
+                          <span>Eliminar</span>
                         </button>
                       )}
                     </div>

@@ -59,7 +59,7 @@ function Layout() {
       const list = Object.entries(data).map(([id, val]) => ({ id, ...(val || {}) }));
       
       const pendingInvoices = list.filter(o => {
-        if (!o || o.status === 'cancelled') return false;
+        if (!o || o.status === 'cancelled' || o.isDeleted) return false;
         const isPaid = (
           o.status === 'fina' || 
           o.hasFinaReceipt === true || 

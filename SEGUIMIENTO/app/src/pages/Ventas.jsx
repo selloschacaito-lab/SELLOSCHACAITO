@@ -119,7 +119,7 @@ export default function Ventas() {
     return Object.entries(orders || {}).map(([key, val]) => ({
       id: key,
       ...(val && typeof val === 'object' ? val : {})
-    }));
+    })).filter(o => !o.isDeleted); // pedidos en la papelera no cuentan
   }, [orders]);
   
   const paidSales = useMemo(() => {

@@ -116,6 +116,7 @@ function KanbanBoard({ orders, searchTerm = '', showArchived = false, onOrderCli
       if (order.status === 'cancelled' || order.statusId === 'cancelled' || order.isCancelled) {
         return;
       }
+      if (order.isDeleted) return; // pedidos movidos a la papelera
 
       if (term) {
         const matchName = order.clientName?.toLowerCase().includes(term);
