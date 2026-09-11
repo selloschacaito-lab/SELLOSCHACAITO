@@ -659,6 +659,36 @@ Direccion: ${address}`;
           </button>
         </div>
 
+        {/* QUIÉN PROCESÓ ESTE PEDIDO — visible siempre, sin importar la pestaña.
+            Cada etapa la puede hacer una persona distinta, así que se muestran
+            todas las que tengan dato (las vacías no aparecen). */}
+        {(() => {
+          const chips = [
+            { label: 'Vendió/Diseñó', name: order.designer || order.vendedor || order.createdBy },
+            { label: 'Producción', name: order.productionStartedBy },
+            { label: 'Terminó', name: order.finishedBy },
+            { label: 'Facturó', name: order.invoicedBy },
+            { label: 'Entregó', name: order.deliveryInfo?.pickedUpBy === 'client' ? 'Cliente (retiro)' : order.deliveredBy }
+          ].filter(c => c.name);
+          if (chips.length === 0) return null;
+          return (
+            <div style={{
+              display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '8px 1.25rem',
+              background: '#fafafa', borderBottom: '1px solid #e2e8f0'
+            }}>
+              {chips.map(c => (
+                <span key={c.label} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '4px',
+                  background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '999px',
+                  padding: '3px 10px', fontSize: '11px', fontWeight: 700, color: '#334155'
+                }}>
+                  <span style={{ color: '#94a3b8', fontWeight: 600 }}>{c.label}:</span> {c.name}
+                </span>
+              ))}
+            </div>
+          );
+        })()}
+
         {/* 3 TABS SELECTOR */}
         <div style={{
           display: 'grid',

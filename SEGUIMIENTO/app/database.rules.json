@@ -3,6 +3,7 @@
     "orders": {
       ".read": "auth != null",
       ".write": "auth != null",
+      ".indexOn": ["orderNumber"],
       "$orderId": {
         ".read": true,
         ".write": true

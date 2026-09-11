@@ -122,7 +122,8 @@ function KanbanBoard({ orders, searchTerm = '', showArchived = false, onOrderCli
         const matchName = order.clientName?.toLowerCase().includes(term);
         const matchDetails = order.details?.toLowerCase().includes(term);
         const matchDesigner = order.designer?.toLowerCase().includes(term);
-        if (!matchName && !matchDetails && !matchDesigner) return;
+        const matchOrderNumber = order.orderNumber?.toString().toLowerCase().includes(term);
+        if (!matchName && !matchDetails && !matchDesigner && !matchOrderNumber) return;
       }
 
       const legacyStatusMap = {
