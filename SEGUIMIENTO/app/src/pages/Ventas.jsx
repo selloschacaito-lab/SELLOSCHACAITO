@@ -305,38 +305,54 @@ export default function Ventas() {
 
   // Número de WhatsApp de Rafael (con código de país, sin "+" ni espacios).
   const RAFAEL_WHATSAPP = '584143256743';
+  const [showReportePicker, setShowReportePicker] = useState(false);
 
-  // Arma el texto del reporte diario para Rafael con los mismos números que
-  // ya se calculan arriba para el dashboard de Ventas (nada se recalcula
-  // aparte) y abre WhatsApp con el mensaje listo para enviar.
-  const handleEnviarReporteRafael = () => {
-    // Si los pedidos todavía se están cargando desde la base de datos,
-    // todaySales podría estar vacío por error (no porque de verdad no haya
+  // Arma el texto del reporte para CUALQUIER día (hoy, ayer o uno elegido a
+  // mano) recalculando los mismos números que el dashboard de Ventas ya usa
+  // para "hoy", pero para la fecha que se le pida.
+  const buildDailyReportText = (targetDate) => {
+    const targetDateStr = getLocalDateStr(targetDate);
+    const fechaTexto = targetDate.toLocaleDateString('es-VE', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    });
+
+    const salesForDate = paidSales.filter(o => getLocalDateStr(o.paidAt || o.createdAt) === targetDateStr);
+    const totalUSD = salesForDate.reduce((acc, o) => acc + (Number(o.totalAmount) || 0), 0);
+    const totalBs = salesForDate.reduce((acc, o) => acc + (Number(o.totalAmountBs) || Number(o.subtotalBs) || 0), 0);
+    const ticketProm = salesForDate.length > 0 ? totalUSD / salesForDate.length : 0;
+    const iniciadosDia = allOrdersList.filter(o => getLocalDateStr(o.createdAt) === targetDateStr).length;
+    const pagadosDia = salesForDate.length;
+    const conversionDia = iniciadosDia > 0 ? Math.round((pagadosDia / iniciadosDia) * 100) : 0;
+
+    let texto = `*Reporte del día* - ${fechaTexto}\nSellos Chacaíto\n\n`;
+
+    if (salesForDate.length === 0) {
+      texto += 'Aún no se registró ninguna venta ese día.';
+    } else {
+      texto += `• Total facturado: $${fmt(totalUSD)}`;
+      if (totalBs > 0) texto += ` (Bs ${fmt(totalBs)})`;
+      texto += `\n• Cantidad de notas: ${salesForDate.length}`;
+      texto += `\n• Ticket promedio: $${fmt(ticketProm)}`;
+      texto += `\n• Conversión: ${conversionDia}% (${pagadosDia} de ${iniciadosDia} pedidos iniciados)`;
+    }
+
+    texto += '\n\n_Generado automáticamente desde el sistema._';
+    return texto;
+  };
+
+  // Envía el reporte de la fecha indicada (por defecto, hoy) por WhatsApp.
+  const handleEnviarReporteRafael = (targetDate = new Date()) => {
+    // Si los pedidos todavía se están cargando desde la base de datos, el
+    // reporte podría salir vacío por error (no porque de verdad no haya
     // ventas) — se avisa y no se envía un reporte con datos incompletos.
     if (loadingOrders) {
       toast.error('Espera un segundo, los datos aún se están cargando...');
       return;
     }
 
-    const fechaHoy = new Date().toLocaleDateString('es-VE', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-    });
-
-    let texto = `*Reporte del día* - ${fechaHoy}\nSellos Chacaíto\n\n`;
-
-    if (todaySales.length === 0) {
-      texto += 'Aún no se ha registrado ninguna venta hoy.';
-    } else {
-      texto += `• Total facturado: $${fmt(totalUSDToday)}`;
-      if (totalBsToday > 0) texto += ` (Bs ${fmt(totalBsToday)})`;
-      texto += `\n• Cantidad de notas: ${todaySales.length}`;
-      texto += `\n• Ticket promedio: $${fmt(ticketPromedioToday)}`;
-      texto += `\n• Conversión: ${conversion}% (${pagadosHoy} de ${iniciadosHoy} pedidos iniciados)`;
-    }
-
-    texto += '\n\n_Generado automáticamente desde el sistema._';
-
+    const texto = buildDailyReportText(targetDate);
     window.open(`https://wa.me/${RAFAEL_WHATSAPP}?text=${encodeURIComponent(texto)}`, '_blank');
+    setShowReportePicker(false);
   };
 
   return (
@@ -389,32 +405,80 @@ export default function Ventas() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {/* Enviar Reporte del Día a Rafael por WhatsApp */}
-            <button
-              onClick={handleEnviarReporteRafael}
-              disabled={loadingOrders}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '0 14px',
-                height: '38px',
-                borderRadius: '10px',
-                background: loadingOrders ? '#94a3b8' : '#25D366',
-                border: 'none',
-                color: '#ffffff',
-                fontSize: '12.5px',
-                fontWeight: 800,
-                cursor: loadingOrders ? 'not-allowed' : 'pointer',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
-                flexShrink: 0,
-                whiteSpace: 'nowrap'
-              }}
-              title={loadingOrders ? 'Cargando datos...' : 'Enviar el reporte de ventas de hoy a Rafael por WhatsApp'}
-              type="button"
-            >
-              <Send size={16} /> <span className="hide-on-mobile">Reporte a Rafael</span>
-            </button>
+            {/* Enviar Reporte a Rafael por WhatsApp (hoy, ayer o una fecha elegida) */}
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowReportePicker(v => !v)}
+                disabled={loadingOrders}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '0 14px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  background: loadingOrders ? '#94a3b8' : '#25D366',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontSize: '12.5px',
+                  fontWeight: 800,
+                  cursor: loadingOrders ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+                  flexShrink: 0,
+                  whiteSpace: 'nowrap'
+                }}
+                title={loadingOrders ? 'Cargando datos...' : 'Enviar el reporte de ventas a Rafael por WhatsApp'}
+                type="button"
+              >
+                <Send size={16} /> <span className="hide-on-mobile">Reporte a Rafael</span>
+              </button>
+
+              {showReportePicker && (
+                <div style={{
+                  position: 'absolute',
+                  top: '44px',
+                  right: 0,
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                  padding: '10px',
+                  zIndex: 60,
+                  minWidth: '190px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px'
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => handleEnviarReporteRafael(new Date())}
+                    style={{ textAlign: 'left', padding: '8px 10px', borderRadius: '8px', border: 'none', background: '#f8fafc', color: '#0f172a', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Hoy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleEnviarReporteRafael(new Date(Date.now() - 24 * 60 * 60 * 1000))}
+                    style={{ textAlign: 'left', padding: '8px 10px', borderRadius: '8px', border: 'none', background: '#f8fafc', color: '#0f172a', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Ayer
+                  </button>
+                  <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '6px', marginTop: '2px' }}>
+                    <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>
+                      Elegir otra fecha:
+                    </label>
+                    <input
+                      type="date"
+                      onChange={(e) => {
+                        if (!e.target.value) return;
+                        handleEnviarReporteRafael(new Date(`${e.target.value}T12:00:00`));
+                      }}
+                      style={{ width: '100%', padding: '6px 8px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Botón Compacto de Configuración de Widgets */}
             {mainView === 'dashboard' && (

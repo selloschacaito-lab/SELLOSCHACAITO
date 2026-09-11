@@ -8,13 +8,24 @@ import {
 } from 'recharts';
 import {
   TrendingUp, TrendingDown, Minus, AlertTriangle,
-  Users, Package, DollarSign, ShoppingBag, Search, LayoutGrid, Boxes
+  Users, Package, DollarSign, ShoppingBag, Search, LayoutGrid, Boxes,
+  Trophy, Crown, Coins, History
 } from 'lucide-react';
 import { computeClientMetrics } from '../utils/crmUtils';
 import { getPeriodBounds, isWithin, compareMetric, PERIOD_OPTIONS } from '../utils/periodUtils';
 
 function fmt(n, decimals = 2) {
   return Number(n || 0).toLocaleString('es-VE', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+// Formatea el valor de una fila de la tabla comparativa Álvaro vs. Kriz
+// según su tipo (entero, dinero, porcentaje u horas).
+function formatComparativaValue(val, format) {
+  if (val === null || val === undefined) return 'N/D';
+  if (format === 'usd') return `$${fmt(val)}`;
+  if (format === 'pct') return `${val}%`;
+  if (format === 'hours') return `${val.toFixed(1)}h`;
+  return val;
 }
 
 const CANCEL_REASON_LABELS = {
@@ -87,6 +98,17 @@ function matchAdvisor(order, advisorKey) {
   return false;
 }
 
+// Clasificador ESTRICTO para Comisiones: a diferencia de matchAdvisor (que
+// por defecto asigna a Álvaro cualquier pedido sin asesor claro), aquí un
+// pedido sin asesor reconocible no debe generar comisión para nadie.
+function matchAdvisorStrict(order, advisorKey) {
+  const v = (order.vendedor || order.createdBy || order.designer || '').toUpperCase().trim();
+  if (!v) return false;
+  if (advisorKey === 'ALVARO') return v.includes('ALVARO') || v.includes('ACEVEDO');
+  if (advisorKey === 'KRIZ') return v.includes('KRIZ');
+  return false;
+}
+
 // Tarjeta de estadística con comparación contra el período anterior
 function StatCard({ label, value, comparison, icon: Icon, color = '#10b981', suffix = '' }) {
   const showTrend = comparison && comparison.direction !== null;
@@ -125,7 +147,7 @@ export default function Estadisticas() {
   const [products, setProducts] = useState([]);
   const [movements, setMovements] = useState([]);
   const [periodKey, setPeriodKey] = useState('mes');
-  const [activeTab, setActiveTab] = useState('general'); // 'general' | 'productos'
+  const [activeTab, setActiveTab] = useState('general'); // 'general' | 'productos' | 'comisiones'
   const [productSearch, setProductSearch] = useState('');
   const [productCategoryFilter, setProductCategoryFilter] = useState('ALL');
   const [compareProductId, setCompareProductId] = useState('');
@@ -228,11 +250,55 @@ export default function Estadisticas() {
       const usd = curPaid.reduce((acc, o) => acc + (Number(o.totalAmount) || 0), 0);
       const prevUsd = prevPaid.reduce((acc, o) => acc + (Number(o.totalAmount) || 0), 0);
       const conversionRate = cur.length > 0 ? Math.round((curPaid.length / cur.length) * 100) : 0;
-      return { name, color, usd, ventas: curPaid.length, conversionRate, usdComparison: compareMetric(usd, previousStart ? prevUsd : null) };
+
+      // Velocidad: tiempo promedio desde que se crea el pedido hasta que se
+      // paga (mismo criterio de "descartar anomalías" que ya usa Ventas.jsx).
+      let totalLeadToPaidMs = 0, countLeadToPaid = 0;
+      curPaid.forEach(o => {
+        if (o.createdAt && o.paidAt) {
+          const c = new Date(o.createdAt).getTime(), p = new Date(o.paidAt).getTime();
+          if (p >= c && (p - c) <= 72 * 60 * 60 * 1000) { totalLeadToPaidMs += (p - c); countLeadToPaid++; }
+        }
+      });
+      const avgLeadToPaidHours = countLeadToPaid > 0 ? (totalLeadToPaidMs / countLeadToPaid) / (1000 * 60 * 60) : null;
+
+      return {
+        name, color,
+        iniciados: cur.length,
+        ventas: curPaid.length,
+        usd,
+        conversionRate,
+        avgLeadToPaidHours,
+        usdComparison: compareMetric(usd, previousStart ? prevUsd : null)
+      };
     };
 
     const alvaro = buildAdvisorStat('ALVARO', 'Álvaro', '#10b981');
     const kriz = buildAdvisorStat('KRIZ', 'Kriz', '#8b5cf6');
+
+    // Tabla comparativa: quién gana cada categoría (mayor es mejor, salvo la
+    // velocidad donde menor es mejor) y quién gana en general (más categorías).
+    const pickWinner = (a, b, { lowerIsBetter = false } = {}) => {
+      if (a === null || b === null || a === undefined || b === undefined) {
+        if (a === b) return null;
+        return a !== null && a !== undefined ? 'alvaro' : 'kriz';
+      }
+      if (a === b) return null;
+      const alvaroWins = lowerIsBetter ? a < b : a > b;
+      return alvaroWins ? 'alvaro' : 'kriz';
+    };
+
+    const comparativaRows = [
+      { key: 'iniciados', label: 'Pedidos Iniciados', alvaroVal: alvaro.iniciados, krizVal: kriz.iniciados, format: 'int' },
+      { key: 'ventas', label: 'Ventas Cerradas', alvaroVal: alvaro.ventas, krizVal: kriz.ventas, format: 'int' },
+      { key: 'usd', label: 'Total Vendido', alvaroVal: alvaro.usd, krizVal: kriz.usd, format: 'usd' },
+      { key: 'conversionRate', label: '% de Conversión', alvaroVal: alvaro.conversionRate, krizVal: kriz.conversionRate, format: 'pct' },
+      { key: 'avgLeadToPaidHours', label: 'Velocidad (creado → pagado)', alvaroVal: alvaro.avgLeadToPaidHours, krizVal: kriz.avgLeadToPaidHours, format: 'hours', lowerIsBetter: true }
+    ].map(row => ({ ...row, winner: pickWinner(row.alvaroVal, row.krizVal, { lowerIsBetter: row.lowerIsBetter }) }));
+
+    const alvaroWinsCount = comparativaRows.filter(r => r.winner === 'alvaro').length;
+    const krizWinsCount = comparativaRows.filter(r => r.winner === 'kriz').length;
+    const ganadorGeneral = alvaroWinsCount === krizWinsCount ? null : (alvaroWinsCount > krizWinsCount ? 'alvaro' : 'kriz');
 
     // Mayra: facturación (paidAt -> invoicedAt)
     const invoicedInPeriod = ordersInPeriod.filter(o => o.isInvoiced && isWithin(o.invoicedAt, currentStart, currentEnd));
@@ -269,6 +335,10 @@ export default function Estadisticas() {
         { name: 'Kriz', ventas: kriz.usd, conversion: kriz.conversionRate }
       ],
       alvaro, kriz,
+      comparativaRows,
+      alvaroWinsCount,
+      krizWinsCount,
+      ganadorGeneral,
       mayra: { facturas: invoicedInPeriod.length, avgHours: avgInvoiceHours },
       felizai: { terminados: finishedByFelizai.length, avgHours: avgProdHours }
     };
@@ -304,6 +374,52 @@ export default function Estadisticas() {
 
     return { tagDonutData, nuevos, recurrentes, topClientes };
   }, [clients, allOrdersList, currentStart, currentEnd]);
+
+  // ===================== COMISIONES =====================
+  // $1 por cada pedido PAGADO/COBRADO (no por monto ni por cantidad de
+  // productos). Se calcula SIEMPRE sobre el mes calendario en curso — no es
+  // un contador acumulado que haya que "liquidar": al cambiar de mes vuelve
+  // a $0 solo, porque se recalcula en vivo sobre ese rango de fechas. Un
+  // pedido cancelado o movido a la papelera nunca llega a esta lista
+  // (isPaidOrder ya excluye cancelados, y allOrdersList ya excluye isDeleted),
+  // así que si eliminas un pedido después de haberle dado su $1, se lo resta
+  // automáticamente la próxima vez que se recalcule.
+  const comisionesStats = useMemo(() => {
+    const now = new Date();
+    const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const mesLabel = now.toLocaleDateString('es-VE', { month: 'long', year: 'numeric' });
+
+    const monthPaidOrders = allOrdersList.filter(o => {
+      if (!isPaidOrder(o)) return false;
+      const d = o.paidAt || o.createdAt;
+      if (!d) return false;
+      const dm = new Date(d);
+      if (isNaN(dm.getTime())) return false;
+      const dmStr = `${dm.getFullYear()}-${String(dm.getMonth() + 1).padStart(2, '0')}`;
+      return dmStr === currentMonthStr;
+    });
+
+    const buildComisionStat = (key, name, color) => {
+      const pedidos = monthPaidOrders
+        .filter(o => matchAdvisorStrict(o, key))
+        .map(o => ({
+          id: o.id,
+          orderNumber: o.orderNumber || o.id.slice(-5),
+          clientName: o.clientName || 'Sin nombre',
+          fecha: o.paidAt || o.createdAt
+        }))
+        .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+      return { name, color, totalComision: pedidos.length, pedidos };
+    };
+
+    const alvaro = buildComisionStat('ALVARO', 'Álvaro', '#10b981');
+    const kriz = buildComisionStat('KRIZ', 'Kriz', '#8b5cf6');
+
+    const historialCombinado = [...alvaro.pedidos.map(p => ({ ...p, asesor: alvaro.name, color: alvaro.color })), ...kriz.pedidos.map(p => ({ ...p, asesor: kriz.name, color: kriz.color }))]
+      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+    return { mesLabel, alvaro, kriz, historialCombinado };
+  }, [allOrdersList]);
 
   // ===================== INVENTARIO =====================
   const inventarioStats = useMemo(() => {
@@ -547,6 +663,19 @@ export default function Estadisticas() {
         >
           <Boxes size={15} /> Análisis de Productos
         </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('comisiones')}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '9px 16px', borderRadius: '10px',
+            border: activeTab === 'comisiones' ? '1.5px solid #10b981' : '1px solid #e2e8f0',
+            background: activeTab === 'comisiones' ? '#ecfdf5' : '#ffffff',
+            color: activeTab === 'comisiones' ? '#065f46' : '#64748b',
+            fontSize: '13px', fontWeight: activeTab === 'comisiones' ? 800 : 700, cursor: 'pointer'
+          }}
+        >
+          <Coins size={15} /> Comisiones
+        </button>
       </div>
 
       {activeTab === 'general' && (
@@ -603,6 +732,59 @@ export default function Estadisticas() {
             <StatCard label="Kriz" value={`$${fmt(personal.kriz.usd)}`} comparison={personal.kriz.usdComparison} icon={Users} color="#8b5cf6" />
           </div>
         </div>
+
+        {/* TABLA COMPARATIVA: Álvaro vs. Kriz — quién gana cada aspecto */}
+        <div style={{ marginBottom: '18px' }}>
+          <h4 style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Trophy size={15} color="#f59e0b" /> Comparativa Álvaro vs. Kriz — {label}
+          </h4>
+          <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '14px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <thead>
+                <tr style={{ background: '#f8fafc' }}>
+                  <th style={{ textAlign: 'left', padding: '10px 14px', color: '#64748b', fontWeight: 700 }}>Aspecto</th>
+                  <th style={{ textAlign: 'center', padding: '10px 14px', color: '#10b981', fontWeight: 800 }}>Álvaro</th>
+                  <th style={{ textAlign: 'center', padding: '10px 14px', color: '#8b5cf6', fontWeight: 800 }}>Kriz</th>
+                  <th style={{ textAlign: 'center', padding: '10px 14px', color: '#64748b', fontWeight: 700 }}>Gana</th>
+                </tr>
+              </thead>
+              <tbody>
+                {personal.comparativaRows.map(row => (
+                  <tr key={row.key} style={{ borderTop: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '10px 14px', color: '#334155', fontWeight: 600 }}>{row.label}</td>
+                    <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: row.winner === 'alvaro' ? 800 : 600, color: row.winner === 'alvaro' ? '#0f172a' : '#64748b' }}>
+                      {formatComparativaValue(row.alvaroVal, row.format)}
+                    </td>
+                    <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: row.winner === 'kriz' ? 800 : 600, color: row.winner === 'kriz' ? '#0f172a' : '#64748b' }}>
+                      {formatComparativaValue(row.krizVal, row.format)}
+                    </td>
+                    <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                      {row.winner === 'alvaro' && <span title="Álvaro" style={{ color: '#10b981', fontWeight: 800 }}>🏆 Álvaro</span>}
+                      {row.winner === 'kriz' && <span title="Kriz" style={{ color: '#8b5cf6', fontWeight: 800 }}>🏆 Kriz</span>}
+                      {row.winner === null && <span style={{ color: '#94a3b8' }}>Empate</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Ganador general del período */}
+          <div style={{
+            marginTop: '10px', padding: '12px 16px', borderRadius: '12px',
+            background: personal.ganadorGeneral === 'alvaro' ? '#ecfdf5' : personal.ganadorGeneral === 'kriz' ? '#f5f3ff' : '#f8fafc',
+            border: `1px solid ${personal.ganadorGeneral === 'alvaro' ? '#a7f3d0' : personal.ganadorGeneral === 'kriz' ? '#ddd6fe' : '#e2e8f0'}`,
+            display: 'flex', alignItems: 'center', gap: '10px'
+          }}>
+            <Crown size={20} color={personal.ganadorGeneral === 'alvaro' ? '#10b981' : personal.ganadorGeneral === 'kriz' ? '#8b5cf6' : '#94a3b8'} />
+            <span style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
+              {personal.ganadorGeneral === null
+                ? `Empate general — ${personal.alvaroWinsCount} categorías cada uno (${label})`
+                : `Ganador general del período (${label}): ${personal.ganadorGeneral === 'alvaro' ? 'Álvaro' : 'Kriz'} (${personal.ganadorGeneral === 'alvaro' ? personal.alvaroWinsCount : personal.krizWinsCount} de ${personal.comparativaRows.length} categorías)`}
+            </span>
+          </div>
+        </div>
+
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <StatCard label="Mayra · Facturas emitidas" value={personal.mayra.facturas} icon={DollarSign} color="#f59e0b" />
           <StatCard label="Mayra · Tiempo prom. facturar" value={personal.mayra.avgHours !== null ? personal.mayra.avgHours.toFixed(1) : '-'} suffix={personal.mayra.avgHours !== null ? 'h' : ''} icon={TrendingUp} color="#f59e0b" />
@@ -801,6 +983,56 @@ export default function Estadisticas() {
             </div>
           ) : (
             <span style={{ fontSize: '12.5px', color: '#94a3b8' }}>Ningún producto llegó a 0 unidades en este período.</span>
+          )}
+        </SectionCard>
+      </>
+      )}
+
+      {activeTab === 'comisiones' && (
+      <>
+        <SectionCard title={`Comisiones — ${comisionesStats.mesLabel}`}>
+          <p style={{ margin: '0 0 16px', fontSize: '12.5px', color: '#64748b' }}>
+            $1 por cada pedido pagado/cobrado este mes (no por monto ni por cantidad de productos). Se calcula
+            solo sobre el mes en curso — al empezar el próximo mes vuelve a $0 automáticamente. Un pedido
+            cancelado o movido a la papelera no genera comisión, y un pedido sin asesor claro no se le asigna a nadie.
+          </p>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+            <StatCard label="Álvaro · Comisión del mes" value={`$${fmt(comisionesStats.alvaro.totalComision, 0)}`} icon={Coins} color="#10b981" />
+            <StatCard label="Kriz · Comisión del mes" value={`$${fmt(comisionesStats.kriz.totalComision, 0)}`} icon={Coins} color="#8b5cf6" />
+          </div>
+
+          <h4 style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <History size={15} color="#64748b" /> Historial detallado del mes
+          </h4>
+          {comisionesStats.historialCombinado.length === 0 ? (
+            <span style={{ fontSize: '12.5px', color: '#94a3b8' }}>Todavía no hay pedidos pagados este mes que generen comisión.</span>
+          ) : (
+            <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '14px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc' }}>
+                    <th style={{ textAlign: 'left', padding: '10px 14px', color: '#64748b', fontWeight: 700 }}>Fecha</th>
+                    <th style={{ textAlign: 'left', padding: '10px 14px', color: '#64748b', fontWeight: 700 }}>Pedido</th>
+                    <th style={{ textAlign: 'left', padding: '10px 14px', color: '#64748b', fontWeight: 700 }}>Cliente</th>
+                    <th style={{ textAlign: 'center', padding: '10px 14px', color: '#64748b', fontWeight: 700 }}>Asesor</th>
+                    <th style={{ textAlign: 'right', padding: '10px 14px', color: '#64748b', fontWeight: 700 }}>Comisión</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comisionesStats.historialCombinado.map(p => (
+                    <tr key={p.id} style={{ borderTop: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '9px 14px', color: '#64748b' }}>{p.fecha ? new Date(p.fecha).toLocaleDateString('es-VE') : '-'}</td>
+                      <td style={{ padding: '9px 14px', color: '#334155', fontWeight: 600 }}>#{p.orderNumber}</td>
+                      <td style={{ padding: '9px 14px', color: '#334155' }}>{p.clientName}</td>
+                      <td style={{ padding: '9px 14px', textAlign: 'center' }}>
+                        <span style={{ color: p.color, fontWeight: 800 }}>{p.asesor}</span>
+                      </td>
+                      <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 800, color: '#10b981' }}>+$1</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </SectionCard>
       </>
