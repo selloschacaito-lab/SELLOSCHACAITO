@@ -27,7 +27,9 @@ import {
   ExternalLink,
   ShieldCheck,
   MapPin,
-  UserX
+  UserX,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import ImageViewer from './ImageViewer';
 import { compressImageToBase64 } from '../utils/imageUtils';
@@ -37,6 +39,7 @@ import { createPortal } from 'react-dom';
 import POSModal from './POSModal';
 import PrintNotaModal from './PrintNotaModal';
 import SaleDetailModal from './SaleDetailModal';
+import OrderAttributionTable from './OrderAttributionTable';
 import { formatDisplayPhone, normalizeWhatsApp } from '../utils/formatters';
 import { toast } from 'react-hot-toast';
 
@@ -50,6 +53,7 @@ function fmt(n, decimals = 2) {
 function OrderModal({ order, onClose, onEdit }) {
   const { activeProfile } = useProfile();
   const [activeTab, setActiveTab] = useState('pedido'); // 'pedido' | 'venta' | 'delivery'
+  const [showAttribution, setShowAttribution] = useState(false);
   
   // Submodals
   const [showPosModal, setShowPosModal] = useState(false);
@@ -659,35 +663,29 @@ Direccion: ${address}`;
           </button>
         </div>
 
-        {/* QUIÉN PROCESÓ ESTE PEDIDO — visible siempre, sin importar la pestaña.
-            Cada etapa la puede hacer una persona distinta, así que se muestran
-            todas las que tengan dato (las vacías no aparecen). */}
-        {(() => {
-          const chips = [
-            { label: 'Vendió/Diseñó', name: order.designer || order.vendedor || order.createdBy },
-            { label: 'Producción', name: order.productionStartedBy },
-            { label: 'Terminó', name: order.finishedBy },
-            { label: 'Facturó', name: order.invoicedBy },
-            { label: 'Entregó', name: order.deliveryInfo?.pickedUpBy === 'client' ? 'Cliente (retiro)' : order.deliveredBy }
-          ].filter(c => c.name);
-          if (chips.length === 0) return null;
-          return (
-            <div style={{
-              display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '8px 1.25rem',
-              background: '#fafafa', borderBottom: '1px solid #e2e8f0'
-            }}>
-              {chips.map(c => (
-                <span key={c.label} style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '4px',
-                  background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '999px',
-                  padding: '3px 10px', fontSize: '11px', fontWeight: 700, color: '#334155'
-                }}>
-                  <span style={{ color: '#94a3b8', fontWeight: 600 }}>{c.label}:</span> {c.name}
-                </span>
-              ))}
-            </div>
-          );
-        })()}
+        {/* QUIÉN PROCESÓ ESTE PEDIDO — desplegable, visible sin importar la
+            pestaña activa. No se muestra el botón si no hay ningún dato. */}
+        {(order.designer || order.vendedor || order.createdBy || order.productionStartedBy || order.finishedBy || order.invoicedBy) && (
+          <div style={{ padding: '8px 1.25rem', background: '#fafafa', borderBottom: '1px solid #e2e8f0' }}>
+            <button
+              type="button"
+              onClick={() => setShowAttribution(v => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
+                background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                fontSize: '11.5px', fontWeight: 700, color: '#64748b'
+              }}
+            >
+              <span>Quién procesó este pedido</span>
+              {showAttribution ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+            </button>
+            {showAttribution && (
+              <div style={{ marginTop: '8px' }}>
+                <OrderAttributionTable order={order} />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 3 TABS SELECTOR */}
         <div style={{

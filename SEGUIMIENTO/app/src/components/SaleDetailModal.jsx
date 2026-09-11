@@ -20,6 +20,7 @@ import { toast } from 'react-hot-toast';
 import PrintNotaModal from './PrintNotaModal';
 import { formatDisplayPhone } from '../utils/formatters';
 import { compressImageToBase64 } from '../utils/imageUtils';
+import OrderAttributionTable from './OrderAttributionTable';
 
 function fmt(n, decimals = 2) {
   return Number(n || 0).toLocaleString('es-VE', {
@@ -279,6 +280,14 @@ export default function SaleDetailModal({ order, onClose, onEdit, onDelete }) {
                   <CopyRow label="Dirección Fiscal" value={clientAddress} />
                 </div>
               </div>
+            </div>
+
+            {/* 1.5. QUIÉN PROCESÓ ESTE PEDIDO */}
+            <div>
+              <span style={{ fontSize: '0.78rem', fontWeight: 850, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>
+                🧑‍🤝‍🧑 Quién Procesó Este Pedido
+              </span>
+              <OrderAttributionTable order={order} />
             </div>
 
             {/* 2. MONTOS Y BASES IMPONIBLES */}
