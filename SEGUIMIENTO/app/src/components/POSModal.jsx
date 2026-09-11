@@ -41,6 +41,7 @@ import { toast } from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 import PrintNotaModal from './PrintNotaModal';
 import { syncClientStatsToFirestore } from '../utils/crmUtils';
+import { findClientByNormalizedRif } from '../utils/clientDedup';
 import { compressImageToBase64 } from '../utils/imageUtils';
 
 function parseNum(v) {
@@ -611,8 +612,25 @@ export default function POSModal({ order = null, onClose, onSuccess }) {
       let targetClientId = client.id;
       if (client.nombre.trim()) {
         try {
-          if (client.id) {
-            await updateDoc(doc(firestoreDB, 'clients', client.id), {
+          // Si no se seleccionó el cliente del buscador (targetClientId vacío)
+          // y el RIF escrito ya pertenece a un cliente existente, evitar crear
+          // un duplicado: se le pregunta a quien está vendiendo si quiere
+          // usar ese cliente en vez de crear uno nuevo con el mismo RIF.
+          if (!targetClientId && client.rif.trim()) {
+            const rifMatch = findClientByNormalizedRif(allClients, client.rif);
+            if (rifMatch) {
+              const useExisting = window.confirm(
+                `Ya existe un cliente con este RIF:\n\n${rifMatch.nombre}\n\n¿Usar ese cliente en vez de crear uno nuevo?`
+              );
+              if (useExisting) {
+                targetClientId = rifMatch.id;
+                client.id = targetClientId;
+              }
+            }
+          }
+
+          if (targetClientId) {
+            await updateDoc(doc(firestoreDB, 'clients', targetClientId), {
               nombre: client.nombre.toUpperCase(),
               rif: client.rif.toUpperCase(),
               whatsapp: cleanWhatsapp,

@@ -8,6 +8,7 @@ import { createPortal } from 'react-dom';
 import { normalizeWhatsApp } from '../utils/formatters';
 import ClientDrawer from '../components/ClientDrawer';
 import { computeClientMetrics } from '../utils/crmUtils';
+import { normalizeRif } from '../utils/clientDedup';
 
 function Clients({ isModal = false }) {
   const [clients, setClients] = useState([]);
@@ -123,10 +124,10 @@ function Clients({ isModal = false }) {
     const cleanNombre = nombre.trim().toUpperCase();
     const cleanRif = (formData.rif || '').trim().toUpperCase();
 
-    const isDuplicate = clients.some(c => 
+    const cleanRifNormalized = normalizeRif(cleanRif);
+    const isDuplicate = clients.some(c =>
       c.id !== (editingClient?.id || null) && (
-        (cleanRif && c.rif && c.rif.toUpperCase() === cleanRif) ||
-        (cleanRif && c.cedula && c.cedula.toUpperCase() === cleanRif) ||
+        (cleanRifNormalized && normalizeRif(c.rif || c.cedula) === cleanRifNormalized) ||
         (cleanNombre && (c.nombre || c.name || '').toUpperCase() === cleanNombre)
       )
     );

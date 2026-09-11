@@ -8,6 +8,7 @@ import { collection, getDocs, limit, query, where } from 'firebase/firestore';
 import { saveOrder } from '../services/orderService';
 import { normalizeWhatsApp, formatDisplayPhone } from '../utils/formatters';
 import { compressImageToBase64 } from '../utils/imageUtils';
+import { findClientByNormalizedRif } from '../utils/clientDedup';
 
 const STATUS_CONFIG = {
   design_sent: { name: 'Diseño Enviado', color: '#3b82f6', bg: '#dbeafe' },
@@ -472,7 +473,22 @@ function NewOrderModal({ onClose, editOrder = null, orders = {}, onHighlightOrde
     try {
       const cleanWhatsapp = formatDisplayPhone(formData.whatsapp);
 
-      const targetClientId = selectedClient ? selectedClient.id : (matchedClient?.id || null);
+      let targetClientId = selectedClient ? selectedClient.id : (matchedClient?.id || null);
+
+      // Si no se seleccionó/emparejó un cliente ya existente (ni por búsqueda
+      // ni por WhatsApp) y el RIF escrito ya pertenece a un cliente existente,
+      // evitar crear un duplicado: preguntar si se usa ese cliente.
+      if (!targetClientId && formData.clientRif?.trim()) {
+        const rifMatch = findClientByNormalizedRif(allClients, formData.clientRif);
+        if (rifMatch) {
+          const useExisting = window.confirm(
+            `Ya existe un cliente con este RIF:\n\n${rifMatch.nombre || rifMatch.name}\n\n¿Usar ese cliente en vez de crear uno nuevo?`
+          );
+          if (useExisting) {
+            targetClientId = rifMatch.id;
+          }
+        }
+      }
 
       const orderData = {
         clientId: targetClientId,
