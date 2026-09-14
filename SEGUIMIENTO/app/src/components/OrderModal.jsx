@@ -40,6 +40,7 @@ import POSModal from './POSModal';
 import PrintNotaModal from './PrintNotaModal';
 import SaleDetailModal from './SaleDetailModal';
 import OrderAttributionTable from './OrderAttributionTable';
+import DeliveryModal from './DeliveryModal';
 import { formatDisplayPhone, normalizeWhatsApp } from '../utils/formatters';
 import { toast } from 'react-hot-toast';
 
@@ -54,6 +55,7 @@ function OrderModal({ order, onClose, onEdit }) {
   const { activeProfile } = useProfile();
   const [activeTab, setActiveTab] = useState('pedido'); // 'pedido' | 'venta' | 'delivery'
   const [showAttribution, setShowAttribution] = useState(false);
+  const [showDeliveryModal, setShowDeliveryModal] = useState(false);
   
   // Submodals
   const [showPosModal, setShowPosModal] = useState(false);
@@ -283,23 +285,12 @@ function OrderModal({ order, onClose, onEdit }) {
     }
   };
 
-  // Mark order as delivered / archived
-  const handleArchive = async () => {
-    if (window.confirm('¿Confirmas que este pedido ya fue entregado al cliente? Se moverá a la sección de archivados.')) {
-      try {
-        await update(ref(db, `orders/${order.id}`), {
-          status: 'delivered',
-          statusId: 'delivered',
-          deliveredAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
-        toast.success("Pedido marcado como entregado");
-        onClose();
-      } catch (error) {
-        console.error("Error al archivar pedido:", error);
-        toast.error("Error al archivar el pedido.");
-      }
-    }
+  // Mark order as delivered / archived — abre el mismo DeliveryModal que ya
+  // usa el Kanban, para que siempre quede anotado quién retiró el pedido
+  // (cliente, tercero, delivery o envío nacional), sin importar por cuál
+  // de los dos botones se marque como entregado.
+  const handleArchive = () => {
+    setShowDeliveryModal(true);
   };
 
   // Descartar el pedido (lead que no se convirtió en venta), con motivo específico.
@@ -1432,9 +1423,21 @@ Link: ${window.location.origin}/delivery/${order.id}`}
       )}
 
       {showSaleDetailModal && (
-        <SaleDetailModal 
+        <SaleDetailModal
           order={order}
           onClose={() => setShowSaleDetailModal(false)}
+        />
+      )}
+
+      {showDeliveryModal && (
+        <DeliveryModal
+          order={order}
+          onClose={() => setShowDeliveryModal(false)}
+          onComplete={() => {
+            setShowDeliveryModal(false);
+            toast.success('Pedido marcado como entregado');
+            onClose();
+          }}
         />
       )}
 

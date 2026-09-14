@@ -611,9 +611,10 @@ Quedamos a su disposición para la emisión de su factura fiscal. ¡Muchas graci
     const ivaBs = order.ivaBs !== undefined ? Number(order.ivaBs) : (subtotalBs * 0.16);
     const totalBs = Number(order.totalAmountBs) || (subtotalBs + ivaBs);
 
-    const sheet = 
+    const sheet =
 `DATOS DE FACTURACIÓN:
 • Razón Social: ${order.clientName || 'Sin Nombre'}
+• Tipo de Cliente: ${order.clientType === 'mayorista' ? 'MAYORISTA' : 'NORMAL'}
 • RIF / C.I.: ${(order.clientRif || '').replace(/[-.\s]/g, '').toUpperCase()}
 • Teléfono: ${order.whatsapp || order.phone || '—'}
 • Dirección: ${order.clientAddress || order.address || 'Caracas'}

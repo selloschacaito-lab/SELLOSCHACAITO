@@ -273,6 +273,7 @@ export default function SaleDetailModal({ order, onClose, onEdit, onDelete }) {
               </span>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <CopyRow label="Nombre / Razón Social" value={clientName} />
+                <CopyRow label="Tipo de Cliente" value={order.clientType === 'mayorista' ? 'MAYORISTA' : 'NORMAL'} />
                 <CopyRow label="RIF / Cédula" value={clientRif} />
                 <CopyRow label="Teléfono" value={clientPhone} />
                 <CopyRow label="Fecha del Pedido" value={dateFormatted} />

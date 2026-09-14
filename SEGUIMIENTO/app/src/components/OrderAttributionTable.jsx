@@ -1,5 +1,23 @@
 import React from 'react';
 
+// Arma el texto de la fila "Entrega" a partir de order.deliveryInfo, que
+// guarda DeliveryModal.jsx con 4 formas posibles de retiro.
+function describeDelivery(deliveryInfo) {
+  if (!deliveryInfo) return null;
+  switch (deliveryInfo.pickedUpBy) {
+    case 'client':
+      return 'Cliente lo retiró';
+    case 'third_party':
+      return `Retiró un tercero: ${deliveryInfo.name || 'sin nombre'}${deliveryInfo.idNumber ? ` (C.I. ${deliveryInfo.idNumber})` : ''}${deliveryInfo.phone ? ` · Tel: ${deliveryInfo.phone}` : ''}`;
+    case 'delivery_man':
+      return `Delivery: ${deliveryInfo.name || 'sin nombre'}${deliveryInfo.phone ? ` · Tel: ${deliveryInfo.phone}` : ''}`;
+    case 'shipping':
+      return `Envío ${deliveryInfo.company || ''}${deliveryInfo.trackingNumber ? ` · Guía: ${deliveryInfo.trackingNumber}` : ''}`;
+    default:
+      return null;
+  }
+}
+
 // Tabla "Etapa / Quién" reutilizada en OrderModal.jsx y SaleDetailModal.jsx
 // para mostrar de un vistazo quién hizo cada parte de un pedido (venta,
 // producción, facturación, entrega). Las etapas sin dato no se muestran.
@@ -17,7 +35,7 @@ export default function OrderAttributionTable({ order }) {
     },
     {
       etapa: 'Entrega',
-      quien: order.deliveryInfo?.pickedUpBy === 'client' ? 'Cliente lo retiró (pickup)' : order.deliveredBy,
+      quien: describeDelivery(order.deliveryInfo),
       bold: false
     }
   ].filter(r => r.quien);
