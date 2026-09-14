@@ -41,10 +41,14 @@ export default function PrintNotaModal({ order, onClose }) {
     (order.incluyeIVA ? rawSubtotalBs * 1.16 : rawSubtotalBs) || 
     ((Number(order.totalAmount) || 0) * (Number(order.tasaBCV) || 1));
 
-  // 3. Compute tax multiplier so EVERY product's displayed price already includes its IVA portion!
-  const taxMultiplier = (rawSubtotalBs > 0 && totalBs > rawSubtotalBs) 
-    ? (totalBs / rawSubtotalBs) 
-    : (order.incluyeIVA ? 1.16 : 1);
+  // 3. Multiplicador para que cada línea de producto sume EXACTO el total real.
+  // Antes, si el total ya venía con IVA incluido en los precios (como arma
+  // Nueva Venta) y por eso totalBs == rawSubtotalBs, este cálculo caía en el
+  // "else" y le aplicaba un 16% ADICIONAL a cada producto — duplicando el IVA
+  // y haciendo que la suma de las líneas no coincidiera con el total real.
+  // Ahora siempre se usa la proporción real entre el total y el subtotal
+  // crudo, así el desglose por producto siempre cuadra con "TOTAL A PAGAR".
+  const taxMultiplier = rawSubtotalBs > 0 ? (totalBs / rawSubtotalBs) : 1;
 
   const processedItems = items.map((it, idx) => {
     const itQty = Number(it.cantidad) || 1;
