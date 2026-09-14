@@ -41,6 +41,7 @@ export default function Calculator({ isEmbedded = false }) {
   const [bcvRate, setBcvRate] = useState('784,6633');
   const [bcvEuroRate, setBcvEuroRate] = useState('850,2540');
   const [euroDeliveryAmount, setEuroDeliveryAmount] = useState('5,00');
+  const [deliveryCurrency, setDeliveryCurrency] = useState('EUR'); // 'EUR' | 'USD' — el motorizado a veces cobra en una u otra
   const [bsInput, setBsInput] = useState('');
   // Cuál de los dos campos (dólares o bolívares) fue el último que el usuario editó.
   // El otro campo siempre se muestra calculado en vivo a partir de este, para que
@@ -65,6 +66,10 @@ export default function Calculator({ isEmbedded = false }) {
     const savedEuro = parseNum(localStorage.getItem('sc_euro_delivery'));
     if (savedEuro > 0) {
       setEuroDeliveryAmount(fmt(savedEuro));
+    }
+    const savedDeliveryCurrency = localStorage.getItem('sc_delivery_currency');
+    if (savedDeliveryCurrency === 'EUR' || savedDeliveryCurrency === 'USD') {
+      setDeliveryCurrency(savedDeliveryCurrency);
     }
     const savedPrices = JSON.parse(localStorage.getItem('sc_prices') || 'null');
     if (Array.isArray(savedPrices)) {
@@ -159,6 +164,11 @@ export default function Calculator({ isEmbedded = false }) {
     localStorage.setItem('sc_euro_delivery', parseNum(val).toString());
   };
 
+  const handleDeliveryCurrencyChange = (currency) => {
+    setDeliveryCurrency(currency);
+    localStorage.setItem('sc_delivery_currency', currency);
+  };
+
   const updatePrice = (index, val) => {
     const newPrices = [...prices];
     newPrices[index] = val;
@@ -180,10 +190,14 @@ export default function Calculator({ isEmbedded = false }) {
   const usdFieldValue = lastEdited === 'bs' ? fmt(usdNum) : usdTotal;
   const bsFieldValue = lastEdited === 'usd' ? fmt(vesTotalNum) : bsInput;
 
-  // Cálculos Euro Delivery (Alexander)
+  // Cálculos Delivery (Alexander) — el motorizado a veces cobra en Euros y a
+  // veces en Dólares, así que se usa la tasa BCV que corresponda según lo
+  // que esté seleccionado, sin duplicar la lógica del monto.
   const euroNum = parseNum(euroDeliveryAmount);
   const euroRateNum = parseNum(bcvEuroRate);
-  const deliveryBsTotalNum = euroNum * euroRateNum;
+  const deliveryRateNum = deliveryCurrency === 'USD' ? rateNum : euroRateNum;
+  const deliveryBsTotalNum = euroNum * deliveryRateNum;
+  const deliverySymbol = deliveryCurrency === 'USD' ? '$' : '€';
 
   // IVA y Totales
   const ivaUsd = usdNum * 0.16;
@@ -243,7 +257,9 @@ Dirección:`;
 
   // Copiar Datos de Delivery (Alexander)
   const handleCopyDeliveryEuro = () => {
-    const text = `Monto del Delivery: ${fmt(euroNum)} € (Bs. ${fmt(deliveryBsTotalNum)})\nTasa BCV Euro: ${bcvEuroRate} Bs.\n\nPago Móvil:\nBanco: Banco de Venezuela (0102)\nC.I: 13.739.158\nTelf: 04241478523\nTitular: Alexander`;
+    const rateLabel = deliveryCurrency === 'USD' ? 'Tasa BCV Dólar' : 'Tasa BCV Euro';
+    const rateVal = deliveryCurrency === 'USD' ? bcvRate : bcvEuroRate;
+    const text = `Monto del Delivery: ${deliverySymbol} ${fmt(euroNum)} (Bs. ${fmt(deliveryBsTotalNum)})\n${rateLabel}: ${rateVal} Bs.\n\nPago Móvil:\nBanco: Banco de Venezuela (0102)\nC.I: 13.739.158\nTelf: 04241478523\nTitular: Alexander`;
 
     navigator.clipboard.writeText(text);
     triggerToast('Datos de Delivery copiados');
@@ -251,7 +267,9 @@ Dirección:`;
 
   // Enviar Datos de Delivery por WhatsApp
   const handleSendDeliveryEuroWhatsApp = () => {
-    const text = `Monto del Delivery: ${fmt(euroNum)} € (Bs. ${fmt(deliveryBsTotalNum)})\nTasa BCV Euro: ${bcvEuroRate} Bs.\n\nPago Móvil:\nBanco: Banco de Venezuela (0102)\nC.I: 13.739.158\nTelf: 04241478523\nTitular: Alexander`;
+    const rateLabel = deliveryCurrency === 'USD' ? 'Tasa BCV Dólar' : 'Tasa BCV Euro';
+    const rateVal = deliveryCurrency === 'USD' ? bcvRate : bcvEuroRate;
+    const text = `Monto del Delivery: ${deliverySymbol} ${fmt(euroNum)} (Bs. ${fmt(deliveryBsTotalNum)})\n${rateLabel}: ${rateVal} Bs.\n\nPago Móvil:\nBanco: Banco de Venezuela (0102)\nC.I: 13.739.158\nTelf: 04241478523\nTitular: Alexander`;
 
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
@@ -307,7 +325,7 @@ Dirección:`;
         <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
           {[
             { id: 'conversor', label: 'Conversor y Precios', icon: DollarSign },
-            { id: 'delivery', label: 'Delivery (Euros)', icon: Truck }
+            { id: 'delivery', label: 'Delivery', icon: Truck }
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -564,7 +582,7 @@ Dirección:`;
 
           {activeTab === 'delivery' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '640px' }}>
-            {/* SECCIÓN DELIVERY MOTORIZADO (EUROS / ALEXANDER) */}
+            {/* SECCIÓN DELIVERY MOTORIZADO (EUROS O DÓLARES / ALEXANDER) */}
             <article className="calc-card" style={{ border: '1.5px solid #a7f3d0', background: '#ffffff' }}>
               <div className="calc-card-title">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -572,17 +590,49 @@ Dirección:`;
                     <Truck size={14} />
                   </div>
                   <div>
-                    <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '13px' }}>Cobro de Delivery (Euros)</span>
+                    <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '13px' }}>Cobro de Delivery</span>
                     <span style={{ display: 'block', fontSize: '10px', color: '#64748b', fontWeight: 600 }}>Motorizado: Alexander</span>
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '9px', color: '#64748b', fontWeight: 800, textTransform: 'uppercase' }}>Tasa Euro BCV</span>
-                  <div style={{ fontSize: '12px', fontWeight: 900, color: '#047857' }}>{bcvEuroRate} <span style={{ fontSize: '9px' }}>Bs/€</span></div>
+                  <span style={{ fontSize: '9px', color: '#64748b', fontWeight: 800, textTransform: 'uppercase' }}>{deliveryCurrency === 'USD' ? 'Tasa Dólar BCV' : 'Tasa Euro BCV'}</span>
+                  <div style={{ fontSize: '12px', fontWeight: 900, color: '#047857' }}>
+                    {deliveryCurrency === 'USD' ? bcvRate : bcvEuroRate} <span style={{ fontSize: '9px' }}>Bs/{deliverySymbol}</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Botones rápidos de montos en Euros */}
+              {/* Toggle Euro / Dólar — el motorizado a veces cobra en uno u otro */}
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => handleDeliveryCurrencyChange('EUR')}
+                  style={{
+                    flex: 1, padding: '7px 10px', borderRadius: '8px',
+                    border: deliveryCurrency === 'EUR' ? '1.5px solid #10b981' : '1px solid #e2e8f0',
+                    background: deliveryCurrency === 'EUR' ? '#ecfdf5' : '#f8fafc',
+                    color: deliveryCurrency === 'EUR' ? '#065f46' : '#64748b',
+                    fontWeight: 800, fontSize: '12px', cursor: 'pointer', transition: 'all 0.15s ease'
+                  }}
+                >
+                  € Euros
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeliveryCurrencyChange('USD')}
+                  style={{
+                    flex: 1, padding: '7px 10px', borderRadius: '8px',
+                    border: deliveryCurrency === 'USD' ? '1.5px solid #10b981' : '1px solid #e2e8f0',
+                    background: deliveryCurrency === 'USD' ? '#ecfdf5' : '#f8fafc',
+                    color: deliveryCurrency === 'USD' ? '#065f46' : '#64748b',
+                    fontWeight: 800, fontSize: '12px', cursor: 'pointer', transition: 'all 0.15s ease'
+                  }}
+                >
+                  $ Dólares
+                </button>
+              </div>
+
+              {/* Botones rápidos de montos */}
               <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
                 {['3,00', '4,00', '5,00', '6,00', '8,00', '10,00'].map(amt => {
                   const isSelected = parseNum(euroDeliveryAmount) === parseNum(amt);
@@ -603,15 +653,15 @@ Dirección:`;
                         transition: 'all 0.15s ease'
                       }}
                     >
-                      {amt.split(',')[0]} €
+                      {amt.split(',')[0]} {deliverySymbol}
                     </button>
                   );
                 })}
               </div>
 
-              {/* Input Euros */}
+              {/* Input del monto */}
               <div className="calc-input-group">
-                <label className="calc-input-label">Monto del Delivery en Euros (€)</label>
+                <label className="calc-input-label">Monto del Delivery en {deliveryCurrency === 'USD' ? 'Dólares ($)' : 'Euros (€)'}</label>
                 <div className="calc-input-shell" style={{ borderColor: '#a7f3d0' }}>
                   <input
                     type="text"
@@ -622,7 +672,7 @@ Dirección:`;
                     onBlur={() => setEuroDeliveryAmount(fmt(parseNum(euroDeliveryAmount)))}
                     onFocus={e => e.target.select()}
                   />
-                  <span className="calc-suffix" style={{ color: '#10b981' }}>€</span>
+                  <span className="calc-suffix" style={{ color: '#10b981' }}>{deliverySymbol}</span>
                 </div>
               </div>
 
