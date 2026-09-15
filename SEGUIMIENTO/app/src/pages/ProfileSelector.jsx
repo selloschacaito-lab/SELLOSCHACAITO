@@ -8,7 +8,7 @@ import ProfileCustomizerModal from '../components/ProfileCustomizerModal';
 import ProfileTransitionOverlay from '../components/ProfileTransitionOverlay';
 
 const DEFAULT_PROFILES = [
-  { id: 'p1', name: 'Mayra', color: '#EC4899', active: true, avatarIcon: '🌸', transitionEffect: 'confetti' },
+  { id: 'p1', name: 'María Eugenia', color: '#EC4899', active: true, avatarIcon: '🌸', transitionEffect: 'confetti' },
   { id: 'p2', name: 'Kriz', color: '#06B6D4', active: true, avatarIcon: '⚡', transitionEffect: 'lightning' },
   { id: 'p3', name: 'Alvaro', color: '#47FF00', active: true, avatarIcon: '🚀', transitionEffect: 'warp' },
   { id: 'p4', name: 'Felizai', color: '#F59E0B', active: true, avatarIcon: '👑', transitionEffect: 'portal' },

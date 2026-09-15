@@ -162,6 +162,19 @@ function KanbanBoard({ orders, searchTerm = '', showArchived = false, onOrderCli
     return accStatus;
   }, [orders, searchTerm]);
 
+  // Crea la alerta de "a imprimir" que escucha Layout.jsx para avisarle a
+  // Felizai. Se saca a una función aparte para poder llamarla tanto cuando
+  // el pedido pasa a Impresión directo, como cuando pasa a Impresión DESPUÉS
+  // de subir la imagen del diseño (antes este segundo camino no la creaba).
+  const createPrintAlert = (id, order) => {
+    const alertId = `${id}-${Date.now()}`;
+    update(ref(db, `print_alerts/${alertId}`), {
+      orderId: id,
+      clientName: order?.clientName || "Cliente sin nombre",
+      createdAt: new Date().toISOString()
+    });
+  };
+
   const performAdvanceLogic = (id, nextStatus) => {
     const order = Object.entries(orders || {}).find(([oid]) => oid === id)?.[1];
     if (!order) return;
@@ -216,12 +229,7 @@ Le notificaremos cuando esté listo para retiro o despacho. ¡Saludos!`);
     }
 
     if (nextStatus === 'printing') {
-      const alertId = `${id}-${Date.now()}`;
-      update(ref(db, `print_alerts/${alertId}`), {
-        orderId: id,
-        clientName: order?.clientName || "Cliente sin nombre",
-        createdAt: new Date().toISOString()
-      });
+      createPrintAlert(id, order);
     }
 
     if (nextStatus === 'production') {
@@ -316,11 +324,14 @@ Le notificaremos cuando esté listo para retiro o despacho. ¡Saludos!`);
   const handleUploadComplete = () => {
     if (uploadingOrder && uploadTargetStatus) {
       const orderRef = ref(db, `orders/${uploadingOrder.id}`);
-      update(orderRef, { 
+      update(orderRef, {
         status: uploadTargetStatus,
         statusId: uploadTargetStatus,
-        updatedAt: new Date().toISOString() 
+        updatedAt: new Date().toISOString()
       }).then(() => {
+        if (uploadTargetStatus === 'printing') {
+          createPrintAlert(uploadingOrder.id, uploadingOrder);
+        }
         if (uploadTargetStatus === 'fina' && uploadingOrder.whatsapp) {
           const publicLink = `https://seguimiento-sellos-chacaito.web.app/orden/${uploadingOrder.id}`;
           const message = encodeURIComponent(`¡Hola! Ya estamos trabajando en su pedido. Para ver el estado, diseño y pagos, use este enlace único: 

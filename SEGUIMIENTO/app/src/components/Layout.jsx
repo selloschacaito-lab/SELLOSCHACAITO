@@ -51,38 +51,42 @@ function Layout() {
     };
   }, []);
 
-  // Escuchar órdenes de Firebase para contar facturas pendientes y alertar a Mayra
+  // Escuchar órdenes de Firebase para contar ventas por facturar y alertar a María Eugenia.
+  // Cuenta tanto ventas ya pagadas como ventas a crédito ("Por Pagar") recién
+  // registradas — el mismo criterio amplio que ya usa Facturación para "allPaidSales".
   useEffect(() => {
     const ordersRef = ref(db, 'orders');
     const unsubscribe = onValue(ordersRef, (snapshot) => {
       const data = snapshot.val() || {};
       const list = Object.entries(data).map(([id, val]) => ({ id, ...(val || {}) }));
-      
+
       const pendingInvoices = list.filter(o => {
         if (!o || o.status === 'cancelled' || o.isDeleted) return false;
-        const isPaid = (
-          o.status === 'fina' || 
-          o.hasFinaReceipt === true || 
+        const isRegisteredSale = (
+          o.status === 'fina' ||
+          o.hasFinaReceipt === true ||
+          o.isPaid !== undefined ||
+          o.paymentMethod === 'Por Pagar' ||
           Boolean(o.paidAt && (Number(o.totalAmount) > 0 || Number(o.totalAmountBs) > 0)) ||
           (o.status === 'delivered' && (Number(o.totalAmount) > 0 || Number(o.totalAmountBs) > 0)) ||
           ((Number(o.totalAmount) > 0 || Number(o.totalAmountBs) > 0) && Boolean(o.paymentMethod) && o.status !== 'design_sent')
         );
-        return isPaid && !o.isInvoiced && !o.isAccumulated;
+        return isRegisteredSale && !o.isInvoiced && !o.isAccumulated;
       });
 
       const currentCount = pendingInvoices.length;
 
-      // Si es el perfil de Mayra y entran nuevas ventas por facturar, alertar en Windows y en pantalla
-      const isMayra = activeProfile?.name?.toLowerCase().includes('mayra');
-      
+      // Si es el perfil de María Eugenia y entran nuevas ventas por facturar, alertar en Windows y en pantalla
+      const isMariaEugenia = activeProfile?.name?.toLowerCase().includes('eugenia');
+
       // Actualizar título de la pestaña para que se vea en la barra de tareas de Windows
-      if (isMayra && currentCount > 0) {
+      if (isMariaEugenia && currentCount > 0) {
         document.title = `🔔 (${currentCount}) Facturas Pendientes - Sellos Chacaíto`;
       } else {
         document.title = 'Sellos Chacaíto - Sistema de Producción';
       }
 
-      if (isMayra && !initialLoadRef.current && currentCount > pendingInvoiceCount) {
+      if (isMariaEugenia && !initialLoadRef.current && currentCount > pendingInvoiceCount) {
         // 1. Notificación Nativa de Windows (Aparece en la esquina inferior derecha de Windows)
         if (typeof window !== 'undefined' && 'Notification' in window) {
           if (Notification.permission === 'granted') {
@@ -93,8 +97,8 @@ function Layout() {
               const notif = new Notification('🌸 ¡Nueva venta para Facturar!', {
                 body: `Cliente: ${clientName} ${amount ? `(${amount})` : ''}\nHay ${currentCount} factura(s) pendiente(s). Toca aquí para ver.`,
                 icon: '/favicon.ico',
-                tag: 'nueva-factura-mayra',
-                requireInteraction: true // Mantiene la notificación fija en Windows hasta que Mayra la toque
+                tag: 'nueva-factura-maria-eugenia',
+                requireInteraction: true // Mantiene la notificación fija en Windows hasta que María Eugenia la toque
               });
               notif.onclick = () => {
                 window.focus();
@@ -129,7 +133,7 @@ function Layout() {
 
         // 3. Toast visual en pantalla
         toast((t) => (
-          <div 
+          <div
             onClick={() => { navigate('/facturacion'); toast.dismiss(t.id); }}
             style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
           >
@@ -151,6 +155,110 @@ function Layout() {
 
     return () => unsubscribe();
   }, [activeProfile, pendingInvoiceCount, navigate]);
+
+  // Escuchar alertas de "a imprimir" para avisarle a Felizai (Windows o su app
+  // Android), con notificación nativa + sonido distinto al de facturación.
+  // Solo se suscribe si el perfil activo es el de Felizai.
+  const printAlertsSeenRef = useRef(null); // null = todavía no se cargó la primera vez
+  useEffect(() => {
+    const isFelizai = activeProfile?.name?.toLowerCase().includes('felizai');
+    if (!isFelizai) return;
+
+    const printAlertsRef = ref(db, 'print_alerts');
+    const unsubscribe = onValue(printAlertsRef, (snapshot) => {
+      const data = snapshot.exists() ? snapshot.val() : {};
+      const currentIds = Object.keys(data);
+
+      if (printAlertsSeenRef.current === null) {
+        // Primera carga: no alertar por alertas que ya existían antes de entrar, solo memorizarlas.
+        printAlertsSeenRef.current = new Set(currentIds);
+        return;
+      }
+
+      const newIds = currentIds.filter(id => !printAlertsSeenRef.current.has(id));
+      printAlertsSeenRef.current = new Set(currentIds);
+      if (newIds.length === 0) return;
+
+      const latest = data[newIds[0]];
+      const clientName = latest?.clientName || 'Sin nombre';
+
+      // 1. Notificación Nativa (Windows o la app instalada en Android)
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        if (Notification.permission === 'granted') {
+          try {
+            const notif = new Notification('🖨️ ¡Pedido para Imprimir!', {
+              body: `Cliente: ${clientName}\nHay ${newIds.length} pedido(s) nuevo(s) esperando imprimir.`,
+              icon: '/favicon.ico',
+              tag: 'nuevo-print-alert',
+              requireInteraction: true
+            });
+            notif.onclick = () => {
+              window.focus();
+              navigate('/');
+              notif.close();
+            };
+          } catch (err) {
+            console.warn('Windows notification error (print):', err);
+          }
+        } else if (Notification.permission === 'default') {
+          Notification.requestPermission();
+        }
+      }
+
+      // 2. Sonido distinto al de María Eugenia (doble pitido agudo, más penetrante)
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const playBeep = (startTime) => {
+          const osc = ctx.createOscillator();
+          const gainNode = ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(880, startTime);
+          osc.frequency.setValueAtTime(1200, startTime + 0.1);
+          gainNode.gain.setValueAtTime(0, startTime);
+          gainNode.gain.linearRampToValueAtTime(1, startTime + 0.05);
+          gainNode.gain.linearRampToValueAtTime(0, startTime + 0.3);
+          osc.connect(gainNode);
+          gainNode.connect(ctx.destination);
+          osc.start(startTime);
+          osc.stop(startTime + 0.3);
+        };
+        playBeep(ctx.currentTime);
+        playBeep(ctx.currentTime + 0.4);
+      } catch (e) {
+        console.warn('Audio alert error (print):', e);
+      }
+
+      // 3. Toast visual en pantalla
+      toast((t) => (
+        <div
+          onClick={() => { navigate('/'); toast.dismiss(t.id); }}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+        >
+          <span style={{ fontSize: '1.4rem' }}>🖨️</span>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>¡Pedido para Imprimir!</div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.9 }}>{clientName} — Toca para ver Pedidos</div>
+          </div>
+        </div>
+      ), {
+        duration: 8000,
+        style: { background: '#3b82f6', color: '#fff', borderRadius: '12px', padding: '12px 16px', fontWeight: 600 }
+      });
+    });
+
+    return () => unsubscribe();
+  }, [activeProfile, navigate]);
+
+  // Pedir permiso de notificaciones apenas se entra con el perfil de María
+  // Eugenia o Felizai (en vez de esperar a que llegue la primera alerta real,
+  // que podía perderse si el permiso todavía no estaba concedido).
+  useEffect(() => {
+    const name = activeProfile?.name?.toLowerCase() || '';
+    const needsNotifications = name.includes('eugenia') || name.includes('felizai');
+    if (needsNotifications && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, [activeProfile]);
 
   // Mouse tracking for background blob
   useEffect(() => {

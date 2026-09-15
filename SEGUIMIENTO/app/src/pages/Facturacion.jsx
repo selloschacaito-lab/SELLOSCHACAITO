@@ -142,7 +142,7 @@ export default function Facturacion() {
 
     try {
       const n = new Notification('🌸 ¡Notificaciones de Windows Activas!', {
-        body: '¡Hola Mayra! Cada vez que entre una venta para facturar, verás este aviso en tu pantalla aunque estés en otro programa.',
+        body: '¡Hola María Eugenia! Cada vez que entre una venta para facturar, verás este aviso en tu pantalla aunque estés en otro programa.',
         icon: '/favicon.ico',
         requireInteraction: true
       });
@@ -530,7 +530,7 @@ Quedamos a su disposición para la emisión de su factura fiscal. ¡Muchas graci
       const nowISO = new Date().toISOString();
       const updates = {};
       const invNum = invoiceNumInput.trim() || 'MENSUAL';
-      const invBy = activeProfile?.name || 'Mayra';
+      const invBy = activeProfile?.name || 'María Eugenia';
 
       groupInvoicingClient.orders.forEach(order => {
         updates[`orders/${order.id}/isInvoiced`] = true;
@@ -574,7 +574,7 @@ Quedamos a su disposición para la emisión de su factura fiscal. ¡Muchas graci
       pendingInvoices.forEach(order => {
         updates[`orders/${order.id}/isInvoiced`] = true;
         updates[`orders/${order.id}/invoicedAt`] = nowISO;
-        updates[`orders/${order.id}/invoicedBy`] = activeProfile?.name || 'Mayra';
+        updates[`orders/${order.id}/invoicedBy`] = activeProfile?.name || 'María Eugenia';
         updates[`orders/${order.id}/invoiceNumber`] = order.invoiceNumber || 'HISTORICA';
       });
 
@@ -635,7 +635,7 @@ Quedamos a su disposición para la emisión de su factura fiscal. ¡Muchas graci
     setSavingInvoice(true);
     try {
       const nowISO = new Date().toISOString();
-      const userName = activeProfile?.name || 'Mayra';
+      const userName = activeProfile?.name || 'María Eugenia';
       const updates = {};
       updates[`orders/${invoicingOrder.id}/isInvoiced`] = true;
       updates[`orders/${invoicingOrder.id}/invoiceNumber`] = invoiceNumInput.trim() || 'S/N';
@@ -1120,7 +1120,7 @@ Quedamos a su disposición para la emisión de su factura fiscal. ¡Muchas graci
                   ¡No hay empresas con pedidos acumulados por facturar!
                 </h3>
                 <p style={{ margin: 0, fontSize: '13px', maxWidth: '440px' }}>
-                  Cuando entren ventas o notas de clientes corporativos (como Inversolca), se agruparán automáticamente aquí para que Mayra pueda facturar toda la cuenta con un solo clic.
+                  Cuando entren ventas o notas de clientes corporativos (como Inversolca), se agruparán automáticamente aquí para que María Eugenia pueda facturar toda la cuenta con un solo clic.
                 </p>
               </div>
             ) : (
@@ -1415,7 +1415,7 @@ Quedamos a su disposición para la emisión de su factura fiscal. ¡Muchas graci
               </h3>
               <p style={{ margin: 0, fontSize: '13px', maxWidth: '400px' }}>
                 {activeTab === 'pending' 
-                  ? 'Cada vez que el mostrador registre una venta o pedido, aparecerá aquí en tiempo real para Mayra.' 
+                  ? 'Cada vez que el mostrador registre una venta o pedido, aparecerá aquí en tiempo real para María Eugenia.' 
                   : 'Utiliza las pestañas o el buscador para filtrar registros.'}
               </p>
             </div>
@@ -1672,7 +1672,7 @@ Quedamos a su disposición para la emisión de su factura fiscal. ¡Muchas graci
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div className="factura-invoiced-badge">
                           <CheckCircle2 size={16} color="#10b981" />
-                          <span>Factura #{order.invoiceNumber || 'S/N'} · {order.invoicedBy || 'Mayra'} ({new Date(order.invoicedAt || 0).toLocaleDateString('es-VE')})</span>
+                          <span>Factura #{order.invoiceNumber || 'S/N'} · {order.invoicedBy || 'María Eugenia'} ({new Date(order.invoicedAt || 0).toLocaleDateString('es-VE')})</span>
                         </div>
                         <button 
                           type="button"

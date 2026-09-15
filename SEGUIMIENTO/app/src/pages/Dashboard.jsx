@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import { db } from '../firebase/config';
 import { ref, onValue } from 'firebase/database';
 import { Search, Bell, MapPin, FolderArchive, Plus, Sparkles, ChevronDown, FileText, ShoppingCart } from 'lucide-react';
-import { toast } from 'react-hot-toast';
 import KanbanBoard from '../components/KanbanBoard';
 import OrderModal from '../components/OrderModal';
 import PrintAlertsModal from '../components/PrintAlertsModal';
@@ -25,7 +24,6 @@ function Dashboard() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showPosModal, setShowPosModal] = useState(false);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
-  const initialLoadRef = useRef(true);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -33,34 +31,6 @@ function Dashboard() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  const playAlertSound = () => {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const playBeep = (startTime) => {
-        const osc = ctx.createOscillator();
-        const gainNode = ctx.createGain();
-        osc.type = 'square'; // Onda cuadrada para que suene más fuerte/penetrante
-        osc.frequency.setValueAtTime(880, startTime);
-        osc.frequency.setValueAtTime(1200, startTime + 0.1);
-        
-        gainNode.gain.setValueAtTime(0, startTime);
-        gainNode.gain.linearRampToValueAtTime(1, startTime + 0.05); // Volúmen al máximo
-        gainNode.gain.linearRampToValueAtTime(0, startTime + 0.3);
-        
-        osc.connect(gainNode);
-        gainNode.connect(ctx.destination);
-        osc.start(startTime);
-        osc.stop(startTime + 0.3);
-      };
-
-      // Doble pitido
-      playBeep(ctx.currentTime);
-      playBeep(ctx.currentTime + 0.4);
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   useEffect(() => {
     // Cerrar dropdown al hacer click afuera
@@ -82,43 +52,13 @@ function Dashboard() {
       setLoadingOrders(false);
     });
 
+    // El sonido + notificación nativa para Felizai ahora vive en Layout.jsx
+    // (así le suena sin importar en qué página esté, no solo aquí en Pedidos).
+    // Acá solo se guarda la lista para el badge/campanita de esta pantalla.
     const printAlertsRef = ref(db, 'print_alerts');
     const unsubscribeAlerts = onValue(printAlertsRef, (snapshot) => {
       const data = snapshot.exists() ? snapshot.val() : {};
-      
-      const isInitial = initialLoadRef.current;
-      initialLoadRef.current = false;
-      
-      setPrintAlerts(prev => {
-        if (!isInitial) {
-          const prevIds = Object.keys(prev);
-          const newIds = Object.keys(data).filter(id => !prevIds.includes(id));
-          if (newIds.length > 0) {
-            playAlertSound();
-            newIds.forEach(id => {
-              toast((t) => (
-                <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '1.2rem' }}>🖨️</span>
-                    <span style={{ whiteSpace: 'pre-line' }}>{`¡A imprimir!\nPedido de: ${data[id].clientName || 'Sin nombre'}`}</span>
-                  </div>
-                  <button 
-                    onClick={() => toast.dismiss(t.id)}
-                    style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '1rem', padding: '4px', opacity: 0.8 }}
-                    title="Cerrar"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ), {
-                duration: 6000,
-                style: { background: '#3b82f6', color: '#fff', borderRadius: '12px', padding: '12px 16px' }
-              });
-            });
-          }
-        }
-        return data;
-      });
+      setPrintAlerts(data);
     });
 
     return () => {

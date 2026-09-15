@@ -811,7 +811,7 @@ export default function Ventas() {
                       <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#15803d', display: 'block' }}>Iniciados</span>
                       <span style={{ fontSize: '14px', fontWeight: 900, color: '#0f172a' }}>{emp.monthInitiated}</span>
                     </div>
-                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '8px 4px' }} title="Facturas fiscales legales emitidas por Mayra">
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '8px 4px' }} title="Facturas fiscales legales emitidas por María Eugenia">
                       <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#64748b', display: 'block' }}>Facturados</span>
                       <span style={{ fontSize: '14px', fontWeight: 900, color: '#7c3aed' }}>{emp.monthInvoiced}</span>
                     </div>

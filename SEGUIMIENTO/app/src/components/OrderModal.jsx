@@ -72,7 +72,7 @@ function OrderModal({ order, onClose, onEdit }) {
   const [uploadingSlot, setUploadingSlot] = useState(null);
   const [imageViewerData, setImageViewerData] = useState({ images: [], initialIndex: 0 });
 
-  // Invoice field edit state (Mayra)
+  // Invoice field edit state (María Eugenia)
   const [invoiceNumberInput, setInvoiceNumberInput] = useState(order?.invoiceNumber || '');
   const [isSavingInvoice, setIsSavingInvoice] = useState(false);
 
@@ -373,7 +373,7 @@ Direccion: ${address}`;
     }
   };
 
-  // Save fiscal invoice number (Mayra)
+  // Save fiscal invoice number (María Eugenia)
   const handleSaveInvoiceNumber = async () => {
     if (!invoiceNumberInput.trim()) {
       toast.error('Ingresa el número de factura fiscal');
@@ -386,7 +386,7 @@ Direccion: ${address}`;
         isInvoiced: true,
         invoiceNumber: invoiceNumberInput.trim().toUpperCase(),
         invoicedAt: nowISO,
-        invoicedBy: activeProfile?.name || 'Mayra',
+        invoicedBy: activeProfile?.name || 'María Eugenia',
         updatedAt: nowISO
       });
       toast.success(`¡Factura #${invoiceNumberInput} guardada con éxito!`);
@@ -1010,11 +1010,11 @@ Direccion: ${address}`;
                 })}
               </div>
 
-              {/* Desglose Fiscal y Facturación de Mayra */}
+              {/* Desglose Fiscal y Facturación de María Eugenia */}
               <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '12px 14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <ShieldCheck size={14} color="#3b82f6" /> Facturación Fiscal (Mayra)
+                    <ShieldCheck size={14} color="#3b82f6" /> Facturación Fiscal (María Eugenia)
                   </span>
                   <span style={{
                     fontSize: '11px',

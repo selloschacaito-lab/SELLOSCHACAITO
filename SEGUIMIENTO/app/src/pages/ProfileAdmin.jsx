@@ -120,7 +120,7 @@ function ProfileAdmin() {
                     value={newName} 
                     onChange={e => setNewName(e.target.value)} 
                     className="ws-input" 
-                    placeholder="Ej. Mayra, Carlos, Recepción..." 
+                    placeholder="Ej. María Eugenia, Carlos, Recepción..."
                     autoFocus
                   />
                 </div>

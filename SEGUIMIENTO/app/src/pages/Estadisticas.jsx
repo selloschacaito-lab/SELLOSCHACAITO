@@ -300,7 +300,7 @@ export default function Estadisticas() {
     const krizWinsCount = comparativaRows.filter(r => r.winner === 'kriz').length;
     const ganadorGeneral = alvaroWinsCount === krizWinsCount ? null : (alvaroWinsCount > krizWinsCount ? 'alvaro' : 'kriz');
 
-    // Mayra: facturación (paidAt -> invoicedAt)
+    // María Eugenia: facturación (paidAt -> invoicedAt)
     const invoicedInPeriod = ordersInPeriod.filter(o => o.isInvoiced && isWithin(o.invoicedAt, currentStart, currentEnd));
     let totalInvoiceMs = 0, countInvoice = 0;
     invoicedInPeriod.forEach(o => {
@@ -339,7 +339,7 @@ export default function Estadisticas() {
       alvaroWinsCount,
       krizWinsCount,
       ganadorGeneral,
-      mayra: { facturas: invoicedInPeriod.length, avgHours: avgInvoiceHours },
+      mariaEugenia: { facturas: invoicedInPeriod.length, avgHours: avgInvoiceHours },
       felizai: { terminados: finishedByFelizai.length, avgHours: avgProdHours }
     };
   }, [ordersInPeriod, ordersInPrevPeriod, previousStart, currentStart, currentEnd]);
@@ -584,7 +584,7 @@ export default function Estadisticas() {
     if (previousStart && ventasConversion.conversionComparison.direction === 'down' && Math.abs(ventasConversion.conversionComparison.pctChange || 0) >= 10) {
       list.push({ text: `La conversión bajó ${Math.abs(ventasConversion.conversionComparison.pctChange).toFixed(0)}% vs. el período anterior`, color: '#f59e0b' });
     }
-    if (personal.mayra.avgHours !== null && personal.mayra.avgHours > 24) {
+    if (personal.mariaEugenia.avgHours !== null && personal.mariaEugenia.avgHours > 24) {
       list.push({ text: `La facturación está tardando más de 24h en promedio`, color: '#f59e0b' });
     }
     if (stagnantProductsCount > 0) {
@@ -786,8 +786,8 @@ export default function Estadisticas() {
         </div>
 
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-          <StatCard label="Mayra · Facturas emitidas" value={personal.mayra.facturas} icon={DollarSign} color="#f59e0b" />
-          <StatCard label="Mayra · Tiempo prom. facturar" value={personal.mayra.avgHours !== null ? personal.mayra.avgHours.toFixed(1) : '-'} suffix={personal.mayra.avgHours !== null ? 'h' : ''} icon={TrendingUp} color="#f59e0b" />
+          <StatCard label="María Eugenia · Facturas emitidas" value={personal.mariaEugenia.facturas} icon={DollarSign} color="#f59e0b" />
+          <StatCard label="María Eugenia · Tiempo prom. facturar" value={personal.mariaEugenia.avgHours !== null ? personal.mariaEugenia.avgHours.toFixed(1) : '-'} suffix={personal.mariaEugenia.avgHours !== null ? 'h' : ''} icon={TrendingUp} color="#f59e0b" />
           <StatCard label="Felizai · Pedidos terminados" value={personal.felizai.terminados} icon={Package} color="#3b82f6" />
           <StatCard label="Felizai · Tiempo prom. producción" value={personal.felizai.avgHours !== null ? personal.felizai.avgHours.toFixed(1) : '-'} suffix={personal.felizai.avgHours !== null ? 'h' : ''} icon={TrendingUp} color="#3b82f6" />
         </div>
