@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreHorizontal, MessageCircle, ChevronLeft, Bike, Truck } from 'lucide-react';
+import { MoreHorizontal, MessageCircle, ChevronLeft, Bike, Truck, Store } from 'lucide-react';
 import { db } from '../firebase/config';
 import { ref, update } from 'firebase/database';
 import { normalizeWhatsApp } from '../utils/formatters';
@@ -102,6 +102,79 @@ function WhatsAppModal({ whatsapp, onClose }) {
   );
 }
 
+const DELIVERY_OPTIONS = [
+  { type: 'pickup', label: 'Retiro en Tienda', icon: Store, bg: '#f8fafc', color: '#334155', border: '#cbd5e1' },
+  { type: 'motorizado', label: 'Motorizado', icon: Bike, bg: '#dbeafe', color: '#1e40af', border: '#93c5fd' },
+  { type: 'mrw', label: 'MRW', icon: Truck, bg: '#fef3c7', color: '#92400e', border: '#fcd34d' },
+  { type: 'zoom', label: 'Zoom', icon: Truck, bg: '#ede9fe', color: '#5b21b6', border: '#c4b5fd' }
+];
+
+// Popup para agregar o cambiar el tipo de envío en cualquier momento del
+// proceso (no solo al hacer la venta) — el cliente puede decidir después.
+function DeliverySelectModal({ order, onClose }) {
+  const choose = (type) => {
+    const orderRef = ref(db, `orders/${order.id}`);
+    if (type === 'pickup') {
+      update(orderRef, { hasDelivery: false, deliveryType: 'pickup' });
+    } else {
+      update(orderRef, { hasDelivery: true, deliveryType: type });
+    }
+    onClose();
+  };
+
+  return createPortal(
+    <div
+      style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        background: 'rgba(0,0,0,0.4)', zIndex: 99999,
+        display: 'flex', alignItems: 'center', justifyContent: 'center'
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: 'white', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)',
+          borderRadius: '1rem', padding: '1.25rem', width: '90%', maxWidth: '340px',
+          display: 'flex', flexDirection: 'column', gap: '0.5rem', textAlign: 'left'
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1.1rem', color: '#1e293b' }}>Tipo de Envío</h3>
+        <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', color: '#64748b' }}>
+          Elige cómo se entrega este pedido (se puede cambiar cuando quieras):
+        </p>
+        {DELIVERY_OPTIONS.map(opt => {
+          const Icon = opt.icon;
+          const isCurrent = (order.deliveryType || 'pickup') === opt.type || (!order.hasDelivery && opt.type === 'pickup');
+          return (
+            <button
+              key={opt.type}
+              type="button"
+              onClick={() => choose(opt.type)}
+              style={{
+                fontSize: '0.9rem', padding: '0.75rem', borderRadius: '0.5rem',
+                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                background: opt.bg, color: opt.color, border: `1.5px solid ${isCurrent ? opt.color : opt.border}`,
+                fontWeight: isCurrent ? 800 : 600, cursor: 'pointer', textAlign: 'left', width: '100%'
+              }}
+            >
+              <Icon size={16} /> {opt.label} {isCurrent && '✓'}
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={onClose}
+          style={{ marginTop: '0.25rem', padding: '0.75rem', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '0.5rem', color: '#64748b', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}
+        >
+          Cerrar
+        </button>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 // Ícono/etiqueta corta para el badge de delivery en la tarjeta, según el tipo
 // guardado en Nueva Venta (hasDelivery + deliveryType).
 function getDeliveryBadgeInfo(order) {
@@ -120,6 +193,7 @@ function getDeliveryBadgeInfo(order) {
 
 function OrderCard({ order, statusConfig, onAdvance, onRegress, onClick, isHighlighted = false }) {
   const [showWaMenu, setShowWaMenu] = useState(false);
+  const [showDeliveryMenu, setShowDeliveryMenu] = useState(false);
   const cardRef = useRef(null);
   const deliveryBadge = getDeliveryBadgeInfo(order);
 
@@ -232,14 +306,26 @@ function OrderCard({ order, statusConfig, onAdvance, onRegress, onClick, isHighl
               {order.designer}
             </span>
           )}
-          {deliveryBadge && (
-            <span
+          {deliveryBadge ? (
+            <button
+              type="button"
               className="badge"
-              style={{ background: deliveryBadge.bg, color: deliveryBadge.color, border: `1px solid ${deliveryBadge.border}`, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}
-              title="Este pedido tiene Delivery"
+              onClick={(e) => { e.stopPropagation(); setShowDeliveryMenu(true); }}
+              style={{ background: deliveryBadge.bg, color: deliveryBadge.color, border: `1px solid ${deliveryBadge.border}`, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}
+              title="Cambiar tipo de envío"
             >
               <deliveryBadge.icon size={11} /> {deliveryBadge.label}
-            </span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="badge"
+              onClick={(e) => { e.stopPropagation(); setShowDeliveryMenu(true); }}
+              style={{ background: '#f8fafc', color: '#94a3b8', border: '1px dashed #cbd5e1', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}
+              title="Agregar envío"
+            >
+              <Truck size={11} /> + Envío
+            </button>
           )}
           {isStaleDesign && (
             <span className="badge" style={{ background: '#fef2f2', color: '#ef4444', border: '1px solid #fca5a5', fontWeight: 800 }}>
@@ -414,6 +500,7 @@ function OrderCard({ order, statusConfig, onAdvance, onRegress, onClick, isHighl
       </div>
 
       {showWaMenu && <WhatsAppModal whatsapp={order.whatsapp} onClose={() => setShowWaMenu(false)} />}
+      {showDeliveryMenu && <DeliverySelectModal order={order} onClose={() => setShowDeliveryMenu(false)} />}
     </div>
   );
 }
