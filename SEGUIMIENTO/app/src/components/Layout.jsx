@@ -35,7 +35,7 @@ function Layout() {
     if (!isDesktopPointer) return;
     hoverTimeoutRef.current = setTimeout(() => {
       setIsSidebarOpen(true);
-    }, 500);
+    }, 200);
   };
 
   const handleEdgeMouseLeave = () => {
