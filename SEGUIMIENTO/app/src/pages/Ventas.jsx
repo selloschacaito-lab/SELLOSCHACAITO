@@ -31,6 +31,20 @@ function getLocalMonthStr(dateInput) {
   return `${year}-${month}`;
 }
 
+// Mismo criterio que ya usa "Rendimiento por Empleado" (línea ~230) para
+// distinguir quién vendió/diseñó cada pedido — se saca aparte para poder
+// reutilizarlo también en el Reporte a Rafael, sin duplicar la regla.
+function matchAdvisorSimple(order, advisorKey) {
+  const v = (order.vendedor || order.createdBy || order.designer || '').toUpperCase().trim();
+  if (advisorKey === 'ALVARO') {
+    return v.includes('ALVARO') || v.includes('ACEVEDO') || (!v.includes('MICHELL') && v !== 'BRIGETHE' && v !== 'ABRIL');
+  }
+  if (advisorKey === 'MICHELL') {
+    return v.includes('MICHELL');
+  }
+  return false;
+}
+
 function formatDuration(ms) {
   if (!ms || isNaN(ms) || ms <= 0) return '-';
   const totalMinutes = Math.floor(ms / (1000 * 60));
@@ -215,13 +229,13 @@ export default function Ventas() {
     return validCount > 0 ? (totalHours / validCount).toFixed(1) : '1.2';
   }, [monthSales]);
 
-  // Rendimiento por Empleado (Today & Month) - Solo visible para Admin (Álvaro Acevedo vs Kriz)
+  // Rendimiento por Empleado (Today & Month) - Solo visible para Admin (Álvaro Acevedo vs Michell)
   const employeeStats = useMemo(() => {
     if (!isMasterAdmin) return [];
     
     const advisors = [
       { key: 'ALVARO ACEVEDO', name: 'ALVARO ACEVEDO', role: 'Administrador / Asesor', color: '#10b981' },
-      { key: 'KRIZ', name: 'KRIZ', role: 'Asesora de Ventas', color: '#8b5cf6' }
+      { key: 'MICHELL', name: 'MICHELL', role: 'Asesora de Ventas', color: '#8b5cf6' }
     ];
 
     const todayOrders = allOrdersList.filter(o => getLocalDateStr(o.createdAt || o.paidAt) === todayLocalStr);
@@ -231,10 +245,10 @@ export default function Ventas() {
       const matchAdv = (o) => {
         const v = (o.vendedor || o.createdBy || o.designer || '').toUpperCase().trim();
         if (adv.key === 'ALVARO ACEVEDO') {
-          return v.includes('ALVARO') || v.includes('ACEVEDO') || (!v.includes('KRIZ') && v !== 'BRIGETHE' && v !== 'ABRIL');
+          return v.includes('ALVARO') || v.includes('ACEVEDO') || (!v.includes('MICHELL') && v !== 'BRIGETHE' && v !== 'ABRIL');
         }
-        if (adv.key === 'KRIZ') {
-          return v.includes('KRIZ');
+        if (adv.key === 'MICHELL') {
+          return v.includes('MICHELL');
         }
         return false;
       };
@@ -324,6 +338,10 @@ export default function Ventas() {
     const pagadosDia = salesForDate.length;
     const conversionDia = iniciadosDia > 0 ? Math.round((pagadosDia / iniciadosDia) * 100) : 0;
 
+    // Desglose de notas/pedidos por asesor (Álvaro vs. Michell) para ese día
+    const notasAlvaro = salesForDate.filter(o => matchAdvisorSimple(o, 'ALVARO')).length;
+    const notasMichell = salesForDate.filter(o => matchAdvisorSimple(o, 'MICHELL')).length;
+
     let texto = `*Reporte del día* - ${fechaTexto}\nSellos Chacaíto\n\n`;
 
     if (salesForDate.length === 0) {
@@ -334,6 +352,8 @@ export default function Ventas() {
       texto += `\n• Cantidad de notas: ${salesForDate.length}`;
       texto += `\n• Ticket promedio: $${fmt(ticketProm)}`;
       texto += `\n• Conversión: ${conversionDia}% (${pagadosDia} de ${iniciadosDia} pedidos iniciados)`;
+      texto += `\n• Notas de Álvaro: ${notasAlvaro}`;
+      texto += `\n• Notas de Michell: ${notasMichell}`;
     }
 
     texto += '\n\n_Generado automáticamente desde el sistema._';
@@ -722,7 +742,7 @@ export default function Ventas() {
           </div>
         )}
 
-        {/* 1.5 RENDIMIENTO POR EMPLEADO (SOLO ADMIN - ÁLVARO ACEVEDO VS KRIZ) */}
+        {/* 1.5 RENDIMIENTO POR EMPLEADO (SOLO ADMIN - ÁLVARO ACEVEDO VS MICHELL) */}
         {isMasterAdmin && (
           <div className="glass-card" style={{
             gridColumn: '1 / -1',
@@ -1053,7 +1073,7 @@ export default function Ventas() {
         <SalesHistoryModal onClose={() => setShowHistoryModal(false)} />
       )}
 
-      {/* AUDIT ORDERS MODAL (ALVARO VS KRIZ) */}
+      {/* AUDIT ORDERS MODAL (ALVARO VS MICHELL) */}
       {auditAdvisor && (
         <AuditOrdersModal 
           advisorName={auditAdvisor} 

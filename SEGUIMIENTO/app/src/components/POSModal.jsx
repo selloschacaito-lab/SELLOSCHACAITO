@@ -735,7 +735,7 @@ export default function POSModal({ order = null, onClose, onSuccess }) {
 
       // 3. Prepare payload for Realtime Database
       const designerName = (designer || 'ALVARO').toUpperCase();
-      const vendedorName = designerName === 'KRIZ' ? 'Kriz' : 'Alvaro';
+      const vendedorName = designerName === 'MICHELL' ? 'Michell' : 'Alvaro';
 
       const orderPayload = {
         id: targetOrderId,
@@ -1402,7 +1402,7 @@ export default function POSModal({ order = null, onClose, onSuccess }) {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                       {[
                         { id: 'ALVARO', label: '👤 Alvaro Acevedo', short: 'Alvaro' },
-                        { id: 'KRIZ', label: '🎨 Kriz (Diseño/Venta)', short: 'Kriz' }
+                        { id: 'MICHELL', label: '🎨 Michell (Diseño/Venta)', short: 'Michell' }
                       ].map(d => {
                         const isSel = (designer || 'ALVARO').toUpperCase() === d.id;
                         return (
@@ -2117,7 +2117,7 @@ export default function POSModal({ order = null, onClose, onSuccess }) {
                     <div style={{ display: 'flex', gap: '6px' }}>
                       {[
                         { id: 'ALVARO', label: '👤 Alvaro' },
-                        { id: 'KRIZ', label: '🎨 Kriz' }
+                        { id: 'MICHELL', label: '🎨 Michell' }
                       ].map(d => {
                         const isSel = (designer || 'ALVARO').toUpperCase() === d.id;
                         return (

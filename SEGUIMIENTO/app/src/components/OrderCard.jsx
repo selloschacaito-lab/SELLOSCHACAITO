@@ -121,7 +121,7 @@ function OrderCard({ order, statusConfig, onAdvance, onRegress, onClick, isHighl
     const name = designer.toLowerCase();
     if (name.includes('abril') || name.includes('brigethe')) return "designer-brigethe";
     if (name.includes('alvaro')) return "designer-alvaro";
-    if (name.includes('kriz')) return "designer-kriz";
+    if (name.includes('michell')) return "designer-michell";
     return "designer-none";
   };
 

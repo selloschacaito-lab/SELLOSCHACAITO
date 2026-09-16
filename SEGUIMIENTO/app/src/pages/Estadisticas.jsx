@@ -18,7 +18,7 @@ function fmt(n, decimals = 2) {
   return Number(n || 0).toLocaleString('es-VE', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
-// Formatea el valor de una fila de la tabla comparativa Álvaro vs. Kriz
+// Formatea el valor de una fila de la tabla comparativa Álvaro vs. Michell
 // según su tipo (entero, dinero, porcentaje u horas).
 function formatComparativaValue(val, format) {
   if (val === null || val === undefined) return 'N/D';
@@ -86,14 +86,14 @@ function isCancelledOrder(o) {
   return o.status === 'cancelled' || o.isCancelled;
 }
 
-// Coincide con el clasificador ya usado en Ventas.jsx:232-241 (Álvaro vs Kriz)
+// Coincide con el clasificador ya usado en Ventas.jsx:232-241 (Álvaro vs Michell)
 function matchAdvisor(order, advisorKey) {
   const v = (order.vendedor || order.createdBy || order.designer || '').toUpperCase().trim();
   if (advisorKey === 'ALVARO') {
-    return v.includes('ALVARO') || v.includes('ACEVEDO') || (!v.includes('KRIZ') && v !== 'BRIGETHE' && v !== 'ABRIL');
+    return v.includes('ALVARO') || v.includes('ACEVEDO') || (!v.includes('MICHELL') && v !== 'BRIGETHE' && v !== 'ABRIL');
   }
-  if (advisorKey === 'KRIZ') {
-    return v.includes('KRIZ');
+  if (advisorKey === 'MICHELL') {
+    return v.includes('MICHELL');
   }
   return false;
 }
@@ -105,7 +105,7 @@ function matchAdvisorStrict(order, advisorKey) {
   const v = (order.vendedor || order.createdBy || order.designer || '').toUpperCase().trim();
   if (!v) return false;
   if (advisorKey === 'ALVARO') return v.includes('ALVARO') || v.includes('ACEVEDO');
-  if (advisorKey === 'KRIZ') return v.includes('KRIZ');
+  if (advisorKey === 'MICHELL') return v.includes('MICHELL');
   return false;
 }
 
@@ -274,31 +274,31 @@ export default function Estadisticas() {
     };
 
     const alvaro = buildAdvisorStat('ALVARO', 'Álvaro', '#10b981');
-    const kriz = buildAdvisorStat('KRIZ', 'Kriz', '#8b5cf6');
+    const michell = buildAdvisorStat('MICHELL', 'Michell', '#8b5cf6');
 
     // Tabla comparativa: quién gana cada categoría (mayor es mejor, salvo la
     // velocidad donde menor es mejor) y quién gana en general (más categorías).
     const pickWinner = (a, b, { lowerIsBetter = false } = {}) => {
       if (a === null || b === null || a === undefined || b === undefined) {
         if (a === b) return null;
-        return a !== null && a !== undefined ? 'alvaro' : 'kriz';
+        return a !== null && a !== undefined ? 'alvaro' : 'michell';
       }
       if (a === b) return null;
       const alvaroWins = lowerIsBetter ? a < b : a > b;
-      return alvaroWins ? 'alvaro' : 'kriz';
+      return alvaroWins ? 'alvaro' : 'michell';
     };
 
     const comparativaRows = [
-      { key: 'iniciados', label: 'Pedidos Iniciados', alvaroVal: alvaro.iniciados, krizVal: kriz.iniciados, format: 'int' },
-      { key: 'ventas', label: 'Ventas Cerradas', alvaroVal: alvaro.ventas, krizVal: kriz.ventas, format: 'int' },
-      { key: 'usd', label: 'Total Vendido', alvaroVal: alvaro.usd, krizVal: kriz.usd, format: 'usd' },
-      { key: 'conversionRate', label: '% de Conversión', alvaroVal: alvaro.conversionRate, krizVal: kriz.conversionRate, format: 'pct' },
-      { key: 'avgLeadToPaidHours', label: 'Velocidad (creado → pagado)', alvaroVal: alvaro.avgLeadToPaidHours, krizVal: kriz.avgLeadToPaidHours, format: 'hours', lowerIsBetter: true }
-    ].map(row => ({ ...row, winner: pickWinner(row.alvaroVal, row.krizVal, { lowerIsBetter: row.lowerIsBetter }) }));
+      { key: 'iniciados', label: 'Pedidos Iniciados', alvaroVal: alvaro.iniciados, michellVal: michell.iniciados, format: 'int' },
+      { key: 'ventas', label: 'Ventas Cerradas', alvaroVal: alvaro.ventas, michellVal: michell.ventas, format: 'int' },
+      { key: 'usd', label: 'Total Vendido', alvaroVal: alvaro.usd, michellVal: michell.usd, format: 'usd' },
+      { key: 'conversionRate', label: '% de Conversión', alvaroVal: alvaro.conversionRate, michellVal: michell.conversionRate, format: 'pct' },
+      { key: 'avgLeadToPaidHours', label: 'Velocidad (creado → pagado)', alvaroVal: alvaro.avgLeadToPaidHours, michellVal: michell.avgLeadToPaidHours, format: 'hours', lowerIsBetter: true }
+    ].map(row => ({ ...row, winner: pickWinner(row.alvaroVal, row.michellVal, { lowerIsBetter: row.lowerIsBetter }) }));
 
     const alvaroWinsCount = comparativaRows.filter(r => r.winner === 'alvaro').length;
-    const krizWinsCount = comparativaRows.filter(r => r.winner === 'kriz').length;
-    const ganadorGeneral = alvaroWinsCount === krizWinsCount ? null : (alvaroWinsCount > krizWinsCount ? 'alvaro' : 'kriz');
+    const michellWinsCount = comparativaRows.filter(r => r.winner === 'michell').length;
+    const ganadorGeneral = alvaroWinsCount === michellWinsCount ? null : (alvaroWinsCount > michellWinsCount ? 'alvaro' : 'michell');
 
     // María Eugenia: facturación (paidAt -> invoicedAt)
     const invoicedInPeriod = ordersInPeriod.filter(o => o.isInvoiced && isWithin(o.invoicedAt, currentStart, currentEnd));
@@ -332,12 +332,12 @@ export default function Estadisticas() {
     return {
       barData: [
         { name: 'Álvaro', ventas: alvaro.usd, conversion: alvaro.conversionRate },
-        { name: 'Kriz', ventas: kriz.usd, conversion: kriz.conversionRate }
+        { name: 'Michell', ventas: michell.usd, conversion: michell.conversionRate }
       ],
-      alvaro, kriz,
+      alvaro, michell,
       comparativaRows,
       alvaroWinsCount,
-      krizWinsCount,
+      michellWinsCount,
       ganadorGeneral,
       mariaEugenia: { facturas: invoicedInPeriod.length, avgHours: avgInvoiceHours },
       felizai: { terminados: finishedByFelizai.length, avgHours: avgProdHours }
@@ -413,12 +413,12 @@ export default function Estadisticas() {
     };
 
     const alvaro = buildComisionStat('ALVARO', 'Álvaro', '#10b981');
-    const kriz = buildComisionStat('KRIZ', 'Kriz', '#8b5cf6');
+    const michell = buildComisionStat('MICHELL', 'Michell', '#8b5cf6');
 
-    const historialCombinado = [...alvaro.pedidos.map(p => ({ ...p, asesor: alvaro.name, color: alvaro.color })), ...kriz.pedidos.map(p => ({ ...p, asesor: kriz.name, color: kriz.color }))]
+    const historialCombinado = [...alvaro.pedidos.map(p => ({ ...p, asesor: alvaro.name, color: alvaro.color })), ...michell.pedidos.map(p => ({ ...p, asesor: michell.name, color: michell.color }))]
       .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
-    return { mesLabel, alvaro, kriz, historialCombinado };
+    return { mesLabel, alvaro, michell, historialCombinado };
   }, [allOrdersList]);
 
   // ===================== INVENTARIO =====================
@@ -444,7 +444,7 @@ export default function Estadisticas() {
     // Acumuladores por producto
     const perProduct = {}; // key: productId || nombre
     const perColor = {};
-    const perProductAdvisor = {}; // key: productKey -> { alvaro, kriz }
+    const perProductAdvisor = {}; // key: productKey -> { alvaro, michell }
 
     paidInPeriod.forEach(o => {
       const isWholesaleOrder = o.clientType === 'mayorista';
@@ -466,9 +466,9 @@ export default function Estadisticas() {
         const color = extractColor(nombre);
         if (color) perColor[color] = (perColor[color] || 0) + qty;
 
-        if (!perProductAdvisor[key]) perProductAdvisor[key] = { nombre, alvaro: 0, kriz: 0 };
+        if (!perProductAdvisor[key]) perProductAdvisor[key] = { nombre, alvaro: 0, michell: 0 };
         if (matchAdvisor(o, 'ALVARO')) perProductAdvisor[key].alvaro += qty;
-        else if (matchAdvisor(o, 'KRIZ')) perProductAdvisor[key].kriz += qty;
+        else if (matchAdvisor(o, 'MICHELL')) perProductAdvisor[key].michell += qty;
       });
     });
 
@@ -537,7 +537,7 @@ export default function Estadisticas() {
     const product = products.find(p => p.id === compareProductId);
     if (!product) return null;
     const nombreUp = (product.nombre || '').toUpperCase();
-    let alvaro = 0, kriz = 0;
+    let alvaro = 0, michell = 0;
     paidInPeriod.forEach(o => {
       const items = Array.isArray(o.items) ? o.items : [];
       items.forEach(it => {
@@ -545,10 +545,10 @@ export default function Estadisticas() {
         if (it.productId !== compareProductId && itNombre !== nombreUp) return;
         const qty = Number(it.cantidad || it.quantity || 1);
         if (matchAdvisor(o, 'ALVARO')) alvaro += qty;
-        else if (matchAdvisor(o, 'KRIZ')) kriz += qty;
+        else if (matchAdvisor(o, 'MICHELL')) michell += qty;
       });
     });
-    return [{ name: product.nombre, Álvaro: alvaro, Kriz: kriz }];
+    return [{ name: product.nombre, Álvaro: alvaro, Michell: michell }];
   }, [compareProductId, ordersInPeriod, products]);
 
   // Última venta de cada producto (con TODO el historial, no solo el período
@@ -729,14 +729,14 @@ export default function Estadisticas() {
           </div>
           <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', gap: '10px', justifyContent: 'center' }}>
             <StatCard label="Álvaro" value={`$${fmt(personal.alvaro.usd)}`} comparison={personal.alvaro.usdComparison} icon={Users} color="#10b981" />
-            <StatCard label="Kriz" value={`$${fmt(personal.kriz.usd)}`} comparison={personal.kriz.usdComparison} icon={Users} color="#8b5cf6" />
+            <StatCard label="Michell" value={`$${fmt(personal.michell.usd)}`} comparison={personal.michell.usdComparison} icon={Users} color="#8b5cf6" />
           </div>
         </div>
 
-        {/* TABLA COMPARATIVA: Álvaro vs. Kriz — quién gana cada aspecto */}
+        {/* TABLA COMPARATIVA: Álvaro vs. Michell — quién gana cada aspecto */}
         <div style={{ marginBottom: '18px' }}>
           <h4 style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Trophy size={15} color="#f59e0b" /> Comparativa Álvaro vs. Kriz — {label}
+            <Trophy size={15} color="#f59e0b" /> Comparativa Álvaro vs. Michell — {label}
           </h4>
           <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '14px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
@@ -744,7 +744,7 @@ export default function Estadisticas() {
                 <tr style={{ background: '#f8fafc' }}>
                   <th style={{ textAlign: 'left', padding: '10px 14px', color: '#64748b', fontWeight: 700 }}>Aspecto</th>
                   <th style={{ textAlign: 'center', padding: '10px 14px', color: '#10b981', fontWeight: 800 }}>Álvaro</th>
-                  <th style={{ textAlign: 'center', padding: '10px 14px', color: '#8b5cf6', fontWeight: 800 }}>Kriz</th>
+                  <th style={{ textAlign: 'center', padding: '10px 14px', color: '#8b5cf6', fontWeight: 800 }}>Michell</th>
                   <th style={{ textAlign: 'center', padding: '10px 14px', color: '#64748b', fontWeight: 700 }}>Gana</th>
                 </tr>
               </thead>
@@ -755,12 +755,12 @@ export default function Estadisticas() {
                     <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: row.winner === 'alvaro' ? 800 : 600, color: row.winner === 'alvaro' ? '#0f172a' : '#64748b' }}>
                       {formatComparativaValue(row.alvaroVal, row.format)}
                     </td>
-                    <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: row.winner === 'kriz' ? 800 : 600, color: row.winner === 'kriz' ? '#0f172a' : '#64748b' }}>
-                      {formatComparativaValue(row.krizVal, row.format)}
+                    <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: row.winner === 'michell' ? 800 : 600, color: row.winner === 'michell' ? '#0f172a' : '#64748b' }}>
+                      {formatComparativaValue(row.michellVal, row.format)}
                     </td>
                     <td style={{ padding: '10px 14px', textAlign: 'center' }}>
                       {row.winner === 'alvaro' && <span title="Álvaro" style={{ color: '#10b981', fontWeight: 800 }}>🏆 Álvaro</span>}
-                      {row.winner === 'kriz' && <span title="Kriz" style={{ color: '#8b5cf6', fontWeight: 800 }}>🏆 Kriz</span>}
+                      {row.winner === 'michell' && <span title="Michell" style={{ color: '#8b5cf6', fontWeight: 800 }}>🏆 Michell</span>}
                       {row.winner === null && <span style={{ color: '#94a3b8' }}>Empate</span>}
                     </td>
                   </tr>
@@ -772,15 +772,15 @@ export default function Estadisticas() {
           {/* Ganador general del período */}
           <div style={{
             marginTop: '10px', padding: '12px 16px', borderRadius: '12px',
-            background: personal.ganadorGeneral === 'alvaro' ? '#ecfdf5' : personal.ganadorGeneral === 'kriz' ? '#f5f3ff' : '#f8fafc',
-            border: `1px solid ${personal.ganadorGeneral === 'alvaro' ? '#a7f3d0' : personal.ganadorGeneral === 'kriz' ? '#ddd6fe' : '#e2e8f0'}`,
+            background: personal.ganadorGeneral === 'alvaro' ? '#ecfdf5' : personal.ganadorGeneral === 'michell' ? '#f5f3ff' : '#f8fafc',
+            border: `1px solid ${personal.ganadorGeneral === 'alvaro' ? '#a7f3d0' : personal.ganadorGeneral === 'michell' ? '#ddd6fe' : '#e2e8f0'}`,
             display: 'flex', alignItems: 'center', gap: '10px'
           }}>
-            <Crown size={20} color={personal.ganadorGeneral === 'alvaro' ? '#10b981' : personal.ganadorGeneral === 'kriz' ? '#8b5cf6' : '#94a3b8'} />
+            <Crown size={20} color={personal.ganadorGeneral === 'alvaro' ? '#10b981' : personal.ganadorGeneral === 'michell' ? '#8b5cf6' : '#94a3b8'} />
             <span style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
               {personal.ganadorGeneral === null
                 ? `Empate general — ${personal.alvaroWinsCount} categorías cada uno (${label})`
-                : `Ganador general del período (${label}): ${personal.ganadorGeneral === 'alvaro' ? 'Álvaro' : 'Kriz'} (${personal.ganadorGeneral === 'alvaro' ? personal.alvaroWinsCount : personal.krizWinsCount} de ${personal.comparativaRows.length} categorías)`}
+                : `Ganador general del período (${label}): ${personal.ganadorGeneral === 'alvaro' ? 'Álvaro' : 'Michell'} (${personal.ganadorGeneral === 'alvaro' ? personal.alvaroWinsCount : personal.michellWinsCount} de ${personal.comparativaRows.length} categorías)`}
             </span>
           </div>
         </div>
@@ -943,8 +943,8 @@ export default function Estadisticas() {
           </div>
         </SectionCard>
 
-        {/* Comparar Kriz vs Álvaro por producto */}
-        <SectionCard title="Comparar un Producto: Álvaro vs. Kriz">
+        {/* Comparar Michell vs Álvaro por producto */}
+        <SectionCard title="Comparar un Producto: Álvaro vs. Michell">
           <select
             value={compareProductId}
             onChange={e => setCompareProductId(e.target.value)}
@@ -963,7 +963,7 @@ export default function Estadisticas() {
                   <Tooltip />
                   <Legend />
                   <Bar dataKey="Álvaro" fill="#10b981" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="Kriz" fill="#8b5cf6" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="Michell" fill="#8b5cf6" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -998,7 +998,7 @@ export default function Estadisticas() {
           </p>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
             <StatCard label="Álvaro · Comisión del mes" value={`$${fmt(comisionesStats.alvaro.totalComision, 0)}`} icon={Coins} color="#10b981" />
-            <StatCard label="Kriz · Comisión del mes" value={`$${fmt(comisionesStats.kriz.totalComision, 0)}`} icon={Coins} color="#8b5cf6" />
+            <StatCard label="Michell · Comisión del mes" value={`$${fmt(comisionesStats.michell.totalComision, 0)}`} icon={Coins} color="#8b5cf6" />
           </div>
 
           <h4 style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>

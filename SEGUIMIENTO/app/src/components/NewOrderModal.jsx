@@ -915,7 +915,7 @@ function NewOrderModal({ onClose, editOrder = null, orders = {}, onHighlightOrde
                   required
                 >
                   <option value="ALVARO">Alvaro</option>
-                  <option value="KRIZ">Kriz</option>
+                  <option value="MICHELL">Michell</option>
                 </select>
               </div>
             </div>
