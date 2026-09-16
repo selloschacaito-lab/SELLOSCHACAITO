@@ -124,7 +124,7 @@ export default function Presupuestos() {
       toast.error("Máximo 10 productos por presupuesto");
       return;
     }
-    setItems([...items, { desc: '', qty: 1, price: '', discount: '' }]);
+    setItems([...items, { desc: '', qty: 1, price: '', discount: '', discountMode: 'percent' }]);
   };
 
   const updateItem = (index, field, value) => {
@@ -132,7 +132,9 @@ export default function Presupuestos() {
     if (field === 'price') {
       newItems[index][field] = value.replace(/[^\d.,]/g, '');
     } else if (field === 'discount') {
-      newItems[index][field] = value.replace(/[^\d.,%]/g, '');
+      newItems[index][field] = value.replace(/[^\d.,]/g, '');
+    } else if (field === 'discountMode') {
+      newItems[index][field] = value;
     } else {
       newItems[index][field] = value.toUpperCase();
     }
@@ -148,16 +150,21 @@ export default function Presupuestos() {
   const parseNum = (str) => parseFloat(String(str).replace(/,/g, '.')) || 0;
   const fmt = (n, dec = 2) => Number(n).toLocaleString('es-VE', { minimumFractionDigits: dec, maximumFractionDigits: dec });
 
+  // Antes, si escribías "5" sin el símbolo %, se interpretaba como $5 fijos en
+  // vez de 5% — un descuento fijo de $5 pesa muy distinto en un sello de $16
+  // que en uno de $64, y por eso el total salía mucho más bajo de lo esperado.
+  // Ahora el modo (% o $) es un botón explícito, ya no depende de que se
+  // escriba el símbolo correcto.
+  const getItemDiscountValue = (item) => {
+    const rawPrice = parseNum(item.price);
+    const discNum = parseNum(item.discount);
+    if (discNum <= 0) return 0;
+    return item.discountMode === 'fixed' ? discNum : rawPrice * (discNum / 100);
+  };
+
   const calculateItemFinalPrice = (item) => {
     const rawPrice = parseNum(item.price);
-    let discVal = 0;
-    const discStr = String(item.discount || '').trim();
-    if (discStr.endsWith('%')) {
-      const pct = parseNum(discStr.replace('%', ''));
-      discVal = rawPrice * (pct / 100);
-    } else {
-      discVal = parseNum(discStr);
-    }
+    const discVal = getItemDiscountValue(item);
     return Math.max(0, rawPrice - discVal);
   };
 
@@ -178,7 +185,7 @@ export default function Presupuestos() {
               <div>{item.desc}</div>
               {item.discount && parseNum(item.discount) > 0 && (
                 <div style={{ fontSize: '9px', color: '#64748b', fontStyle: 'italic' }}>
-                  (Incluye descuento de {item.discount})
+                  (Incluye descuento de {item.discountMode === 'fixed' ? `$${item.discount}` : `${item.discount}%`} c/u)
                 </div>
               )}
             </td>
@@ -351,14 +358,7 @@ export default function Presupuestos() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
             {items.map((item, idx) => {
               const rawPrice = parseNum(item.price);
-              let discVal = 0;
-              const discStr = String(item.discount || '').trim();
-              if (discStr.endsWith('%')) {
-                const pct = parseNum(discStr.replace('%', ''));
-                discVal = rawPrice * (pct / 100);
-              } else {
-                discVal = parseNum(discStr);
-              }
+              const discVal = getItemDiscountValue(item);
               const finalPrice = Math.max(0, rawPrice - discVal);
 
               return (
@@ -389,25 +389,44 @@ export default function Presupuestos() {
                       onChange={(e) => updateItem(idx, 'price', e.target.value)} 
                       style={{ flex: 1.3, minWidth: '55px', height: '34px', fontSize: '12px', fontWeight: 'bold' }} 
                     />
-                    <input 
-                      type="text" 
-                      placeholder="Desc. (ej: 10% o 50)" 
-                      title="Descuento por cada sello: escribe monto fijo o porcentaje (ej: 10% ó 50)" 
-                      className="input-field" 
-                      value={item.discount || ''} 
-                      onChange={(e) => updateItem(idx, 'discount', e.target.value)} 
-                      style={{ 
-                        flex: 1.2, 
-                        minWidth: '55px', 
-                        height: '34px', 
-                        fontSize: '11px', 
-                        color: discVal > 0 ? '#15803d' : '#64748b', 
+                    <input
+                      type="text"
+                      placeholder="Descuento"
+                      title="Descuento por cada sello (usa el botón % / $ de al lado para elegir el tipo)"
+                      className="input-field"
+                      value={item.discount || ''}
+                      onChange={(e) => updateItem(idx, 'discount', e.target.value)}
+                      style={{
+                        flex: 0.9,
+                        minWidth: '45px',
+                        height: '34px',
+                        fontSize: '11px',
+                        color: discVal > 0 ? '#15803d' : '#64748b',
                         background: discVal > 0 ? '#ecfdf5' : '#ffffff',
                         borderColor: discVal > 0 ? '#86efac' : '#cbd5e1',
                         fontWeight: discVal > 0 ? 800 : 500
-                      }} 
+                      }}
                     />
-                    <button 
+                    <button
+                      type="button"
+                      onClick={() => updateItem(idx, 'discountMode', (item.discountMode || 'percent') === 'percent' ? 'fixed' : 'percent')}
+                      title="Cambiar entre descuento en porcentaje (%) o monto fijo ($)"
+                      style={{
+                        flex: '0 0 auto',
+                        minWidth: '34px',
+                        height: '34px',
+                        fontSize: '11px',
+                        fontWeight: 800,
+                        borderRadius: '0.5rem',
+                        border: '1px solid ' + (discVal > 0 ? '#86efac' : '#cbd5e1'),
+                        background: discVal > 0 ? '#ecfdf5' : '#f8fafc',
+                        color: discVal > 0 ? '#15803d' : '#475569',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {(item.discountMode || 'percent') === 'percent' ? '%' : '$'}
+                    </button>
+                    <button
                       onClick={() => removeItem(idx)} 
                       style={{ padding: '0.2rem', color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer' }} 
                       title="Eliminar"
@@ -419,7 +438,7 @@ export default function Presupuestos() {
                   {/* Detalle pequeño si tiene descuento */}
                   {discVal > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', padding: '0 4px', color: '#15803d', fontWeight: 700 }}>
-                      <span>Descuento: -{fmt(discVal)} c/u</span>
+                      <span>Descuento: -{fmt(discVal)} c/u ({(item.discountMode || 'percent') === 'percent' ? `${item.discount}%` : `$${item.discount} fijo`})</span>
                       <span>Neto unitario: {fmt(finalPrice)} Bs</span>
                     </div>
                   )}
