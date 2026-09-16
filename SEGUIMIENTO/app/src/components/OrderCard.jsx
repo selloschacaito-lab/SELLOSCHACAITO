@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreHorizontal, MessageCircle, ChevronLeft } from 'lucide-react';
+import { MoreHorizontal, MessageCircle, ChevronLeft, Bike, Truck } from 'lucide-react';
 import { db } from '../firebase/config';
 import { ref, update } from 'firebase/database';
 import { normalizeWhatsApp } from '../utils/formatters';
@@ -102,9 +102,26 @@ function WhatsAppModal({ whatsapp, onClose }) {
   );
 }
 
+// Ícono/etiqueta corta para el badge de delivery en la tarjeta, según el tipo
+// guardado en Nueva Venta (hasDelivery + deliveryType).
+function getDeliveryBadgeInfo(order) {
+  if (!order.hasDelivery || !order.deliveryType || order.deliveryType === 'pickup') return null;
+  if (order.deliveryType === 'motorizado') {
+    return { icon: Bike, label: 'Moto', bg: '#dbeafe', color: '#1e40af', border: '#93c5fd' };
+  }
+  if (order.deliveryType === 'mrw') {
+    return { icon: Truck, label: 'MRW', bg: '#fef3c7', color: '#92400e', border: '#fcd34d' };
+  }
+  if (order.deliveryType === 'zoom') {
+    return { icon: Truck, label: 'Zoom', bg: '#ede9fe', color: '#5b21b6', border: '#c4b5fd' };
+  }
+  return { icon: Truck, label: 'Envío', bg: '#dbeafe', color: '#1e40af', border: '#93c5fd' };
+}
+
 function OrderCard({ order, statusConfig, onAdvance, onRegress, onClick, isHighlighted = false }) {
   const [showWaMenu, setShowWaMenu] = useState(false);
   const cardRef = useRef(null);
+  const deliveryBadge = getDeliveryBadgeInfo(order);
 
   useEffect(() => {
     if (isHighlighted && cardRef.current) {
@@ -213,6 +230,15 @@ function OrderCard({ order, statusConfig, onAdvance, onRegress, onClick, isHighl
           {order.designer && (
             <span className={`badge ${getDesignerClass(order.designer)}`}>
               {order.designer}
+            </span>
+          )}
+          {deliveryBadge && (
+            <span
+              className="badge"
+              style={{ background: deliveryBadge.bg, color: deliveryBadge.color, border: `1px solid ${deliveryBadge.border}`, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+              title="Este pedido tiene Delivery"
+            >
+              <deliveryBadge.icon size={11} /> {deliveryBadge.label}
             </span>
           )}
           {isStaleDesign && (

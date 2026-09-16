@@ -4,6 +4,7 @@ import ImageUploadModal from './ImageUploadModal';
 import DeliveryModal from './DeliveryModal';
 import CheckoutModal from './CheckoutModal';
 import FinishedPhotoModal from './FinishedPhotoModal';
+import DeliveryAlertModal from './DeliveryAlertModal';
 import POSModal from './POSModal';
 import { db } from '../firebase/config';
 import { ref, update, get, remove } from 'firebase/database';
@@ -32,6 +33,7 @@ function KanbanBoard({ orders, searchTerm = '', showArchived = false, onOrderCli
   const [deliveringOrder, setDeliveringOrder] = useState(null);
   const [checkoutOrder, setCheckoutOrder] = useState(null);
   const [packedOrder, setPackedOrder] = useState(null);
+  const [pendingDeliveryAlert, setPendingDeliveryAlert] = useState(null);
   const [posOrder, setPosOrder] = useState(null);
   const [uploadTargetStatus, setUploadTargetStatus] = useState(null);
 
@@ -215,7 +217,10 @@ Le notificaremos cuando esté listo para retiro o despacho. ¡Saludos!`);
     }
 
     if (nextStatus === 'packed') {
-      setPackedOrder({ ...order, id });
+      // Antes de empacar, se confirma con un aviso que hay que cerrar sí o sí
+      // si el pedido tiene Delivery o es Retiro en Tienda (para no despachar
+      // por error algo que había que enviar, o al revés).
+      setPendingDeliveryAlert({ ...order, id });
       return false;
     }
     
@@ -620,8 +625,18 @@ Le notificaremos cuando esté listo para retiro o despacho. ¡Saludos!`);
           />
         )}
 
+        {pendingDeliveryAlert && (
+          <DeliveryAlertModal
+            order={pendingDeliveryAlert}
+            onAcknowledge={() => {
+              setPackedOrder(pendingDeliveryAlert);
+              setPendingDeliveryAlert(null);
+            }}
+          />
+        )}
+
         {packedOrder && (
-          <FinishedPhotoModal 
+          <FinishedPhotoModal
             order={packedOrder}
             onClose={() => setPackedOrder(null)}
             onComplete={handlePackedPhotoComplete}
