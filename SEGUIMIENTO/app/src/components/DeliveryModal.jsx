@@ -102,8 +102,21 @@ ${publicLink}
         }
       } else {
         updates.deliveryInfo = {
-          pickedUpBy: 'client'
+          pickedUpBy: 'client',
+          name: formData.name
         };
+
+        if (order.whatsapp) {
+          const message = encodeURIComponent(`Hola! Te confirmamos que tu pedido de Sellos Chacaito fue retirado exitosamente por:
+
+${formData.name}
+
+¡Gracias por tu confianza!`);
+          const cleanPhone = normalizeWhatsApp(order.whatsapp);
+          if (cleanPhone) {
+            window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
+          }
+        }
       }
 
       await update(orderRef, updates);
@@ -138,7 +151,10 @@ ${publicLink}
               <button 
                 className="btn-secondary"
                 style={{ height: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', border: '2px solid #cbd5e1', padding: '0.5rem' }}
-                onClick={() => setDeliveryType('client')}
+                onClick={() => {
+                  setFormData(prev => ({ ...prev, name: order.clientName || '' }));
+                  setDeliveryType('client');
+                }}
               >
                 <UserCheck size={32} color="#10b981" />
                 <span style={{ fontWeight: '600', fontSize: '0.85rem', textAlign: 'center' }}>Retira el Cliente</span>
@@ -346,11 +362,21 @@ ${publicLink}
                   </div>
                 </>
               ) : (
-                <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-                  <UserCheck size={48} color="#10b981" style={{ margin: '0 auto 1rem' }} />
-                  <p style={{ fontSize: '1.125rem', color: '#1e293b' }}>
-                    Confirmar entrega directa al cliente.
+                <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                  <UserCheck size={40} color="#10b981" style={{ margin: '0 auto 0.75rem' }} />
+                  <p style={{ fontSize: '0.9rem', color: '#475569', marginBottom: '1rem' }}>
+                    Confirma quién retira el pedido. Se enviará un mensaje a <b>{order.whatsapp}</b>.
                   </p>
+
+                  <div className="input-group" style={{ textAlign: 'left' }}>
+                    <label className="input-label">¿A quién se le entrega? *</label>
+                    <input
+                      className="input-field"
+                      required
+                      value={formData.name}
+                      onChange={e => setFormData(prev => ({ ...prev, name: e.target.value.toUpperCase() }))}
+                    />
+                  </div>
                 </div>
               )}
             </div>
