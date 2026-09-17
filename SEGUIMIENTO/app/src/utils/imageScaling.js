@@ -166,60 +166,10 @@ export function imageDataToBlob(imageData) {
   return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
 }
 
-function loadImageFromSrc(src) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('No se pudo cargar el resultado de IA'));
-    img.src = src;
-  });
-}
-
-let upscaler4xInstance = null;
-let upscaler2xInstance = null;
-
-async function getUpscaler4x() {
-  if (!upscaler4xInstance) {
-    const [{ default: Upscaler }, { default: model4x }] = await Promise.all([
-      import('upscaler'),
-      import('@upscalerjs/esrgan-slim/4x'),
-    ]);
-    upscaler4xInstance = new Upscaler({ model: model4x });
-  }
-  return upscaler4xInstance;
-}
-
-async function getUpscaler2x() {
-  if (!upscaler2xInstance) {
-    const [{ default: Upscaler }, { default: model2x }] = await Promise.all([
-      import('upscaler'),
-      import('@upscalerjs/esrgan-slim/2x'),
-    ]);
-    upscaler2xInstance = new Upscaler({ model: model2x });
-  }
-  return upscaler2xInstance;
-}
-
-/**
- * Escala con el modelo de IA (ESRGAN Slim vía TensorFlow.js), corriendo
- * enteramente en el navegador. El modelo solo tiene versión nativa x4 en
- * navegador (la variante x8 del paquete es exclusiva de Node); para "IA x8"
- * se compone aplicando x4 y luego x2 una vez más sobre ese resultado — se
- * documenta como límite real del modelo, no como decisión de diseño.
- * @param {HTMLImageElement} imgElement - imagen ORIGINAL (nunca una salida ya escalada por otro método)
- * @param {4|8} scale
- * @returns {Promise<{ dataUrl: string, composed: boolean }>}
- */
-export async function scaleWithAI(imgElement, scale) {
-  const upscaler4x = await getUpscaler4x();
-  const x4DataUrl = await upscaler4x.upscale(imgElement);
-
-  if (scale === 4) {
-    return { dataUrl: x4DataUrl, composed: false };
-  }
-
-  const x4Img = await loadImageFromSrc(x4DataUrl);
-  const upscaler2x = await getUpscaler2x();
-  const x8DataUrl = await upscaler2x.upscale(x4Img);
-  return { dataUrl: x8DataUrl, composed: true };
-}
+// Nota: se probó un método de IA (ESRGAN Slim vía TensorFlow.js/UpscalerJS,
+// corriendo 100% en el navegador) y se descartó por ahora — producía
+// resultados corruptos (parches en gris/negro) incluso con el tamaño de
+// imagen exacto que espera el modelo, un problema de la librería en el
+// navegador. Mientras tanto, esa comparación se puede seguir haciendo con
+// el script de Python aparte (herramientas-upscale/), que usa
+// waifu2x-ncnn-vulkan directamente y no tiene este problema.

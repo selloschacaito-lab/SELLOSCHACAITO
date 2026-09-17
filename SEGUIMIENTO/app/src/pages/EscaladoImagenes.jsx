@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ImagePlus, UploadCloud, Download, AlertTriangle, Loader2, Trash2 } from 'lucide-react';
-import { resizeImageData, loadImageFile, imageDataToBlob, scaleWithAI } from '../utils/imageScaling';
+import { resizeImageData, loadImageFile, imageDataToBlob } from '../utils/imageScaling';
 import '../styles/whitestamp.css';
 import './EscaladoImagenes.css';
 
@@ -108,36 +108,12 @@ export default function EscaladoImagenes() {
       }
     }
 
-    // --- IA (ESRGAN Slim vía TensorFlow.js) ---
-    for (const scale of SCALES) {
-      setProgressLabel(`Generando IA x${scale} (puede tardar más)...`);
-      await new Promise(r => setTimeout(r, 0));
-      try {
-        const { dataUrl, composed } = await scaleWithAI(source.img, scale);
-        const blob = await (await fetch(dataUrl)).blob();
-        const url = URL.createObjectURL(blob);
-        const width = source.width * scale;
-        const height = source.height * scale;
-        newResults.push({
-          method: 'ai',
-          label: composed ? 'IA (ESRGAN) — compuesto' : 'IA (ESRGAN)',
-          scale,
-          width,
-          height,
-          url,
-          composed,
-        });
-      } catch (err) {
-        console.error(err);
-        newResults.push({
-          method: 'ai',
-          label: 'IA (ESRGAN)',
-          scale,
-          error: 'No se pudo generar (el navegador/equipo puede no soportar WebGL).',
-        });
-      }
-      setResults([...newResults]);
-    }
+    // Nota: el método de IA (ESRGAN vía TensorFlow.js) se probó y por ahora
+    // produce resultados corruptos (parches en gris/negro) incluso con el
+    // tamaño de imagen exacto que espera el modelo — es un problema de la
+    // librería en el navegador, no de esta página. Se deja pendiente hasta
+    // encontrar un modelo confiable; mientras tanto se puede seguir usando
+    // el script de Python (herramientas-upscale/) para esa comparación.
 
     setProgressLabel('');
     setIsProcessing(false);
@@ -161,7 +137,7 @@ export default function EscaladoImagenes() {
             </div>
             <div>
               <h1>Ampliar Imágenes</h1>
-              <p>Compara Nearest, Bicubic, Lanczos e IA antes de usar Calco de Imagen en Illustrator</p>
+              <p>Compara Nearest, Bicubic y Lanczos antes de usar Calco de Imagen en Illustrator</p>
             </div>
           </div>
         </header>
