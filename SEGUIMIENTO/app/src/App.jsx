@@ -33,6 +33,7 @@ import VerRecibo from './pages/VerRecibo';
 import CatalogoPublico from './pages/CatalogoPublico';
 import AdminOnlyRoute from './components/AdminOnlyRoute';
 const Estadisticas = lazy(() => import('./pages/Estadisticas'));
+const EscaladoImagenes = lazy(() => import('./pages/EscaladoImagenes'));
 import { db } from './firebase/config';
 import { ref, set } from 'firebase/database';
 
@@ -125,6 +126,11 @@ function App() {
                   <Route path="presupuestos" element={<Presupuestos />} />
                   <Route path="herramientas" element={<Herramientas />} />
                   <Route path="sellos-madera" element={<CalculadoraSellosMadera />} />
+                  <Route path="ampliar-imagenes" element={(
+                    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Cargando...</div>}>
+                      <EscaladoImagenes />
+                    </Suspense>
+                  )} />
                 </Route>
 
                 {/* Configuración: Configuración general + Usuarios (Usuarios solo Álvaro) */}
