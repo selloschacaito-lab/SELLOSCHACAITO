@@ -242,6 +242,46 @@
   to { transform: rotate(360deg); }
 }
 
+/* --- SELECTOR DE MÉTODO / ESCALA --- */
+.ei-choice-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ei-choice-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ei-choice-btn {
+  padding: 10px 16px;
+  border-radius: var(--ws-radius-md);
+  border: 1.5px solid var(--ws-border-subtle);
+  background: var(--ws-card-bg);
+  color: var(--ws-text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ei-choice-btn:hover:not(:disabled) {
+  border-color: var(--ws-accent-primary-border);
+}
+
+.ei-choice-btn.active {
+  background: var(--ws-accent-primary-light);
+  border-color: var(--ws-accent-primary);
+  color: var(--ws-accent-primary-text);
+}
+
+.ei-choice-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* --- GRID DE RESULTADOS --- */
 .ei-results-grid {
   display: grid;

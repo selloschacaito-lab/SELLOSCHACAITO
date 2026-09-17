@@ -5,7 +5,7 @@ import '../styles/whitestamp.css';
 import './EscaladoImagenes.css';
 
 const VALID_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
-const SCALES = [4, 8];
+const SCALES = [2, 4, 8];
 const CLASSIC_METHODS = [
   { id: 'nearest', label: 'Nearest Neighbor' },
   { id: 'bicubic', label: 'Bicubic' },
@@ -16,17 +16,18 @@ export default function EscaladoImagenes() {
   const [source, setSource] = useState(null); // { file, img, imageData, width, height }
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [progressLabel, setProgressLabel] = useState('');
-  const [results, setResults] = useState([]); // { method, label, scale, width, height, url, error, composed }
+  const [selectedMethod, setSelectedMethod] = useState('nearest');
+  const [selectedScale, setSelectedScale] = useState(4);
+  const [result, setResult] = useState(null); // { method, label, scale, width, height, url, error }
   const [loadError, setLoadError] = useState('');
   const fileInputRef = useRef(null);
 
-  const resultsRef = useRef(results);
-  resultsRef.current = results;
+  const resultRef = useRef(result);
+  resultRef.current = result;
 
-  // Limpia las URLs de blob generadas al desmontar o al cargar una imagen nueva
+  // Limpia la URL de blob generada al desmontar o al cargar una imagen nueva
   const revokeResultUrls = useCallback(() => {
-    resultsRef.current.forEach(r => { if (r.url) URL.revokeObjectURL(r.url); });
+    if (resultRef.current?.url) URL.revokeObjectURL(resultRef.current.url);
   }, []);
 
   useEffect(() => () => revokeResultUrls(), [revokeResultUrls]);
@@ -39,7 +40,7 @@ export default function EscaladoImagenes() {
     }
     setLoadError('');
     revokeResultUrls();
-    setResults([]);
+    setResult(null);
     try {
       const loaded = await loadImageFile(file);
       setSource({ file, ...loaded });
@@ -80,49 +81,34 @@ export default function EscaladoImagenes() {
     if (!source) return;
     setIsProcessing(true);
     revokeResultUrls();
-    const newResults = [];
+    setResult(null);
+    // Deja respirar al render antes del cálculo pesado
+    await new Promise(r => setTimeout(r, 0));
 
-    // --- Nearest / Bicubic / Lanczos: siempre desde el ImageData original ---
-    for (const method of CLASSIC_METHODS) {
-      for (const scale of SCALES) {
-        setProgressLabel(`Generando ${method.label} x${scale}...`);
-        // Deja respirar al render antes de cada cálculo pesado
-        await new Promise(r => setTimeout(r, 0));
-        try {
-          const resized = resizeImageData(source.imageData, scale, method.id);
-          const blob = await imageDataToBlob(resized);
-          const url = URL.createObjectURL(blob);
-          newResults.push({
-            method: method.id,
-            label: method.label,
-            scale,
-            width: resized.width,
-            height: resized.height,
-            url,
-          });
-        } catch (err) {
-          console.error(err);
-          newResults.push({ method: method.id, label: method.label, scale, error: 'Error al generar esta variante.' });
-        }
-        setResults([...newResults]);
-      }
+    const methodInfo = CLASSIC_METHODS.find(m => m.id === selectedMethod);
+    try {
+      const resized = resizeImageData(source.imageData, selectedScale, selectedMethod);
+      const blob = await imageDataToBlob(resized);
+      const url = URL.createObjectURL(blob);
+      setResult({
+        method: selectedMethod,
+        label: methodInfo.label,
+        scale: selectedScale,
+        width: resized.width,
+        height: resized.height,
+        url,
+      });
+    } catch (err) {
+      console.error(err);
+      setResult({ method: selectedMethod, label: methodInfo.label, scale: selectedScale, error: 'Error al generar esta variante.' });
     }
-
-    // Nota: el método de IA (ESRGAN vía TensorFlow.js) se probó y por ahora
-    // produce resultados corruptos (parches en gris/negro) incluso con el
-    // tamaño de imagen exacto que espera el modelo — es un problema de la
-    // librería en el navegador, no de esta página. Se deja pendiente hasta
-    // encontrar un modelo confiable; mientras tanto se puede seguir usando
-    // el script de Python (herramientas-upscale/) para esa comparación.
-
-    setProgressLabel('');
     setIsProcessing(false);
   };
 
   const handleReset = () => {
     revokeResultUrls();
     setSource(null);
-    setResults([]);
+    setResult(null);
     setLoadError('');
   };
 
@@ -173,15 +159,9 @@ export default function EscaladoImagenes() {
               <div className="ei-source-info">
                 <strong>{source.file.name}</strong>
                 <span>{source.width} × {source.height} px</span>
-                <div className="ei-source-actions">
-                  <button type="button" className="wsm-breakdown-toggle" onClick={handleReset} disabled={isProcessing}>
-                    <Trash2 size={14} /> Quitar imagen
-                  </button>
-                  <button type="button" className="ei-generate-btn" onClick={handleGenerate} disabled={isProcessing}>
-                    {isProcessing ? <Loader2 size={16} className="ei-spin" /> : null}
-                    {isProcessing ? (progressLabel || 'Generando...') : 'Generar variantes'}
-                  </button>
-                </div>
+                <button type="button" className="wsm-breakdown-toggle" onClick={handleReset} disabled={isProcessing}>
+                  <Trash2 size={14} /> Quitar imagen
+                </button>
               </div>
             </div>
           )}
@@ -194,37 +174,82 @@ export default function EscaladoImagenes() {
           )}
         </div>
 
-        {results.length > 0 && (
+        {source && (
           <div className="wsm-card">
             <h3 className="wsm-card-title">
-              <span>Resultados</span>
+              <span>Elige método y escala</span>
+            </h3>
+
+            <div className="ei-choice-group">
+              <span className="wsm-label">Método</span>
+              <div className="ei-choice-row">
+                {CLASSIC_METHODS.map(m => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    className={`ei-choice-btn ${selectedMethod === m.id ? 'active' : ''}`}
+                    onClick={() => setSelectedMethod(m.id)}
+                    disabled={isProcessing}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="ei-choice-group">
+              <span className="wsm-label">Escala</span>
+              <div className="ei-choice-row">
+                {SCALES.map(s => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={`ei-choice-btn ${selectedScale === s ? 'active' : ''}`}
+                    onClick={() => setSelectedScale(s)}
+                    disabled={isProcessing}
+                  >
+                    {s}x
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button type="button" className="ei-generate-btn" onClick={handleGenerate} disabled={isProcessing}>
+              {isProcessing ? <Loader2 size={16} className="ei-spin" /> : null}
+              {isProcessing ? 'Generando...' : `Generar ${CLASSIC_METHODS.find(m => m.id === selectedMethod)?.label} x${selectedScale}`}
+            </button>
+          </div>
+        )}
+
+        {result && (
+          <div className="wsm-card">
+            <h3 className="wsm-card-title">
+              <span>Resultado</span>
             </h3>
             <div className="ei-results-grid">
-              {results.map((r, i) => (
-                <div key={`${r.method}-${r.scale}-${i}`} className="ei-result-card">
-                  {r.error ? (
-                    <div className="ei-result-error">
-                      <AlertTriangle size={18} />
-                      <span>{r.error}</span>
-                    </div>
-                  ) : (
-                    <img src={r.url} alt={`${r.label} x${r.scale}`} />
-                  )}
-                  <div className="ei-result-meta">
-                    <strong>{r.label} — x{r.scale}</strong>
-                    {!r.error && <span>{r.width} × {r.height} px</span>}
+              <div className="ei-result-card">
+                {result.error ? (
+                  <div className="ei-result-error">
+                    <AlertTriangle size={18} />
+                    <span>{result.error}</span>
                   </div>
-                  {!r.error && (
-                    <a
-                      className="ei-download-btn"
-                      href={r.url}
-                      download={`${source.file.name.replace(/\.[^.]+$/, '')}_${r.method}_x${r.scale}.png`}
-                    >
-                      <Download size={14} /> Descargar
-                    </a>
-                  )}
+                ) : (
+                  <img src={result.url} alt={`${result.label} x${result.scale}`} />
+                )}
+                <div className="ei-result-meta">
+                  <strong>{result.label} — x{result.scale}</strong>
+                  {!result.error && <span>{result.width} × {result.height} px</span>}
                 </div>
-              ))}
+                {!result.error && (
+                  <a
+                    className="ei-download-btn"
+                    href={result.url}
+                    download={`${source.file.name.replace(/\.[^.]+$/, '')}_${result.method}_x${result.scale}.png`}
+                  >
+                    <Download size={14} /> Descargar
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         )}
