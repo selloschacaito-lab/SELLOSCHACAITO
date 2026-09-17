@@ -66,6 +66,11 @@ export default function DeliveryAlertModal({ order, onAcknowledge }) {
           <p style={{ margin: '10px 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
             Pedido {order.orderNumber ? `#${order.orderNumber}` : ''} — {order.clientName || 'Sin Nombre'}
           </p>
+          {info.hasDelivery && order.deliveryAddress && (
+            <p style={{ margin: '10px 0 0', padding: '8px 10px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', fontSize: '0.8rem', color: '#92400e', fontWeight: 700 }}>
+              📝 {order.deliveryAddress}
+            </p>
+          )}
         </div>
         <button
           type="button"

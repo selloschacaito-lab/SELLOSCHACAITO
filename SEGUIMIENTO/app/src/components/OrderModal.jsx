@@ -80,6 +80,17 @@ function OrderModal({ order, onClose, onEdit }) {
   const [mapsLinkInput, setMapsLinkInput] = useState(order?.mapsLink || '');
   const [isSavingMapsLink, setIsSavingMapsLink] = useState(false);
 
+  // Delivery Address state (nota escrita aparte del link de Maps, editable en cualquier momento)
+  const [deliveryAddressInput, setDeliveryAddressInput] = useState(order?.deliveryAddress || '');
+  const [isSavingDeliveryAddress, setIsSavingDeliveryAddress] = useState(false);
+
+  // Edición de teléfonos (WhatsApp y Factura) — el cliente a veces envía otro
+  // número distinto al que quedó registrado, hay que poder corregirlo.
+  const [whatsappInput, setWhatsappInput] = useState(order?.whatsapp || '');
+  const [invoicePhoneInput, setInvoicePhoneInput] = useState(order?.phone || '');
+  const [isSavingPhones, setIsSavingPhones] = useState(false);
+  const [isEditingPhones, setIsEditingPhones] = useState(false);
+
   // Quick payment register for "Por Pagar"
   const [registeringPaymentMethod, setRegisteringPaymentMethod] = useState('Pago Móvil');
   const [registeringPaymentRef, setRegisteringPaymentRef] = useState('');
@@ -370,6 +381,46 @@ Direccion: ${address}`;
       toast.error('Error al guardar la ubicación');
     } finally {
       setIsSavingMapsLink(false);
+    }
+  };
+
+  // Guarda la nota de dirección escrita (independiente del link de Maps) —
+  // por si la dirección real de envío no coincide con la registrada del cliente.
+  const handleSaveDeliveryAddress = async () => {
+    setIsSavingDeliveryAddress(true);
+    try {
+      const nowISO = new Date().toISOString();
+      const cleanAddress = deliveryAddressInput.trim().toUpperCase();
+      await update(ref(db, `orders/${order.id}`), {
+        deliveryAddress: cleanAddress,
+        updatedAt: nowISO
+      });
+      toast.success(cleanAddress ? '¡Dirección de envío guardada!' : 'Dirección eliminada');
+    } catch (err) {
+      console.error(err);
+      toast.error('Error al guardar la dirección');
+    } finally {
+      setIsSavingDeliveryAddress(false);
+    }
+  };
+
+  // Guarda WhatsApp y/o Teléfono de Factura corregidos después de pagado.
+  const handleSavePhones = async () => {
+    setIsSavingPhones(true);
+    try {
+      const nowISO = new Date().toISOString();
+      await update(ref(db, `orders/${order.id}`), {
+        whatsapp: whatsappInput.trim(),
+        phone: invoicePhoneInput.trim(),
+        updatedAt: nowISO
+      });
+      toast.success('¡Teléfonos actualizados!');
+      setIsEditingPhones(false);
+    } catch (err) {
+      console.error(err);
+      toast.error('Error al guardar los teléfonos');
+    } finally {
+      setIsSavingPhones(false);
     }
   };
 
@@ -736,26 +787,74 @@ Direccion: ${address}`;
                   <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <User size={13} /> Datos del Cliente
                   </span>
-                  <button 
-                    onClick={() => setShowClientDetails(!showClientDetails)}
-                    style={{ background: 'none', border: 'none', color: '#3b82f6', fontWeight: 700, fontSize: '11px', cursor: 'pointer' }}
-                  >
-                    {showClientDetails ? 'Ocultar' : 'Ver ficha completa'}
-                  </button>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <button
+                      onClick={() => setIsEditingPhones(v => !v)}
+                      style={{ background: 'none', border: 'none', color: '#3b82f6', fontWeight: 700, fontSize: '11px', cursor: 'pointer' }}
+                    >
+                      {isEditingPhones ? 'Cancelar' : '✏️ Editar Teléfonos'}
+                    </button>
+                    <button
+                      onClick={() => setShowClientDetails(!showClientDetails)}
+                      style={{ background: 'none', border: 'none', color: '#3b82f6', fontWeight: 700, fontSize: '11px', cursor: 'pointer' }}
+                    >
+                      {showClientDetails ? 'Ocultar' : 'Ver ficha completa'}
+                    </button>
+                  </div>
                 </div>
-                
+
                 <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>
                   {order.clientName || 'Sin Nombre'}
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px', marginTop: '4px', fontSize: '12px', color: '#475569', flexWrap: 'wrap' }}>
-                  {order.whatsapp && (
-                    <span>📱 WA: <strong>{formatDisplayPhone(order.whatsapp)}</strong></span>
-                  )}
-                  {order.clientRif && (
-                    <span>🪪 RIF: <strong>{order.clientRif}</strong></span>
-                  )}
-                </div>
+                {isEditingPhones ? (
+                  <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div>
+                      <label style={{ fontSize: '10px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '2px' }}>
+                        📱 WhatsApp (donde se le escribe)
+                      </label>
+                      <input
+                        type="tel"
+                        placeholder="Ej. 0412-1234567"
+                        value={whatsappInput}
+                        onChange={e => setWhatsappInput(e.target.value)}
+                        style={{ width: '100%', height: '34px', padding: '0 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', fontWeight: 600, boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '10px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '2px' }}>
+                        🧾 Teléfono de Factura
+                      </label>
+                      <input
+                        type="tel"
+                        placeholder="Ej. 0212-1234567"
+                        value={invoicePhoneInput}
+                        onChange={e => setInvoicePhoneInput(e.target.value)}
+                        style={{ width: '100%', height: '34px', padding: '0 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', fontWeight: 600, boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isSavingPhones}
+                      onClick={handleSavePhones}
+                      style={{ marginTop: '2px', padding: '8px', borderRadius: '8px', background: '#10b981', color: '#fff', border: 'none', fontWeight: 800, fontSize: '12px', cursor: isSavingPhones ? 'wait' : 'pointer' }}
+                    >
+                      {isSavingPhones ? 'Guardando...' : '💾 Guardar Teléfonos'}
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '4px', fontSize: '12px', color: '#475569', flexWrap: 'wrap' }}>
+                    {order.whatsapp && (
+                      <span>📱 WA: <strong>{formatDisplayPhone(order.whatsapp)}</strong></span>
+                    )}
+                    {order.phone && (
+                      <span>🧾 Factura: <strong>{formatDisplayPhone(order.phone)}</strong></span>
+                    )}
+                    {order.clientRif && (
+                      <span>🪪 RIF: <strong>{order.clientRif}</strong></span>
+                    )}
+                  </div>
+                )}
 
                 {showClientDetails && (
                   <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #cbd5e1', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -1195,6 +1294,32 @@ Link: ${window.location.origin}/delivery/${order.id}`}
                     }}
                   >
                     {isSavingMapsLink ? 'Guardando...' : '💾 Guardar Link'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Nota de dirección escrita — independiente del link de Maps, por si
+                  la dirección real de envío no coincide con la registrada (ej. el
+                  cliente vive en Chacaíto pero pide enviar a Propatria) */}
+              <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '12px 14px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#475569', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '6px' }}>
+                  📝 Dirección de Envío (nota)
+                </span>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input
+                    type="text"
+                    placeholder="Ej. Enviar a Propatria, no a Chacaíto"
+                    value={deliveryAddressInput}
+                    onChange={e => setDeliveryAddressInput(e.target.value)}
+                    style={{ flex: 1, height: '36px', padding: '0 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', fontWeight: 600, background: '#ffffff' }}
+                  />
+                  <button
+                    type="button"
+                    disabled={isSavingDeliveryAddress}
+                    onClick={handleSaveDeliveryAddress}
+                    style={{ padding: '0 14px', borderRadius: '8px', background: '#10b981', color: '#ffffff', border: 'none', fontWeight: 800, fontSize: '12px', cursor: isSavingDeliveryAddress ? 'wait' : 'pointer', whiteSpace: 'nowrap' }}
+                  >
+                    {isSavingDeliveryAddress ? 'Guardando...' : '💾 Guardar'}
                   </button>
                 </div>
               </div>
