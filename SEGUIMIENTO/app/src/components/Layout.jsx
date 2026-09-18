@@ -313,6 +313,8 @@ function Layout() {
         <div
           onMouseEnter={handleEdgeMouseEnter}
           onMouseLeave={handleEdgeMouseLeave}
+          onClick={() => setIsSidebarOpen(true)}
+          title="Abrir menú"
           style={{
             position: 'fixed',
             top: 0,
@@ -324,7 +326,8 @@ function Layout() {
             pointerEvents: isSidebarOpen ? 'none' : 'auto',
             transition: 'opacity 0.2s ease',
             display: 'flex',
-            alignItems: 'center'
+            alignItems: 'center',
+            cursor: 'pointer'
           }}
         >
           <div style={{
