@@ -76,6 +76,13 @@ function OrderModal({ order, onClose, onEdit }) {
   const [invoiceNumberInput, setInvoiceNumberInput] = useState(order?.invoiceNumber || '');
   const [isSavingInvoice, setIsSavingInvoice] = useState(false);
 
+  // Sellos listos por línea de producto — estado local porque `order` llega
+  // como una instantánea congelada (no se re-sincroniza mientras el modal
+  // está abierto), igual que ya pasa con invoiceNumberInput/mapsLinkInput.
+  const [readyQtyInputs, setReadyQtyInputs] = useState(() =>
+    (order?.items || []).map(it => it.readyQty ?? 0)
+  );
+
   // Delivery Maps Link state
   const [mapsLinkInput, setMapsLinkInput] = useState(order?.mapsLink || '');
   const [isSavingMapsLink, setIsSavingMapsLink] = useState(false);
@@ -896,10 +903,15 @@ Direccion: ${address}`;
                               type="number"
                               min={0}
                               max={cantidad}
-                              value={it.readyQty ?? 0}
+                              value={readyQtyInputs[idx] ?? 0}
                               onChange={e => {
                                 const raw = Number(e.target.value);
                                 const clamped = Math.max(0, Math.min(cantidad, isNaN(raw) ? 0 : raw));
+                                setReadyQtyInputs(prev => {
+                                  const next = [...prev];
+                                  next[idx] = clamped;
+                                  return next;
+                                });
                                 update(ref(db, `orders/${order.id}/items/${idx}`), { readyQty: clamped });
                               }}
                               style={{ width: '56px', height: '26px', padding: '0 6px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', fontWeight: 700, textAlign: 'center' }}
