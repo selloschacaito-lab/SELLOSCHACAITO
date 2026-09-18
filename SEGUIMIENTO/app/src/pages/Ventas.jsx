@@ -1120,6 +1120,7 @@ export default function Ventas() {
       {showDetailedReport && (
         <DetailedSalesReportModal
           paidSales={paidSales}
+          allOrdersList={allOrdersList}
           onClose={() => setShowDetailedReport(false)}
         />
       )}

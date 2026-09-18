@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { X, Copy, Download, Calendar, BarChart3 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -22,6 +22,26 @@ function fmtDateDisplay(dateStr) {
   return `${d}/${m}/${y}`;
 }
 
+function fmtDateTime(dateInput) {
+  if (!dateInput) return '-';
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return '-';
+  return d.toLocaleString('es-VE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function fmtDurationHours(hours) {
+  if (hours === null || hours === undefined || isNaN(hours)) return '-';
+  const totalMinutes = Math.round(hours * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h === 0) return `${m}m`;
+  return `${h}h ${m}m`;
+}
+
+function includesFeliz(name) {
+  return (name || '').toLowerCase().includes('feliz');
+}
+
 const STATUS_LABELS = {
   fina: 'Pagado',
   printing: 'Impresión',
@@ -38,21 +58,76 @@ const STATUS_LABELS = {
 // para uso interno de Álvaro): totales, por diseñador, por método de
 // pago, por tipo de entrega, productos más vendidos, y el detalle de
 // cada venta — para un día puntual o un rango de fechas.
-export default function DetailedSalesReportModal({ paidSales, onClose }) {
+export default function DetailedSalesReportModal({ paidSales, allOrdersList, onClose }) {
   const [mode, setMode] = useState('day'); // 'day' | 'range'
   const [dayValue, setDayValue] = useState(getLocalDateStr(new Date()));
   const [rangeFrom, setRangeFrom] = useState(getLocalDateStr(new Date()));
   const [rangeTo, setRangeTo] = useState(getLocalDateStr(new Date()));
 
+  const isInPeriod = useCallback((dateInput) => {
+    const d = getLocalDateStr(dateInput);
+    if (!d) return false;
+    if (mode === 'day') return d === dayValue;
+    if (!rangeFrom || !rangeTo) return false;
+    return d >= rangeFrom && d <= rangeTo;
+  }, [mode, dayValue, rangeFrom, rangeTo]);
+
   const filteredSales = useMemo(() => {
-    return paidSales.filter(o => {
-      const d = getLocalDateStr(o.paidAt || o.createdAt);
-      if (!d) return false;
-      if (mode === 'day') return d === dayValue;
-      if (!rangeFrom || !rangeTo) return false;
-      return d >= rangeFrom && d <= rangeTo;
-    }).sort((a, b) => new Date(a.paidAt || a.createdAt) - new Date(b.paidAt || b.createdAt));
-  }, [paidSales, mode, dayValue, rangeFrom, rangeTo]);
+    return paidSales.filter(o => isInPeriod(o.paidAt || o.createdAt))
+      .sort((a, b) => new Date(a.paidAt || a.createdAt) - new Date(b.paidAt || b.createdAt));
+  }, [paidSales, isInPeriod]);
+
+  // Producción de Felizai: se mide por evento (quién hizo la transición y
+  // cuándo), no por venta — un pedido puede quedar "terminado" un día
+  // distinto al que se pagó, así que se filtra por su propia fecha, igual
+  // que ya hace Estadísticas con finishedBy.
+  const felizai = useMemo(() => {
+    const list = allOrdersList || [];
+    const printedOrders = list.filter(o => o.printedAt && isInPeriod(o.printedAt) && includesFeliz(o.printedBy));
+    const productionOrders = list.filter(o => o.productionStartedAt && isInPeriod(o.productionStartedAt) && includesFeliz(o.productionStartedBy));
+    const finishedOrders = list.filter(o => o.finishedAt && isInPeriod(o.finishedAt) && includesFeliz(o.finishedBy))
+      .sort((a, b) => new Date(a.finishedAt) - new Date(b.finishedAt));
+
+    let laserCount = 0, normalCount = 0;
+    let totalProdMs = 0, countProd = 0;
+    let totalFullMs = 0, countFull = 0;
+
+    const detailRows = finishedOrders.map(o => {
+      if (o.isLaser) laserCount++; else normalCount++;
+
+      let prodHours = null;
+      if (o.printedAt) {
+        const p = new Date(o.printedAt).getTime(), f = new Date(o.finishedAt).getTime();
+        if (f >= p) { prodHours = (f - p) / (1000 * 60 * 60); totalProdMs += (f - p); countProd++; }
+      }
+      let fullHours = null;
+      if (o.paidAt) {
+        const pa = new Date(o.paidAt).getTime(), f = new Date(o.finishedAt).getTime();
+        if (f >= pa) { fullHours = (f - pa) / (1000 * 60 * 60); totalFullMs += (f - pa); countFull++; }
+      }
+
+      return {
+        orderNumber: o.orderNumber || o.id,
+        clientName: o.clientName || 'Sin Nombre',
+        printedAt: o.printedAt,
+        finishedAt: o.finishedAt,
+        prodHours,
+        fullHours,
+        isLaser: Boolean(o.isLaser)
+      };
+    });
+
+    return {
+      printedCount: printedOrders.length,
+      productionCount: productionOrders.length,
+      finishedCount: finishedOrders.length,
+      laserCount,
+      normalCount,
+      avgProdHours: countProd > 0 ? totalProdMs / countProd / (1000 * 60 * 60) : null,
+      avgFullHours: countFull > 0 ? totalFullMs / countFull / (1000 * 60 * 60) : null,
+      detailRows
+    };
+  }, [allOrdersList, isInPeriod]);
 
   const report = useMemo(() => {
     let totalUSD = 0, totalBs = 0;
@@ -102,44 +177,56 @@ export default function DetailedSalesReportModal({ paidSales, onClose }) {
 
     if (filteredSales.length === 0) {
       t += 'No hay ventas registradas en este período.\n';
-      return t;
-    }
+    } else {
+      t += `TOTALES\n`;
+      t += `Ventas: ${filteredSales.length}\n`;
+      t += `Total USD: $${fmt(report.totalUSD)}\n`;
+      t += `Total Bs: Bs. ${fmt(report.totalBs)}\n`;
+      t += `Ticket promedio: $${fmt(report.ticketProm)}\n`;
+      if (report.porPagar.count > 0) {
+        t += `Por Pagar (crédito, no cobrado aún): ${report.porPagar.count} ventas — $${fmt(report.porPagar.usd)}\n`;
+      }
 
-    t += `TOTALES\n`;
-    t += `Ventas: ${filteredSales.length}\n`;
-    t += `Total USD: $${fmt(report.totalUSD)}\n`;
-    t += `Total Bs: Bs. ${fmt(report.totalBs)}\n`;
-    t += `Ticket promedio: $${fmt(report.ticketProm)}\n`;
-    if (report.porPagar.count > 0) {
-      t += `Por Pagar (crédito, no cobrado aún): ${report.porPagar.count} ventas — $${fmt(report.porPagar.usd)}\n`;
-    }
+      t += `\nPOR DISEÑADOR\n`;
+      for (const [name, v] of Object.entries(report.byDesigner)) {
+        t += `- ${name}: ${v.count} ventas — $${fmt(v.usd)}\n`;
+      }
 
-    t += `\nPOR DISEÑADOR\n`;
-    for (const [name, v] of Object.entries(report.byDesigner)) {
-      t += `- ${name}: ${v.count} ventas — $${fmt(v.usd)}\n`;
-    }
+      t += `\nPOR MÉTODO DE PAGO\n`;
+      for (const [name, v] of Object.entries(report.byMethod)) {
+        t += `- ${name}: ${v.count} ventas — $${fmt(v.usd)}\n`;
+      }
 
-    t += `\nPOR MÉTODO DE PAGO\n`;
-    for (const [name, v] of Object.entries(report.byMethod)) {
-      t += `- ${name}: ${v.count} ventas — $${fmt(v.usd)}\n`;
-    }
+      t += `\nENTREGA\n`;
+      for (const [name, count] of Object.entries(report.byDelivery)) {
+        t += `- ${name}: ${count}\n`;
+      }
 
-    t += `\nENTREGA\n`;
-    for (const [name, count] of Object.entries(report.byDelivery)) {
-      t += `- ${name}: ${count}\n`;
-    }
+      if (report.topProducts.length > 0) {
+        t += `\nPRODUCTOS VENDIDOS\n`;
+        for (const [name, qty] of report.topProducts) {
+          t += `- ${name}: ${qty}\n`;
+        }
+      }
 
-    if (report.topProducts.length > 0) {
-      t += `\nPRODUCTOS VENDIDOS\n`;
-      for (const [name, qty] of report.topProducts) {
-        t += `- ${name}: ${qty}\n`;
+      t += `\nDETALLE DE CADA VENTA\n`;
+      for (const o of filteredSales) {
+        const estado = STATUS_LABELS[o.status] || o.status || '-';
+        t += `#${o.orderNumber || o.id} | ${o.clientName || 'Sin Nombre'} | $${fmt(o.totalAmount)} | ${o.paymentMethod || '-'} | ${estado}\n`;
       }
     }
 
-    t += `\nDETALLE DE CADA VENTA\n`;
-    for (const o of filteredSales) {
-      const estado = STATUS_LABELS[o.status] || o.status || '-';
-      t += `#${o.orderNumber || o.id} | ${o.clientName || 'Sin Nombre'} | $${fmt(o.totalAmount)} | ${o.paymentMethod || '-'} | ${estado}\n`;
+    t += `\nFELIZAI — PRODUCCIÓN\n`;
+    t += `Pasó a Producción: ${felizai.productionCount}\n`;
+    t += `Marcó Impreso: ${felizai.printedCount}\n`;
+    t += `Terminó: ${felizai.finishedCount} (Láser: ${felizai.laserCount} · Normal: ${felizai.normalCount})\n`;
+    t += `Tiempo prom. de producción (Impreso → Terminado): ${fmtDurationHours(felizai.avgProdHours)}\n`;
+    t += `Tiempo prom. total (Pagado → Terminado): ${fmtDurationHours(felizai.avgFullHours)}\n`;
+    if (felizai.detailRows.length > 0) {
+      t += `\nDetalle de lo que terminó Felizai:\n`;
+      for (const r of felizai.detailRows) {
+        t += `#${r.orderNumber} | ${r.clientName} | ${fmtDateTime(r.printedAt)} → ${fmtDateTime(r.finishedAt)} | ${fmtDurationHours(r.prodHours)} | ${r.isLaser ? 'Láser' : 'Normal'}\n`;
+      }
     }
 
     t += `\nGenerado desde el sistema.\n`;
@@ -243,12 +330,14 @@ export default function DetailedSalesReportModal({ paidSales, onClose }) {
 
         {/* Contenido */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '900px', margin: '0 auto' }}>
+
           {filteredSales.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8', fontSize: '0.9rem' }}>
+            <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8', fontSize: '0.9rem' }}>
               No hay ventas registradas en este período.
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '900px', margin: '0 auto' }}>
+            <>
 
               {/* Totales */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
@@ -304,8 +393,34 @@ export default function DetailedSalesReportModal({ paidSales, onClose }) {
                 />
               </Section>
 
-            </div>
+            </>
           )}
+
+          {/* Producción de Felizai — siempre visible, aunque sea 0, para que
+              quede claro cuando no hubo actividad de ella en el período */}
+          <Section title="Felizai · Producción">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+              <StatBox label="Pasó a Producción" value={felizai.productionCount} />
+              <StatBox label="Marcó Impreso" value={felizai.printedCount} />
+              <StatBox label="Terminó" value={felizai.finishedCount} highlight />
+              <StatBox label="Láser / Normal" value={`${felizai.laserCount} / ${felizai.normalCount}`} />
+              <StatBox label="Tiempo prom. producción" value={fmtDurationHours(felizai.avgProdHours)} />
+              <StatBox label="Tiempo prom. total (pago→fin)" value={fmtDurationHours(felizai.avgFullHours)} />
+            </div>
+            <SimpleTable
+              rows={felizai.detailRows.map(r => [
+                r.orderNumber,
+                r.clientName,
+                fmtDateTime(r.printedAt),
+                fmtDateTime(r.finishedAt),
+                fmtDurationHours(r.prodHours),
+                r.isLaser ? 'Láser' : 'Normal'
+              ])}
+              headers={['# Pedido', 'Cliente', 'Impreso', 'Terminado', 'Duración', 'Tipo']}
+            />
+          </Section>
+
+          </div>
         </div>
       </div>
     </div>
