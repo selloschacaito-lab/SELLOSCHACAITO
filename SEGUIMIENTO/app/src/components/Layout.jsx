@@ -32,7 +32,11 @@ function Layout() {
   }, []);
 
   const handleEdgeMouseEnter = () => {
-    if (!isDesktopPointer) return;
+    // Sin filtrar por isDesktopPointer: hay equipos con mouse real que el
+    // navegador detecta erróneamente como táctiles (falso negativo de
+    // "hover: hover" + "pointer: fine"), y en esos casos el hover debe
+    // seguir funcionando igual. Un dispositivo realmente táctil nunca
+    // dispara mouseenter, así que esto no afecta a nadie más.
     hoverTimeoutRef.current = setTimeout(() => {
       setIsSidebarOpen(true);
     }, 200);
@@ -341,6 +345,8 @@ function Layout() {
       ) : (
         <button
           onClick={() => setIsSidebarOpen(true)}
+          onMouseEnter={handleEdgeMouseEnter}
+          onMouseLeave={handleEdgeMouseLeave}
           aria-label="Abrir menú"
           style={{
             position: 'fixed',
