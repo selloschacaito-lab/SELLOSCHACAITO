@@ -872,14 +872,16 @@ Direccion: ${address}`;
 
                 {order.items && order.items.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {order.items.map((it, idx) => (
+                    {order.items.map((it, idx) => {
+                      const cantidad = it.cantidad || 1;
+                      return (
                       <div key={idx} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 10px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>
-                            {it.cantidad || 1}x {it.nombre}
+                            {cantidad}x {it.nombre}
                           </span>
                           <span style={{ fontSize: '12px', fontWeight: 800, color: '#10b981' }}>
-                            ${((it.cantidad || 1) * (it.precioUSD || 0)).toFixed(2)}
+                            ${(cantidad * (it.precioUSD || 0)).toFixed(2)}
                           </span>
                         </div>
                         {it.nota && (
@@ -887,8 +889,27 @@ Direccion: ${address}`;
                             📝 NOTA TALLER: {it.nota}
                           </div>
                         )}
+                        {cantidad > 1 && (
+                          <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>Sellos listos:</span>
+                            <input
+                              type="number"
+                              min={0}
+                              max={cantidad}
+                              value={it.readyQty ?? 0}
+                              onChange={e => {
+                                const raw = Number(e.target.value);
+                                const clamped = Math.max(0, Math.min(cantidad, isNaN(raw) ? 0 : raw));
+                                update(ref(db, `orders/${order.id}/items/${idx}`), { readyQty: clamped });
+                              }}
+                              style={{ width: '56px', height: '26px', padding: '0 6px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', fontWeight: 700, textAlign: 'center' }}
+                            />
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8' }}>/ {cantidad}</span>
+                          </div>
+                        )}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div style={{ fontSize: '13px', color: '#334155' }}>

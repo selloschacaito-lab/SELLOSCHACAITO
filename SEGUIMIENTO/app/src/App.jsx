@@ -34,6 +34,7 @@ import CatalogoPublico from './pages/CatalogoPublico';
 import AdminOnlyRoute from './components/AdminOnlyRoute';
 const Estadisticas = lazy(() => import('./pages/Estadisticas'));
 const EscaladoImagenes = lazy(() => import('./pages/EscaladoImagenes'));
+const Monitor = lazy(() => import('./pages/Monitor'));
 import { db } from './firebase/config';
 import { ref, set } from 'firebase/database';
 
@@ -107,6 +108,13 @@ function App() {
                     <AdminOnlyRoute>
                       <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Cargando estadísticas...</div>}>
                         <Estadisticas />
+                      </Suspense>
+                    </AdminOnlyRoute>
+                  } />
+                  <Route path="monitor" element={
+                    <AdminOnlyRoute>
+                      <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Cargando monitor...</div>}>
+                        <Monitor />
                       </Suspense>
                     </AdminOnlyRoute>
                   } />

@@ -191,11 +191,27 @@ function getDeliveryBadgeInfo(order) {
   return { icon: Truck, label: 'Envío', bg: '#dbeafe', color: '#1e40af', border: '#93c5fd' };
 }
 
+// Progreso de sellos listos dentro del pedido (readyQty / cantidad, sumado
+// entre todas las líneas de items). Solo tiene sentido mostrarlo cuando hay
+// más de 1 sello en total — un pedido de 1 solo sello no necesita este badge.
+function getSellosProgress(order) {
+  const items = Array.isArray(order.items) ? order.items : [];
+  let total = 0, listos = 0;
+  for (const it of items) {
+    const cantidad = Number(it.cantidad) || 0;
+    total += cantidad;
+    listos += Math.min(Number(it.readyQty) || 0, cantidad);
+  }
+  if (total <= 1) return null;
+  return { listos, total };
+}
+
 function OrderCard({ order, statusConfig, onAdvance, onRegress, onClick, isHighlighted = false }) {
   const [showWaMenu, setShowWaMenu] = useState(false);
   const [showDeliveryMenu, setShowDeliveryMenu] = useState(false);
   const cardRef = useRef(null);
   const deliveryBadge = getDeliveryBadgeInfo(order);
+  const sellosProgress = getSellosProgress(order);
 
   useEffect(() => {
     if (isHighlighted && cardRef.current) {
@@ -337,6 +353,20 @@ function OrderCard({ order, statusConfig, onAdvance, onRegress, onClick, isHighl
           )}
           {order.isFina && (
             <span className="badge badge-fina">FINA</span>
+          )}
+          {sellosProgress && (
+            <span
+              className="badge"
+              style={{
+                background: sellosProgress.listos >= sellosProgress.total ? '#dcfce7' : '#f1f5f9',
+                color: sellosProgress.listos >= sellosProgress.total ? '#16a34a' : '#475569',
+                border: `1px solid ${sellosProgress.listos >= sellosProgress.total ? '#bbf7d0' : '#cbd5e1'}`,
+                fontWeight: 700
+              }}
+              title="Sellos listos de este pedido"
+            >
+              🖨️ {sellosProgress.listos}/{sellosProgress.total} sellos
+            </span>
           )}
         </div>
 

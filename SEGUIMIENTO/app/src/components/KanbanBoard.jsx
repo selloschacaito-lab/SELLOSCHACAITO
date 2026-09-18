@@ -14,17 +14,8 @@ import confetti from 'canvas-confetti';
 import { toast } from 'react-hot-toast';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
-import { Minimize2, Maximize2, Plus, ChevronRight, LayoutPanelLeft, Palette, Receipt, Printer, Cog, CheckCircle2, Package, CheckCheck } from 'lucide-react';
-
-const STATUSES = [
-  { id: "design_sent", name: "Iniciando Pedido", color: "color-blue", icon: Palette },
-  { id: "fina", name: "Pagado", color: "color-red", icon: Receipt },
-  { id: "printing", name: "Impresión", color: "color-orange", icon: Printer },
-  { id: "production", name: "En Producción", color: "color-indigo", icon: Cog },
-  { id: "finished", name: "Terminado", color: "color-green", icon: CheckCircle2 },
-  { id: "packed", name: "Empacado", color: "color-fuchsia", icon: Package },
-  { id: "delivered", name: "Entregado", color: "color-gray", isHidden: true, icon: CheckCheck }
-];
+import { Minimize2, Maximize2, Plus, ChevronRight, LayoutPanelLeft } from 'lucide-react';
+import { STATUSES } from '../utils/orderStatuses';
 
 function KanbanBoard({ orders, searchTerm = '', showArchived = false, onOrderClick, highlightedOrderId = null }) {
   const { activeProfile } = useProfile();
@@ -273,6 +264,10 @@ Le notificaremos cuando esté listo para retiro o despacho. ¡Saludos!`);
     if (nextStatus === 'finished' && !order?.finishedAt) {
       timestampUpdates.finishedAt = nowISO;
       timestampUpdates.finishedBy = staffName;
+    }
+    if (nextStatus === 'packed' && !order?.packedAt) {
+      timestampUpdates.packedAt = nowISO;
+      timestampUpdates.packedBy = staffName;
     }
     if (nextStatus === 'delivered' && !order?.deliveredAt) {
       timestampUpdates.deliveredAt = nowISO;

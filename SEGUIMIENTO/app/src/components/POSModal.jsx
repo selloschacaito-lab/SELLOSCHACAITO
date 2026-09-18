@@ -120,7 +120,8 @@ export default function POSModal({ order = null, onClose, onSuccess }) {
         nombre: (it.nombre || '').toUpperCase(),
         cantidad: it.cantidad || 1,
         precioUSD: it.precioUSD || 0,
-        tasaBCV: it.tasaBCV || globalBcvRate
+        tasaBCV: it.tasaBCV || globalBcvRate,
+        readyQty: it.readyQty ?? 0
       }));
     }
     return [];
@@ -453,7 +454,8 @@ export default function POSModal({ order = null, onClose, onSuccess }) {
         cantidad: 1,
         precioUSD: priceUSD,
         tasaBCV: globalBcvRate,
-        stockAvailable: prod.cantidad !== undefined ? prod.cantidad : null
+        stockAvailable: prod.cantidad !== undefined ? prod.cantidad : null,
+        readyQty: 0
       };
       setItems(prev => [...prev, newItem]);
       toast.success(`"${prod.nombre}" agregado ${isWholesale ? '(⭐ Mayorista $' + priceUSD.toFixed(2) + ')' : ''}`);
@@ -468,7 +470,8 @@ export default function POSModal({ order = null, onClose, onSuccess }) {
       nombre: 'SELLO PERSONALIZADO',
       cantidad: 1,
       precioUSD: 16.0,
-      tasaBCV: globalBcvRate
+      tasaBCV: globalBcvRate,
+      readyQty: 0
     };
     setItems(prev => [...prev, newItem]);
     toast.success('Ítem personalizado agregado');
