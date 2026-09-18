@@ -311,29 +311,32 @@ function Layout() {
       backgroundColor: '#f8fafc'
     }}>
 
-      {/* Borde izquierdo: en PC, franja delgada sensible al hover que abre el menú;
-          en táctil, pestañita fija con flecha para tocar y abrir */}
-      {isDesktopPointer ? (
-        <div
-          onMouseEnter={handleEdgeMouseEnter}
-          onMouseLeave={handleEdgeMouseLeave}
-          onClick={() => setIsSidebarOpen(true)}
-          title="Abrir menú"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            bottom: 0,
-            width: '14px',
-            zIndex: 55,
-            opacity: isSidebarOpen ? 0 : 1,
-            pointerEvents: isSidebarOpen ? 'none' : 'auto',
-            transition: 'opacity 0.2s ease',
-            display: 'flex',
-            alignItems: 'center',
-            cursor: 'pointer'
-          }}
-        >
+      {/* Borde izquierdo: TODA la franja (de arriba a abajo) reacciona al
+          hover y al clic para abrir el menú — no solo un punto puntual —
+          tanto si el dispositivo se detecta como PC (franja delgada) como
+          si se detecta como táctil (más ancha, con la flecha visible como
+          pista de dónde tocar). */}
+      <div
+        onMouseEnter={handleEdgeMouseEnter}
+        onMouseLeave={handleEdgeMouseLeave}
+        onClick={() => setIsSidebarOpen(true)}
+        title="Abrir menú"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          bottom: 0,
+          width: isDesktopPointer ? '14px' : '22px',
+          zIndex: 55,
+          opacity: isSidebarOpen ? 0 : 1,
+          pointerEvents: isSidebarOpen ? 'none' : 'auto',
+          transition: 'opacity 0.2s ease',
+          display: 'flex',
+          alignItems: 'center',
+          cursor: 'pointer'
+        }}
+      >
+        {isDesktopPointer ? (
           <div style={{
             width: '4px',
             height: '64px',
@@ -341,37 +344,27 @@ function Layout() {
             borderRadius: '0 4px 4px 0',
             background: '#cbd5e1'
           }} />
-        </div>
-      ) : (
-        <button
-          onClick={() => setIsSidebarOpen(true)}
-          onMouseEnter={handleEdgeMouseEnter}
-          onMouseLeave={handleEdgeMouseLeave}
-          aria-label="Abrir menú"
-          style={{
-            position: 'fixed',
-            left: 0,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            zIndex: 55,
-            width: '22px',
-            height: '52px',
-            borderRadius: '0 10px 10px 0',
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderLeft: 'none',
-            boxShadow: '2px 0 8px rgba(0,0,0,0.08)',
-            display: isSidebarOpen ? 'none' : 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#64748b',
-            padding: 0,
-            cursor: 'pointer'
-          }}
-        >
-          <ChevronRight size={16} />
-        </button>
-      )}
+        ) : (
+          <div
+            aria-hidden
+            style={{
+              width: '22px',
+              height: '52px',
+              borderRadius: '0 10px 10px 0',
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderLeft: 'none',
+              boxShadow: '2px 0 8px rgba(0,0,0,0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#64748b'
+            }}
+          >
+            <ChevronRight size={16} />
+          </div>
+        )}
+      </div>
 
       {/* Backdrop overlay */}
       <div
