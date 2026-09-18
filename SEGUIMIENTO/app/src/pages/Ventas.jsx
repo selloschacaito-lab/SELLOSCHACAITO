@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../firebase/config';
 import { ref, onValue } from 'firebase/database';
-import { Settings, DollarSign, Filter, Clock, Users, AlertTriangle, Package, Activity, ArrowRight, TrendingUp, Sparkles, Crown, Calendar, Bookmark, FileText, Send } from 'lucide-react';
+import { Settings, DollarSign, Filter, Clock, Users, AlertTriangle, Package, Activity, ArrowRight, TrendingUp, Sparkles, Crown, Calendar, Bookmark, FileText, Send, BarChart3 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useProfile } from '../contexts/ProfileContext';
 import SalesHistoryModal from '../components/SalesHistoryModal';
 import AuditOrdersModal from '../components/AuditOrdersModal';
 import AdminNotesPanel from '../components/AdminNotesPanel';
+import DetailedSalesReportModal from '../components/DetailedSalesReportModal';
 
 function fmt(n, decimals = 2) {
   return Number(n || 0).toLocaleString('es-VE', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
@@ -70,6 +71,7 @@ export default function Ventas() {
   const [financeTab, setFinanceTab] = useState('today'); // 'today' | 'month'
   const [mainView, setMainView] = useState('dashboard'); // 'dashboard' | 'notes'
   const [adminNotesCount, setAdminNotesCount] = useState(0);
+  const [showDetailedReport, setShowDetailedReport] = useState(false);
   
   // Permiso Maestro exclusivo para Alvaro Acevedo / Administrador
   const isMasterAdmin = Boolean(
@@ -499,6 +501,38 @@ export default function Ventas() {
                 </div>
               )}
             </div>
+
+            {/* Reporte Detallado de Ventas — solo Álvaro, totalmente aparte
+                del Reporte a Rafael (ese es un resumen corto para WhatsApp;
+                este es el desglose completo con totales, por diseñador, por
+                método de pago, productos y el detalle de cada venta) */}
+            {isMasterAdmin && (
+              <button
+                onClick={() => setShowDetailedReport(true)}
+                disabled={loadingOrders}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '0 14px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  color: '#334155',
+                  fontSize: '12.5px',
+                  fontWeight: 800,
+                  cursor: loadingOrders ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                  flexShrink: 0,
+                  whiteSpace: 'nowrap'
+                }}
+                title="Ver reporte detallado de ventas (por día o rango de fechas)"
+                type="button"
+              >
+                <BarChart3 size={16} /> <span className="hide-on-mobile">Reporte Detallado</span>
+              </button>
+            )}
 
             {/* Botón Compacto de Configuración de Widgets */}
             {mainView === 'dashboard' && (
@@ -1075,10 +1109,18 @@ export default function Ventas() {
 
       {/* AUDIT ORDERS MODAL (ALVARO VS MICHELL) */}
       {auditAdvisor && (
-        <AuditOrdersModal 
-          advisorName={auditAdvisor} 
-          allOrders={allOrdersList} 
-          onClose={() => setAuditAdvisor(null)} 
+        <AuditOrdersModal
+          advisorName={auditAdvisor}
+          allOrders={allOrdersList}
+          onClose={() => setAuditAdvisor(null)}
+        />
+      )}
+
+      {/* REPORTE DETALLADO DE VENTAS (SOLO ALVARO) */}
+      {showDetailedReport && (
+        <DetailedSalesReportModal
+          paidSales={paidSales}
+          onClose={() => setShowDetailedReport(false)}
         />
       )}
     </div>
